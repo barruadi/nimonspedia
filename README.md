@@ -41,3 +41,8 @@
 docker compose up --build
 ```
 2) Open `localhost:8080`
+
+3) Open database inside docker
+```bash
+docker compose exec db bash -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
