@@ -1,3 +1,8 @@
+<?php
+
+namespace App\Core;
+use PDO;
+
 class Database {
     private static ?PDO $instance = null;
 
@@ -5,6 +10,7 @@ class Database {
         # If PDO hasn't been built yet (access via .env variables)
         if (!self::$instance) {
             $host = getenv('DB_HOST') ?: 'db';
+            $port = getenv('DB_PORT') ?: '5432';
             $name = getenv('DB_NAME') ?: 'ecommerce';
             $user = getenv('DB_USER') ?: 'user';
             $pass = getenv('DB_PASS') ?: 'password';
@@ -13,19 +19,6 @@ class Database {
             self::$instance->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
         return self::$instance;
-
-        /* Docker version (uncomment when want to load via Docker)
-
-        if (self::$instance === null) {
-        self::$instance = new PDO(
-            "pgsql:host=db;dbname=ecommerce",
-            "user",
-            "password",
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-        );
-        }
-        return self::$instance;
-        */
     }
 
 }
