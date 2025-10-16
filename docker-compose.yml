@@ -6,8 +6,23 @@ services:
     container_name: tubes-wbd
     ports:
       - '8080:80'
+    env_file:
+      - ./.env
     volumes:
       - ./php/src:/var/www/app
+    depends_on:
+      - db
       
-  # db:
-    # TODO
+  db:
+    image: postgres:16
+    container_name: tubes-wbd-db
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./php/db:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  pgdata:
