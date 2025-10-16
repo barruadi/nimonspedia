@@ -3,6 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: tubes-wbd
+    ports:
+      - '8080:80'
+    volumes:
+      - ./php/src:/var/www/app
+      
+  # db:
     # TODO
-  db:
-# TODO
