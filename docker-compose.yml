@@ -22,7 +22,7 @@ services:
       - ./.env
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./php/db:/docker-entrypoint-initdb.d:ro
+      - ./php/db/init:/docker-entrypoint-initdb.d:ro
 
 volumes:
   pgdata:
