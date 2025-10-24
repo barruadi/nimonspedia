@@ -1,5 +1,39 @@
-<section class="page">
-  <h1>Login Page</h1>
-</section>
+<!doctype html>
+<html>
+  <body>
+    <form id="loginForm">
+      <input name="email" type="email" required>
+      <input name="password" type="password" required>
+      <button type="submit">Login</button>
+      <p id="loginError" style="color:red; display:none"></p>
+    </form>
 
-<script></script>
+    <script type="module">
+      import { api } from '../utils/api.js';
+
+      const form = document.getElementById('loginForm');
+      const errorEl = document.getElementById('loginError');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorEl.style.display = 'none';
+
+        const email = e.target.email.value.trim();
+        const password = e.target.password.value;
+
+        try {
+          const res = await api.post('/login', { email, password });
+          console.log(res);
+          if (res?.ok === false) {
+            throw new Error(res.error?.message || 'Login failed');
+          }
+          // success → go to dashboard/home
+          window.location.href = '/public/pages/HomePage.html';
+        } catch (err) {
+          errorEl.textContent = err.data?.error?.message || err.message || 'Login failed';
+          errorEl.style.display = 'block';
+        }
+      });
+    </script>
+  </body>
+</html>
