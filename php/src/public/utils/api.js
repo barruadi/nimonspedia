@@ -41,5 +41,5 @@ export const api = {
   get:  (p, o)    => request(p, {...o, method: 'GET'}),
   post: (p, b, o) => request(p, {...o, method: 'POST', body: b}),
   put:  (p, b, o) => request(p, {...o, method: 'PUT',  body: b}),
-  del:  (p, b)    => request(p, {...o, method: 'DELETE'}),
+  del:  (p, o)    => request(p, {...o, method: 'DELETE'}),
 }
