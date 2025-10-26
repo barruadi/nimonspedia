@@ -1,3 +1,4 @@
+import { api } from './utils/api.js'
 
 // Defines routes
 const routes = {

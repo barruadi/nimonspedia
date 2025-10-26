@@ -7,7 +7,7 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # [ API ]
-RewriteRule ^api/ ../index.php [QSA,L]
+RewriteRule ^api(?:/|$) index.php [QSA,L]
 
 # [ SPA ]
 RewriteRule ^ index.html [QSA,L]
