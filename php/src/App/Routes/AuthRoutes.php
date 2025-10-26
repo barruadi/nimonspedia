@@ -28,8 +28,7 @@ $router->get('/api/me', function ($req) {
             'name'  => $u['name'],
             'email' => $u['email'],
             'role'  => $u['role'],
-        ] : null,
-        'role' => $u['role'] ?? null,
+        ] : null
     ];
 });
 
