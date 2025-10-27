@@ -64,6 +64,7 @@ class Product
         
         $stmt->execute([
             'store_id'    => $data['store_id'],
+            'category_id' => $data['category_id'],
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
             'price'       => $data['price'],
