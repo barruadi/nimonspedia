@@ -1,5 +1,17 @@
-<section class="page">
-  <h1>Register</h1>
-</section>
+<!doctype html>
+<html>
+  <body>
+    <form id="registerForm">
+      <input name="full_name" type="text" placeholder="Full name" required>
+      <input name="email" type="email" placeholder="Email" required>
+      <input name="password" type="password" placeholder="Password" required>
+      <input name="confirm_password" type="password" placeholder="Confirm Password" required>
 
-<script></script>
+      <button type="submit">Create account</button>
+
+      <p id="registerError" style="color:red; display:none"></p>
+    </form>
+
+    <script type="module" src="/script/Register.js" defer></script>
+  </body>
+</html>
