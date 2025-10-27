@@ -2,10 +2,12 @@ import { api } from './utils/api.js'
 
 // Defines routes
 const routes = {
-  '/'         : '/Pages/HomePage.html',
-  '/home'     : '/Pages/HomePage.html',
-  '/login'    : '/Pages/LoginPage.html',
-  '/register' : '/Pages/RegisterPage.html',
+  '/'              : '/pages/HomePage.html',
+  '/home'          : '/pages/HomePage.html',
+  '/login'         : '/pages/LoginPage.html',
+  '/register'      : '/pages/RegisterPage.html',
+  '/products/add'  : '/pages/AddProductPage.html',
+  '/products/edit' : '/pages/EditProductPage.html',
 }
 
 // SPA mount point
