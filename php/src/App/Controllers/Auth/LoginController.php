@@ -4,20 +4,21 @@ namespace App\Controllers\Auth;
 
 class LoginController
 {
-    public static function show(): void
+    public static function show(): array
     {
-        http_response_code($status);
+        http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_SLASHES);
-        return 
+        return [
+            'ok' => true
+        ];
     }
     
-    public static function login(array $req): void
+    public static function login(array $req): array
     {
         $email      = $req['body'];
         
         return [
             'ok' => true
-        ]
+        ];
     }
 }
