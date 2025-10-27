@@ -7,7 +7,7 @@ use PDO;
 
 class Product
 {
-    // Properties (opsional, untuk type hinting atau OOP style)
+    // Properties
     public ?int $product_id = null;
     public ?int $store_id = null;
     public ?string $name = null;
@@ -105,7 +105,7 @@ class Product
         }
         
         if (empty($fields)) {
-            return false; // nothing to update
+            return false; // Nothing to update
         }
         
         $sql = "UPDATE products SET " . implode(', ', $fields) . " WHERE product_id = :id";
