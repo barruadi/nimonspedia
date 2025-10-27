@@ -17,12 +17,25 @@ $router->group([
   /* TODO: If sellerOnly middleware is already defined
     'middleware'  => [$auth, $sellerOnly],  */
 ], function($r) {
-    $r->get('/dashboard',                       fn($req) => (new DashboardController())->showDashboard());
-    $r->get('/product-management/add',          fn($req) => (new ProductManagementController())->showAddProductForm());
-    $r->post('/product-management/add',         fn($req) => (new ProductManagementController())->handleAddProductForm());
-    $r->get('/product-management/edit/{id}',    fn($req, $id) => (new ProductManagementController())->showEditProductForm($id));
-    $r->post('/product-management/edit/{id}',   fn($req, $id) => (new ProductManagementController())->handleEditProductForm($id));
+    $r->get('/dashboard',             fn($req) => (new DashboardController())->showDashboard());
+    $r->get('/products/add',          fn($req) => (new ProductManagementController())->showAddProductForm());
+    $r->post('/products/add',         fn($req) => (new ProductManagementController())->handleAddProductForm());
+    $r->get('/products/edit/{id}',    fn($req, $id) => (new ProductManagementController())->showEditProductForm($req));
+    $r->post('/products/edit/{id}',   fn($req, $id) => (new ProductManagementController())->handleEditProductForm($req, $id));
 }); 
+
+// Public endpoints ------------------------
+// GET /api/categories - to populate cateogories dropdown
+$router->get('/api/categories', function() {
+    $db = \App\Core\Database::getInstance();
+    $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
+    $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    
+    return [
+        'ok' => true,
+        'data' => $categories
+    ];
+});
 
 // Sanity checks ------------------------
 $router->get('/api/me', function ($req) {
