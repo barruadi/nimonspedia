@@ -2,6 +2,8 @@
 
 namespace App\Controllers\Auth;
 
+use App\Models\User;
+
 class LoginController
 {
     public static function show(): array
@@ -15,10 +17,27 @@ class LoginController
     
     public static function login(array $req): array
     {
-        $email      = $req['body'];
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        $email      = $req['body']['email'] ?? '';
+        $password   = $req['body']['password'] ?? '';
+        
+        if ($email === '' || $password === '') {
+            return [];
+        }
+        
+        $user = User::authenticate($email, $password);
+        
+        // setup session
+        $_SESSION['user_id']   = $user['user_id'];
+        $_SESSION['role']      = $user['role'];
+        $_SESSION['full_name'] = $user['full_name'];
         
         return [
-            'ok' => true
+            'ok' => true,
+            'data' => $user
         ];
     }
 }
