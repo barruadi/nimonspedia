@@ -20,5 +20,24 @@ class Database {
         }
         return self::$instance;
     }
-
+    
+    public static function fetchOne(string $sql, array $params = []): ?array
+    {
+        $stmt = self::getInstance()->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : $row;
+    }
+    
+    public static function executeA(string $sql, array $params = []): int
+    {
+        $stmt = self::getInstance()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->rowCount(PDO::FETCH_ASSOC);
+    }
+    
+    public static function pdo(): PDO
+    {
+        return self::getInstance();
+    }
 }
