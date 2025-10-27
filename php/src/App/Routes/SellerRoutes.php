@@ -17,34 +17,34 @@ $router->group([
   /* TODO: If sellerOnly middleware is already defined
     'middleware'  => [$auth, $sellerOnly],  */
 ], function($r) {
-    $r->get('/dashboard',             fn($req) => (new DashboardController())->showDashboard());
-    $r->get('/products/add',          fn($req) => (new ProductManagementController())->showAddProductForm());
-    $r->post('/products/add',         fn($req) => (new ProductManagementController())->handleAddProductForm());
-    $r->get('/products/edit/{id}',    fn($req, $id) => (new ProductManagementController())->showEditProductForm($req));
-    $r->post('/products/edit/{id}',   fn($req, $id) => (new ProductManagementController())->handleEditProductForm($req, $id));
+    $r->get('/dashboard', fn($req) => (new DashboardController())->showDashboard());
+    $r->get('/products/add',  fn($req) => ProductManagementController::showAddProductForm());
+    $r->post('/products/add', fn($req) => ProductManagementController::handleAddProduct($req));
+    $r->get('/products/edit/{id}',  fn($req, $id) => ProductManagementController::showEditProductForm($id));
+    $r->post('/products/edit/{id}', fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
 }); 
 
-// Public endpoints ------------------------
-// GET /api/categories - to populate cateogories dropdown
+// PUBLIC ENDPOINTS
+// GET /api/categories - to populate categories dropdown
 $router->get('/api/categories', function() {
     $db = \App\Core\Database::getInstance();
     $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
     $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
     
-    return [
+    http_response_code(200);
+    header('Content-Type: application/json; charset=utf-8');
+    
+    echo json_encode([
         'ok' => true,
         'data' => $categories
-    ];
+    ], JSON_UNESCAPED_SLASHES);
+    
+    exit; 
 });
 
-// Sanity checks ------------------------
+// SANITY CHECKS
 $router->get('/api/me', function ($req) {
     $u = $_SESSION['user'] ?? null;
-    /* TODO: implement role check
-    if (!$u || $u['role'] !== 'seller') {
-        return ['authenticated' => false, 'message' => 'Not a seller'];
-    }
-    */
     return [
         'authenticated' => (bool)$u,
         'user' => $u ? [
