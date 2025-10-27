@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Management: Edit Product</title>
+    <!-- Rich text editor CDN (Quill.js) -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
+      .preview-container {
+        margin: 10px 0;
+      }
+      .preview-image {
+        max-width: 300px;
+        max-height: 300px;
+        border: 1px solid #ccc;
+        padding: 5px;
+        display: block;
+        margin-bottom: 10px;
+      }
+      .error { color: red; font-size: 0.9em; }
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: #f0f0f0;
+        border-radius: 5px;
+        overflow: hidden;
+        display: none;
+        margin: 10px 0;
+      }
+      .progress-fill {
+        height: 100%;
+        background: #4CAF50;
+        width: 0%;
+        transition: width 0.3s;
+      }
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        display: none;
+        z-index: 1000;
+      }
+      /* Confirmation Modal */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 400px;
+        border-radius: 5px;
+      }
+      .modal-buttons {
+        margin-top: 20px;
+        text-align: right;
+      }
+      .modal-buttons button {
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Edit Product</h1>
+    <p>Store: <span id="store_name">Loading...</span></p>
+    <p>Product ID: <span id="current_product_id">-</span></p>
+
+    <form id="editProductForm" enctype="multipart/form-data">
+      <!-- Hidden fields -->
+      <input type="hidden" id="product_id" name="product_id" />
+      <input type="hidden" id="store_id" name="store_id" />
+
+      <!-- Product Name -->
+      <label for="productName">Product Name: <span style="color:red">*</span></label>
+      <input 
+        id="productName" 
+        name="name" 
+        type="text" 
+        maxlength="200"
+        required 
+        placeholder="Enter product name (max 200 characters)"
+      />
+      <span class="error" id="nameError"></span>
+      <br><br>
+
+      <!-- Description (Rich Text) -->
+      <label for="productDescription">Description: <span style="color:red">*</span></label>
+      <div id="editor" style="height: 200px;"></div>
+      <input type="hidden" id="productDescription" name="description">
+      <span class="error" id="descError"></span>
+      <br><br>
+
+      <!-- Category -->
+      <label for="productCategory">Category: <span style="color:red">*</span></label>
+      <select id="productCategory" name="category_id" required>
+        <option value="">-- Select Category --</option>
+        <!-- Categories will be populated from API -->
+      </select>
+      <span class="error" id="categoryError"></span>
+      <br><br>
+
+      <!-- Price -->
+      <label for="productPrice">Price (Rp): <span style="color:red">*</span></label>
+      <input 
+        id="productPrice" 
+        name="price" 
+        type="number" 
+        step="0.01" 
+        min="1000" 
+        required 
+        placeholder="Min. Rp 1,000"
+      />
+      <span class="error" id="priceError"></span>
+      <small style="color: orange; display: block;">
+        Warning: Changing price will not affect past transactions
+      </small>
+      <br><br>
+
+      <!-- Stock -->
+      <label for="productStock">Stock: <span style="color:red">*</span></label>
+      <input 
+        id="productStock" 
+        name="stock" 
+        type="number" 
+        min="0" 
+        required 
+        placeholder="0"
+      />
+      <span class="error" id="stockError"></span>
+      <small style="display: block;">
+        Note: This replaces the current stock, not increment
+      </small>
+      <br><br>
+
+      <!-- Current Image Display -->
+      <div class="preview-container" id="currentImageContainer" style="display:none;">
+        <label>Current Image:</label><br>
+        <img id="currentImage" class="preview-image" src="" alt="Current product image">
+        <button type="button" id="changeImageBtn">Ganti Foto</button>
+      </div>
+
+      <!-- New Image Preview -->
+      <div class="preview-container" id="newImageContainer" style="display:none;">
+        <label>New Image Preview:</label><br>
+        <img id="newImagePreview" class="preview-image" src="" alt="New image preview">
+      </div>
+
+      <!-- Image Upload (Hidden, triggered by "Ganti Foto") -->
+      <input 
+        id="productImage" 
+        name="image" 
+        type="file" 
+        accept="image/jpeg,image/jpg,image/png,image/webp"
+        style="display: none;"
+      />
+      <span class="error" id="imageError"></span>
+      <br>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <!-- Submit Buttons -->
+      <button type="submit" id="submitBtn">Simpan Perubahan</button>
+      <button type="button" id="cancelBtn">Batal</button>
+    </form>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <h3>Konfirmasi Perubahan</h3>
+        <p>Apakah Anda yakin ingin menyimpan perubahan produk ini?</p>
+        <p style="color: orange; font-size: 0.9em;">
+          Perubahan harga tidak akan mempengaruhi transaksi yang sudah ada.
+        </p>
+        <div class="modal-buttons">
+          <button type="button" id="cancelConfirm">Batal</button>
+          <button type="button" id="proceedConfirm">Ya, Simpan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Rich Text Editor -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script type="module" src="/script/EditProduct.js"></script>
+  </body>
+</html>
