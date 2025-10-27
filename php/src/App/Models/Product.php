@@ -80,6 +80,7 @@ class Product
     {
         $db = self::getDB();
         
+        // Build dynamic UPDATE query based on provided fields
         $fields = [];
         $params = ['id' => $productId];
         
@@ -90,6 +91,10 @@ class Product
         if (isset($data['description'])) {
             $fields[] = "description = :description";
             $params['description'] = $data['description'];
+        }
+        if (isset($data['category_id'])) {
+            $fields[] = "category_id = :category_id";
+            $params['category_id'] = $data['category_id'];
         }
         if (isset($data['price'])) {
             $fields[] = "price = :price";
@@ -104,8 +109,11 @@ class Product
             $params['image_path'] = $data['image_path'];
         }
         
+        // Add updated_at timestamp
+        $fields[] = "updated_at = CURRENT_TIMESTAMP";
+        
         if (empty($fields)) {
-            return false; // Nothing to update
+            return false; // nothing to update
         }
         
         $sql = "UPDATE products SET " . implode(', ', $fields) . " WHERE product_id = :id";
