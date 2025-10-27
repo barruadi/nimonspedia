@@ -2,45 +2,369 @@
 
 namespace App\Controllers\Seller;
 
+use App\Models\Product;
+
 class ProductManagementController
 {
     // Renders the add product form for sellers
     public static function showAddProductForm(): array
     {
+        // Check authentication
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return [
+                'ok' => false, 
+                'error' => 'Unauthorized: Not a seller'
+            ];
+        }
+
+        // Get seller's store
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT store_id, store_name, description, logo_path 
+            FROM stores 
+            WHERE owner_id = :owner_id 
+            LIMIT 1
+        ");
+        $stmt->execute(['owner_id' => $user['id']]);
+        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$store) {
+            http_response_code(404);
+            return [
+                'ok' => false, 
+                'error' => 'Store not found. Please create a store first.'
+            ];
+        }
+
+        // Return store info for frontend
         http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
         return [
-            'ok' => true
+            'ok' => true,
+            'data' => [
+                'store_id' => $store['store_id'],
+                'store_name' => $store['store_name'],
+                'store_description' => $store['description'] ?? null,
+                'store_logo' => $store['logo_path'] ?? null,
+                'categories' => $categories
+            ]
         ];
     }
     
     // Handles the submission of the add product form
-    public static function handleAddProductForm(): array
+    public static function handleAddProduct(array $req): array
     {
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized'];
+        }
+
+        // Get seller's store
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
+        $stmt->execute(['owner_id' => $user['id']]);
+        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$store) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Store not found'];
+        }
+
+        // Get data from request
+        $name = $req['body']['name'] ?? null;
+        $description = $req['body']['description'] ?? '';
+        $categoryId = $req['body']['category_id'] ?? null;
+        $price = $req['body']['price'] ?? null;
+        $stock = $req['body']['stock'] ?? null;
+
+        // Server-side validation
+        if (!$name || strlen($name) > 200) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Name required (max 200 chars)'];
+        }
+
+        if (strlen($description) > 1000) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Description max 1000 chars'];
+        }
+
+        if (!$categoryId) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Category required'];
+        }
+
+        if (!$price || $price < 1000) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Price must be at least 1000'];
+        }
+
+        if ($stock < 0) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Stock must be 0 or more'];
+        }
+
+        // Handle file upload
+        $imagePath = null;
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadResult = self::handleImageUpload($_FILES['image']);
+            if (!$uploadResult['ok']) {
+                http_response_code(400);
+                return $uploadResult;
+            }
+            $imagePath = $uploadResult['path'];
+        } else {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Product image required'];
+        }
+
+        // Insert to database
+        try {
+            $productId = Product::create([
+                'store_id' => $store['store_id'],
+                'name' => $name,
+                'description' => $description,
+                'category_id' => $categoryId,
+                'price' => $price,
+                'stock' => $stock,
+                'image_path' => $imagePath,
+            ]);
+
+            http_response_code(201);
+            return [
+                'ok' => true,
+                'data' => ['product_id' => $productId]
+            ];
+            
+        } catch (\Exception $e) {
+            // Clean up uploaded file if DB insert fails
+            if ($imagePath && file_exists(__DIR__ . '/../../../public' . $imagePath)) {
+                unlink(__DIR__ . '/../../../public' . $imagePath);
+            }
+            
+            http_response_code(500);
+            return ['ok' => false, 'error' => 'Database error: ' . $e->getMessage()];
+        }
+    }
+
+    // Utility function: Handles image upload and validation
+    private static function handleImageUpload(array $file): array
+    {
+        // Validate file type
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        
+        if (!in_array($mimeType, $allowedTypes)) {
+            return ['ok' => false, 'error' => 'Invalid file type. Only JPG, PNG, WEBP allowed'];
+        }
+
+        // Validate file size (max 2MB)
+        $maxSize = 2 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return ['ok' => false, 'error' => 'File size must be less than 2MB'];
+        }
+
+        // Create upload directory
+        $uploadDir = __DIR__ . '/../../../public/uploads/products/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // Generate unique filename
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = uniqid('product_', true) . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            return ['ok' => false, 'error' => 'Failed to upload file'];
+        }
+
+        // TODO: Image optimization (resize, compress) - optional
+        // self::optimizeImage($filepath);
+
         return [
-            'ok' => true
+            'ok' => true,
+            'path' => '/uploads/products/' . $filename
         ];
     }
-    
-    // Renders the edit product form for sellers
-    public static function showEditProductForm(): array
+
+    // TO-DO: Image optimization
+    private static function optimizeImage(string $filepath): void
     {
+        // Implement with GD or Imagick
+        // Resize to max 800x800, compress quality 85%
+    }
+        
+    // Renders the edit product form for sellers
+    public static function showEditProductForm(int $productId): array
+    {
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized'];
+        }
+
+        // Get product data
+        $product = Product::findById($productId);
+        
+        if (!$product) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Product not found'];
+        }
+
+        // Get seller's store
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("SELECT store_id, store_name FROM stores WHERE owner_id = :owner_id");
+        $stmt->execute(['owner_id' => $user['id']]);
+        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$store) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Store not found'];
+        }
+
+        // Check if product belongs to seller's store
+        if ($product['store_id'] !== $store['store_id']) {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
+        }
+
         http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
         return [
-            'ok' => true
+            'ok' => true,
+            'data' => [
+                'product' => $product,
+                'store' => $store,
+                'categories' => $categories
+            ]
         ];
     }
 
     // Handles the submission of the edit product form
-    public static function handleEditProductForm(): array
+    public static function handleEditProduct(array $req, int $productId): array
     {
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
-        return [
-            'ok' => true
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized'];
+        }
+
+        // Get product data
+        $product = Product::findById($productId);
+        
+        if (!$product) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Product not found'];
+        }
+
+        // Get seller's store
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
+        $stmt->execute(['owner_id' => $user['id']]);
+        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$store) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Store not found'];
+        }
+
+        // Authorization: Check if product belongs to seller's store
+        if ($product['store_id'] !== $store['store_id']) {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
+        }
+
+        // Get data from request
+        $name = $req['body']['name'] ?? null;
+        $description = $req['body']['description'] ?? '';
+        $categoryId = $req['body']['category_id'] ?? null;
+        $price = $req['body']['price'] ?? null;
+        $stock = $req['body']['stock'] ?? null;
+
+        // Server-side validation
+        if (!$name || strlen($name) > 200) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Name required (max 200 chars)'];
+        }
+
+        if (strlen($description) > 1000) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Description max 1000 chars'];
+        }
+
+        if (!$categoryId) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Category required'];
+        }
+
+        if (!$price || $price < 1000) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Price must be at least 1000'];
+        }
+
+        if ($stock < 0) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Stock must be 0 or more'];
+        }
+
+        // Prepare update data
+        $updateData = [
+            'name' => $name,
+            'description' => $description,
+            'category_id' => $categoryId,
+            'price' => $price,
+            'stock' => $stock,
         ];
+
+        // Handle image upload (optional for edit)
+        $oldImagePath = $product['image_path'];
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $uploadResult = self::handleImageUpload($_FILES['image']);
+            if (!$uploadResult['ok']) {
+                http_response_code(400);
+                return $uploadResult;
+            }
+            $updateData['image_path'] = $uploadResult['path'];
+        }
+
+        // Update product in database
+        try {
+            $success = Product::update($productId, $updateData);
+            
+            if (!$success) {
+                throw new \Exception('Failed to update product');
+            }
+
+            // Delete old image if new image uploaded successfully
+            if (isset($updateData['image_path']) && $oldImagePath) {
+                $oldFilePath = __DIR__ . '/../../../public' . $oldImagePath;
+                if (file_exists($oldFilePath)) {
+                    unlink($oldFilePath);
+                }
+            }
+
+            http_response_code(200);
+            return [
+                'ok' => true,
+                'data' => ['product_id' => $productId]
+            ];
+            
+        } catch (\Exception $e) {
+            // Clean up new uploaded file if DB update fails
+            if (isset($updateData['image_path']) && file_exists(__DIR__ . '/../../../public' . $updateData['image_path'])) {
+                unlink(__DIR__ . '/../../../public' . $updateData['image_path']);
+            }
+            
+            http_response_code(500);
+            return ['ok' => false, 'error' => 'Database error: ' . $e->getMessage()];
+        }
     }
 }
