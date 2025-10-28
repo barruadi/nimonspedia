@@ -63,6 +63,21 @@ class User {
         $row = Database::fetchOne($query, [':email' => $email]);
         return $row ?? [];
     }
+    
+    public static function findById(
+        int $user_id
+    ): array
+    {
+        $query = "
+            SELECT user_id, email, password_hash, full_name, role, balance, created_at, updated_at
+            FROM users
+            WHERE user_id = :user_id
+            LIMIT 1
+        ";
+        
+        $row = Database::fetchOne($query, [':user_id' => $user_id]);
+        return $row ?? [];
+    }
 
     public static function authenticate(
         string $email,
