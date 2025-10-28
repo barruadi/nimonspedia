@@ -21,31 +21,40 @@ const backToStep2FromReviewBtn = document.getElementById('backToStep2FromReview'
 const submitSellerBtn          = document.getElementById('submitSeller');
 const submitBuyerBtn           = document.getElementById('submitBuyer');
 
-const fullNameInput     = document.getElementById('fullNameInput');
-const emailInput        = document.getElementById('emailInput');
-const passwordInput     = document.getElementById('passwordInput');
-const storeNameInput    = document.getElementById('storeNameInput');
+// inputs
+const fullNameInput        = document.getElementById('fullNameInput');
+const emailInput           = document.getElementById('emailInput');
+const passwordInput        = document.getElementById('passwordInput');
+const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+const addressInput         = document.getElementById('addressInput');
+const storeNameInput       = document.getElementById('storeNameInput');
 
-const errorBox          = document.getElementById('errorBox');
+// error box
+const errorBox = document.getElementById('errorBox');
 
-const summaryRoleEl     = document.getElementById('summaryRole');
-const summaryNameEl     = document.getElementById('summaryName');
-const summaryEmailEl    = document.getElementById('summaryEmail');
-const summaryStoreEl    = document.getElementById('summaryStore');
-const sellerSummaryRow  = stepReview.querySelector('.seller-only');
+// review summary elements
+const summaryRoleEl    = document.getElementById('summaryRole');
+const summaryNameEl    = document.getElementById('summaryName');
+const summaryEmailEl   = document.getElementById('summaryEmail');
+const summaryStoreEl   = document.getElementById('summaryStore');
+const sellerSummaryRow = stepReview.querySelector('.seller-only');
+
+// password reveal buttons
+const revealButtons = [...document.querySelectorAll('.reveal-btn')];
 
 // --- HELPERS ---
-function showStep(which) {
+function showStep(whichStepEl) {
   [stepRole, stepUser, stepStore, stepReview].forEach(s => {
     s.classList.remove('active');
   });
-  which.classList.add('active');
+  whichStepEl.classList.add('active');
 }
 
 function showError(msg) {
   errorBox.textContent = msg;
   errorBox.style.display = 'block';
 }
+
 function clearError() {
   errorBox.textContent = '';
   errorBox.style.display = 'none';
@@ -65,11 +74,34 @@ function fillReview(storeNameVal = '') {
   }
 }
 
+function validateBaseFields() {
+  const fullName  = fullNameInput.value.trim();
+  const email     = emailInput.value.trim();
+  const password  = passwordInput.value;
+  const confirm   = confirmPasswordInput ? confirmPasswordInput.value : '';
+  const address   = addressInput ? addressInput.value.trim() : '';
+
+  if (!fullName || !email || !password || !confirm || !address) {
+    showError('Lengkapi semua data.');
+    return false;
+  }
+
+  if (password !== confirm) {
+    showError('Password dan konfirmasi password tidak sama.');
+    return false;
+  }
+
+  return true;
+}
+
+// --- SUBMIT CALLS ---
 async function submitBuyer() {
   clearError();
-  const full_name  = fullNameInput.value.trim();
-  const email      = emailInput.value.trim();
-  const password   = passwordInput.value;
+  if (!validateBaseFields()) return;
+
+  const full_name = fullNameInput.value.trim();
+  const email     = emailInput.value.trim();
+  const password  = passwordInput.value;
 
   const res = await api.post('/register', {
     full_name,
@@ -77,29 +109,28 @@ async function submitBuyer() {
     password,
     role: 'buyer'
   });
-  
-  console.log(res);
 
   if (!res || res.ok === false) {
     showError(res?.error?.message || 'Pendaftaran gagal');
     return;
   }
 
-  // redirect buyer
   window.location.href = '/home';
 }
 
 async function submitSeller() {
   clearError();
-  const full_name  = fullNameInput.value.trim();
-  const email      = emailInput.value.trim();
-  const password   = passwordInput.value;
-  const store_name = storeNameInput.value.trim();
+  if (!validateBaseFields()) return;
 
+  const store_name = storeNameInput.value.trim();
   if (!store_name) {
     showError('Nama toko wajib diisi untuk penjual.');
     return;
   }
+
+  const full_name = fullNameInput.value.trim();
+  const email     = emailInput.value.trim();
+  const password  = passwordInput.value;
 
   const res = await api.post('/register', {
     full_name,
@@ -114,23 +145,31 @@ async function submitSeller() {
     return;
   }
 
-  // redirect seller
   window.location.href = '/home';
 }
 
-// --- STEP 1: ROLE PICK ---
+// --- ROLE PICK LOGIC ---
+function selectRole(role) {
+  selectedRole = role;
+
+  roleCards.forEach(btn => {
+    if (btn.dataset.role === role) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  toStep2Btn.disabled = false;
+}
+
+// set default
+selectRole('buyer');
+
 roleCards.forEach(card => {
   card.addEventListener('click', () => {
-    console.log('[wizard] role clicked:', card.dataset.role);
-
-    selectedRole = card.dataset.role; // 'buyer' | 'seller'
-
-    // visual active state
-    roleCards.forEach(c => c.classList.remove('active'));
-    card.classList.add('active');
-
-    // enable next
-    toStep2Btn.disabled = false;
+    const role = card.dataset.role;
+    selectRole(role);
   });
 });
 
@@ -140,34 +179,25 @@ toStep2Btn.addEventListener('click', () => {
   showStep(stepUser);
 });
 
-// --- STEP 2: USER INFO ---
+// --- STEP NAV ---
 backToStep1Btn.addEventListener('click', () => {
+  clearError();
   showStep(stepRole);
 });
 
 toNextAfterUserBtn.addEventListener('click', () => {
   clearError();
 
-  const fullName  = fullNameInput.value.trim();
-  const email     = emailInput.value.trim();
-  const password  = passwordInput.value;
-
-  if (!fullName || !email || !password) {
-    showError('Lengkapi semua data.');
-    return;
-  }
+  if (!validateBaseFields()) return;
 
   if (selectedRole === 'seller') {
-    // seller must fill store name next
     showStep(stepStore);
   } else {
-    // buyer goes to review
     fillReview();
     showStep(stepReview);
   }
 });
 
-// --- STEP 3: STORE NAME (seller only) ---
 backToStep2Btn.addEventListener('click', () => {
   clearError();
   showStep(stepUser);
@@ -177,7 +207,6 @@ submitSellerBtn.addEventListener('click', async () => {
   await submitSeller();
 });
 
-// --- STEP 4: REVIEW (buyer only) ---
 backToStep2FromReviewBtn.addEventListener('click', () => {
   clearError();
   showStep(stepUser);
@@ -185,4 +214,25 @@ backToStep2FromReviewBtn.addEventListener('click', () => {
 
 submitBuyerBtn.addEventListener('click', async () => {
   await submitBuyer();
+});
+
+// --- PASSWORD REVEAL ---
+revealButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const wrap = btn.closest('.input-wrap');
+    if (!wrap) return;
+
+    const input = wrap.querySelector('input');
+    const icon  = btn.querySelector('.eye-icon');
+    if (!input || !icon) return;
+
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+
+    if (isHidden) {
+      icon.classList.add('hidden-eye');
+    } else {
+      icon.classList.remove('hidden-eye');
+    }
+  });
 });

@@ -7,98 +7,154 @@
   </head>
 
   <body>
-    <div class="card">
-      <div id="errorBox" class="error-box" style="display:none"></div>
+    <div class="register-page">
+      <div class="reg-card">
 
-      <!-- STEP 1: pick role -->
-      <section class="step active" id="step-role">
-        <h2>Pilih tipe akun</h2>
-        <p class="desc">Kami akan menyiapkan pengalaman yang sesuai untuk kamu.</p>
+        <!-- title / subtitle -->
+        <header class="reg-header">
+          <h1 class="reg-title">Daftar Sekarang</h1>
+          <p class="reg-subtitle">
+            Sudah punya akun Nimonspedia?
+            <a href="/login" class="login-link">Masuk</a>
+          </p>
+        </header>
 
-        <div class="role-options">
-          <div class="role-card" data-role="buyer">
-            <strong>Pembeli</strong>
-            <span>Beli produk dari penjual</span>
+        <!-- error box -->
+        <div id="errorBox" class="error-box" style="display:none"></div>
+
+        <!-- STEP 1: ROLE PICK -->
+        <section class="step active" id="step-role">
+          <div class="role-list">
+            <!-- keep class role-card so JS still works -->
+            <button
+              class="role-item role-card active"
+              data-role="buyer"
+              type="button"
+            >
+              <span class="role-main">Buyer</span>
+              <span class="role-desc">Beli produk dari penjual</span>
+            </button>
+
+            <button
+              class="role-item role-card"
+              data-role="seller"
+              type="button"
+            >
+              <span class="role-main">Seller</span>
+              <span class="role-desc">Kelola toko dan pesanan</span>
+            </button>
           </div>
-          <div class="role-card" data-role="seller">
-            <strong>Penjual</strong>
-            <span>Kelola toko dan pesanan</span>
+
+          <div class="actions only-next">
+            <button id="toStep2" class="primary-btn" disabled>Lanjut</button>
           </div>
-        </div>
+        </section>
 
-        <div class="actions">
-          <button id="toStep2" disabled>Lanjut</button>
-        </div>
-      </section>
+        <!-- STEP 2: USER INFO -->
+        <section class="step" id="step-user">
+          <div class="form-grid">
+            <div class="field">
+              <label>Nama*</label>
+              <div class="input-wrap">
+                <input id="fullNameInput" type="text" placeholder="Masukkan nama akun" required />
+              </div>
+            </div>
 
-      <!-- STEP 2: user info -->
-      <section class="step" id="step-user">
-        <h2>Data akun</h2>
-        <p class="desc">Kami butuh beberapa detail dasar.</p>
+            <div class="field">
+              <label>Email*</label>
+              <div class="input-wrap">
+                <input id="emailInput" type="email" placeholder="Masukkan alamat email" required />
+              </div>
+            </div>
 
-        <div class="field">
-          <label>Nama lengkap</label>
-          <input id="fullNameInput" type="text" placeholder="Nama lengkap" required />
-        </div>
+            <div class="field">
+              <label>Password*</label>
+              <div class="input-wrap with-icon">
+                <input id="passwordInput" type="password" placeholder="Masukkan password" required />
+                <button type="button" class="reveal-btn" aria-label="Tampilkan password">
+                  <span class="eye-icon"></span>
+                </button>
+              </div>
+            </div>
 
-        <div class="field">
-          <label>Email</label>
-          <input id="emailInput" type="email" placeholder="you@example.com" required />
-        </div>
+            <div class="field">
+              <label>Validasi Password*</label>
+              <div class="input-wrap with-icon">
+                <input id="confirmPasswordInput" type="password" placeholder="Masukkan validasi password" required />
+                <button type="button" class="reveal-btn" aria-label="Tampilkan password">
+                  <span class="eye-icon"></span>
+                </button>
+              </div>
+            </div>
 
-        <div class="field">
-          <label>Password</label>
-          <input id="passwordInput" type="password" placeholder="••••••••" required />
-        </div>
+            <div class="field fullrow">
+              <label>Alamat*</label>
+              <div class="input-wrap">
+                <input id="addressInput" type="text" placeholder="Masukkan alamat" required />
+              </div>
+            </div>
+          </div>
 
-        <div class="actions">
-          <button class="secondary" id="backToStep1">Kembali</button>
-          <button id="toNextAfterUser">Lanjut</button>
-        </div>
-      </section>
+          <div class="actions">
+            <button class="secondary-btn" id="backToStep1">Kembali</button>
+            <button id="toNextAfterUser" class="primary-btn">Lanjut</button>
+          </div>
+        </section>
 
-      <!-- STEP 3 (seller only): store name -->
-      <section class="step" id="step-store">
-        <h2>Nama toko</h2>
-        <p class="desc">Ini akan tampil ke pembeli.</p>
+        <!-- STEP 3 (seller only): store name -->
+        <section class="step" id="step-store">
+          <div class="form-grid single">
+            <div class="field fullrow">
+              <label>Nama Toko*</label>
+              <div class="input-wrap">
+                <input id="storeNameInput" type="text" placeholder="Contoh: Warung Geprek Mbak Uni" />
+              </div>
+            </div>
+          </div>
 
-        <div class="field">
-          <label>Nama Toko</label>
-          <input id="storeNameInput" type="text" placeholder="Contoh: Warung Geprek Mbak Uni" />
-        </div>
+          <div class="actions">
+            <button class="secondary-btn" id="backToStep2">Kembali</button>
+            <button id="submitSeller" class="primary-btn">Daftar sebagai Penjual</button>
+          </div>
+        </section>
 
-        <div class="actions">
-          <button class="secondary" id="backToStep2">Kembali</button>
-          <button id="submitSeller">Daftar sebagai Penjual</button>
-        </div>
-      </section>
+        <!-- STEP 4 (buyer final submit / review) -->
+        <section class="step" id="step-review">
+          <div class="review-block">
+            <div class="summary-line">
+              <span class="summary-label">Peran:</span>
+              <span id="summaryRole"></span>
+            </div>
+            <div class="summary-line">
+              <span class="summary-label">Nama:</span>
+              <span id="summaryName"></span>
+            </div>
+            <div class="summary-line">
+              <span class="summary-label">Email:</span>
+              <span id="summaryEmail"></span>
+            </div>
+            <div class="summary-line seller-only" style="display:none">
+              <span class="summary-label">Nama Toko:</span>
+              <span id="summaryStore"></span>
+            </div>
+          </div>
 
-      <!-- STEP 4 (buyer final submit / review) -->
-      <section class="step" id="step-review">
-        <h2>Konfirmasi</h2>
-        <p class="desc">Periksa data kamu sebelum daftar.</p>
+          <div class="actions">
+            <button class="secondary-btn" id="backToStep2FromReview">Kembali</button>
+            <button id="submitBuyer" class="primary-btn">Buat Akun</button>
+          </div>
+        </section>
 
-        <div class="summary-line">
-          <span class="summary-label">Peran:</span> <span id="summaryRole"></span>
-        </div>
-        <div class="summary-line">
-          <span class="summary-label">Nama:</span> <span id="summaryName"></span>
-        </div>
-        <div class="summary-line">
-          <span class="summary-label">Email:</span> <span id="summaryEmail"></span>
-        </div>
-        <div class="summary-line seller-only" style="display:none">
-          <span class="summary-label">Nama Toko:</span> <span id="summaryStore"></span>
-        </div>
-
-        <div class="actions">
-          <button class="secondary" id="backToStep2FromReview">Kembali</button>
-          <button id="submitBuyer">Buat Akun</button>
-        </div>
-      </section>
+        <!-- terms -->
+        <footer class="terms">
+          <p>
+            Dengan mendaftar, saya menyetujui<br />
+            Syarat &amp; Ketentuan serta Kebijakan Privasi Tokopedia.
+          </p>
+        </footer>
+      </div>
     </div>
 
-    <!-- JS at the bottom so DOM is ready -->
     <script type="module" src="/script/Register.js"></script>
   </body>
 </html>

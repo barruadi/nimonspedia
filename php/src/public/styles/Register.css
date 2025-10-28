@@ -1,0 +1,293 @@
+/* PAGE WRAPPER */
+.register-page {
+  --green: #2f9d4a;
+  --green-bg: #d5edd8;
+  --border: #2f9d4a;
+  --radius-card: 12px;
+  --radius-field: 8px;
+  --radius-pill: 32px;
+  --text-main: #000;
+  --text-subtle: #1a1a1a;
+  --text-label: #000;
+  --bg-page: #f6f6f8;
+
+  font-family: system-ui, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
+  background: var(--bg-page);
+  min-height: 100dvh;
+  padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: var(--text-main);
+}
+
+/* CARD */
+.register-page .reg-card {
+  background: #fff;
+  width: 100%;
+  max-width: 720px;
+  border-radius: var(--radius-card);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  padding: 2rem 1.5rem 1.5rem;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* HEADER */
+.register-page .reg-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.register-page .reg-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 .5rem;
+  color: #000;
+}
+.register-page .reg-subtitle {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #000;
+  font-weight: 400;
+}
+.register-page .login-link {
+  color: var(--green);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* ERROR BOX */
+.register-page .error-box {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border-radius: .6rem;
+  padding: .6rem .8rem;
+  font-size: .8rem;
+  line-height: 1.3rem;
+  margin: 0 auto 1rem;
+  max-width: 600px;
+}
+
+/* STEP VISIBILITY */
+.register-page .step { display: none; }
+.register-page .step.active {
+  display: block;
+  animation: fade .18s ease-in;
+}
+@keyframes fade {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0);   }
+}
+
+/* ROLE LIST (vertical buttons instead of pill) */
+.register-page .role-list {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  max-width: 400px;
+  margin: 0 auto 2rem;
+}
+
+.register-page .role-item {
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border-radius: var(--radius-field);
+  border: 2px solid var(--border);
+  padding: .9rem 1rem .8rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.register-page .role-item.active {
+  background: var(--green-bg);
+  border-color: var(--green);
+}
+
+.register-page .role-main {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #000;
+  line-height: 1.3;
+  margin-bottom: .25rem;
+}
+.register-page .role-desc {
+  font-size: .9rem;
+  line-height: 1.4;
+  color: #4b5563;
+  font-weight: 400;
+}
+
+/* FORM GRID */
+.register-page .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-column-gap: 1.5rem;
+  grid-row-gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.register-page .form-grid.single {
+  grid-template-columns: 1fr;
+}
+.register-page .field {
+  display: flex;
+  flex-direction: column;
+}
+.register-page .field.fullrow {
+  grid-column: span 2;
+}
+
+/* LABEL */
+.register-page .field label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-label);
+  margin-bottom: .4rem;
+}
+
+/* INPUT WRAPPER */
+.register-page .input-wrap {
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-field);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  padding: .75rem .75rem;
+}
+.register-page .input-wrap.with-icon {
+  padding-right: 2.5rem; /* leave room for eye btn */
+}
+
+/* INPUT */
+.register-page .input-wrap input {
+  border: 0;
+  outline: none;
+  width: 100%;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #000;
+}
+.register-page .input-wrap input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+/* EYE BUTTON */
+.register-page .reveal-btn {
+  position: absolute;
+  right: .5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+
+/* ACTION BUTTONS */
+.register-page .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+}
+.register-page .actions.only-next {
+  justify-content: center;
+}
+
+/* Primary (green) */
+.register-page .primary-btn {
+  width: 100%;
+  max-width: 640px;
+  background: var(--green-bg);
+  color: var(--green);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  padding: .9rem 1rem;
+  border-radius: var(--radius-field);
+  border: 0;
+  cursor: pointer;
+  border: 2px solid var(--green-bg);
+}
+.register-page .primary-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Secondary (text button / back) */
+.register-page .secondary-btn {
+  background: transparent;
+  border: 0;
+  color: #000;
+  font-size: .95rem;
+  line-height: 1.2;
+  font-weight: 500;
+  cursor: pointer;
+  padding: .75rem 1rem;
+  border-radius: var(--radius-field);
+  border: 2px solid rgba(0,0,0,0.1);
+}
+
+/* REVIEW BLOCK */
+.register-page .review-block {
+  border-radius: var(--radius-field);
+  border: 2px solid var(--border);
+  padding: 1rem 1rem 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #000;
+}
+.register-page .summary-line {
+  margin-bottom: .75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.register-page .summary-label {
+  font-weight: 500;
+  color: #000;
+}
+
+/* TERMS */
+.register-page .terms {
+  text-align: center;
+  font-size: .9rem;
+  line-height: 1.4;
+  color: #000;
+  font-weight: 400;
+  padding-bottom: .5rem;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .register-page .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .register-page .field.fullrow {
+    grid-column: span 1;
+  }
+
+  .register-page .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .register-page .secondary-btn,
+  .register-page .primary-btn {
+    width: 100%;
+    max-width: none;
+  }
+}
