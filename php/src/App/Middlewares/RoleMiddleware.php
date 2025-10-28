@@ -10,7 +10,13 @@ class RoleMiddleware
             $user = $req['session']['user'] ?? null;
             if (!user) {
                 http_response_code(401);
-                return ['ok'=>false, 'error'=>['code'=>'AUTH', 'message'=>'Unauthenticated']];
+                return [
+                    'ok' => false, 
+                    'error' => [
+                        'code'=>'AUTH', 
+                        'message'=>'Unauthenticated'
+                    ]
+                ];
             }
             
             if (!in_array($user['role'], $roles, true)) {

@@ -95,8 +95,9 @@ function request(path, {
 }
 
 export const api = {
-  get:  (p, o = {})    => request(p, { ...o, method: 'GET' }),
-  post: (p, b, o = {}) => request(p, { ...o, method: 'POST',   body: b }),
-  put:  (p, b, o = {}) => request(p, { ...o, method: 'PUT',    body: b }),
-  del:  (p, o = {})    => request(p, { ...o, method: 'DELETE' }),
+  get:   (p, o = {})    => request(p, { ...o, method: 'GET' }),
+  post:  (p, b, o = {}) => request(p, { ...o, method: 'POST',   body: b }),
+  put:   (p, b, o = {}) => request(p, { ...o, method: 'PUT',    body: b }),
+  del:   (p, o = {})    => request(p, { ...o, method: 'DELETE' }),
+  patch: (p, b, o = {}) => request(p, { ...o, method: 'PATCH',  body: b }),
 };

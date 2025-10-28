@@ -16,6 +16,11 @@ class Router
         return $this->map('POST', $path, $callback, $mw);
     }
     
+    public function patch(string $path, callable $callback, array $mw = []): self
+    {
+        return $this->map('PATCH', $path, $callback, $mw);
+    }
+    
     public function group(array $opts, callable $callback): void 
     {
         $prefix = rtrim($opts['prefix'] ?? '', '/');
@@ -31,6 +36,11 @@ class Router
             public function post(string $path, callable $h, array $mw = []): void 
             {
                 $this->r->post($this->p . ($path ?: ''), $h, array_merge($this->m, $mw));
+            }
+            
+            public function patch(string $path, callable $h, array $mw = []): void 
+            {
+                $this->r->patch($this->p . ($path ?: ''), $h, array_merge($this->m, $mw));
             }
             
             public function map(string $method, string $path, callable $h, array $mw = []): void 
