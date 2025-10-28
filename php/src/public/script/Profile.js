@@ -7,12 +7,13 @@ import { api } from '/utils/api.js';
   try {
     const res = await api.get('/me');
     if (!res || res.ok === false) {
-      
+
       window.location.href = '/login';
       return;
     }
+
+    const { user } = res;
     
-    const { user } = res.user;
     document.getElementById('p-name').textContent = user.name || '';
     document.getElementById('p-email').textContent = user.email || '';
     document.getElementById('p-role').textContent = user.role || '';
