@@ -3,6 +3,7 @@
 use App\Core;
 
 use App\Core\Application;
+use App\Models\Categories;
 use App\Middlewares\AuthMiddleware;
 use App\Controllers\Seller\{DashboardController, ProductManagementController};
 
@@ -23,9 +24,7 @@ $router->group([
 // Public Endpoints (can be called from non-sellers)
 // GET /api/categories return categories list
 $router->get('/api/categories', function() {
-    $db = \App\Core\Database::getInstance();
-    $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
-    $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    $categories = Categories::getAll();
     
     http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');
