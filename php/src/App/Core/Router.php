@@ -21,6 +21,16 @@ class Router
         return $this->map('PATCH', $path, $callback, $mw);
     }
     
+    public function put(string $path, callable $callback, array $mw = []): self
+    {
+        return $this->map('PUT', $path, $callback, $mw);
+    }
+    
+    public function delete(string $path, callable $callback, array $mw = []): self
+    {
+        return $this->map('DELETE', $path, $callback, $mw);
+    }
+    
     public function group(array $opts, callable $callback): void 
     {
         $prefix = rtrim($opts['prefix'] ?? '', '/');
@@ -41,6 +51,16 @@ class Router
             public function patch(string $path, callable $h, array $mw = []): void 
             {
                 $this->r->patch($this->p . ($path ?: ''), $h, array_merge($this->m, $mw));
+            }
+            
+            public function put(string $path, callable $h, array $mw = []): void 
+            {
+                $this->r->put($this->p . ($path ?: ''), $h, array_merge($this->m, $mw));
+            }
+            
+            public function delete(string $path, callable $h, array $mw = []): void 
+            {
+                $this->r->delete($this->p . ($path ?: ''), $h, array_merge($this->m, $mw));
             }
             
             public function map(string $method, string $path, callable $h, array $mw = []): void 
