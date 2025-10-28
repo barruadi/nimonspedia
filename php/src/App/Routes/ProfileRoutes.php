@@ -10,8 +10,8 @@ $auth = AuthMiddleware::requireAuth();
 
 $router->group([
     'prefix'     => '/api/profile',
-    'middleware' => [$auth]
+    'middleware' => [$auth],
 ], function($r) {
-    $r->patch('/change-password',   fn($req) => (new ProfileController())->updatePassword());
-    $r->patch('/change-username',   fn($req) => (new ProfileController())->updateUsername());
+    $r->patch('/change-password',   fn($req) => (new ProfileController())->updatePassword($req));
+    $r->patch('/change-username',   fn($req) => (new ProfileController())->updateUsername($req));
 });
