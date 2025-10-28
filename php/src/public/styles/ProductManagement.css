@@ -1,0 +1,31 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.product-management-page {
+    display: flex;
+    flex-direction: row;
+    gap: 4rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+/* Responsive Design */
+
+@media (max-width: 1024px) {
+    /* TO-DO: Add responsive styles for product management page here */
+}
+
+@media (max-width: 640px) {
+    /* TO-DO: Add responsive styles for product management page here */
+    
+    .toast {
+        top: 1rem;
+        right: 1rem;
+        left: 1rem;
+    }
+}
