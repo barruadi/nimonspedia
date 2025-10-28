@@ -26,7 +26,6 @@ const fullNameInput        = document.getElementById('fullNameInput');
 const emailInput           = document.getElementById('emailInput');
 const passwordInput        = document.getElementById('passwordInput');
 const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-const addressInput         = document.getElementById('addressInput');
 const storeNameInput       = document.getElementById('storeNameInput');
 
 // error box
@@ -79,9 +78,8 @@ function validateBaseFields() {
   const email     = emailInput.value.trim();
   const password  = passwordInput.value;
   const confirm   = confirmPasswordInput ? confirmPasswordInput.value : '';
-  const address   = addressInput ? addressInput.value.trim() : '';
 
-  if (!fullName || !email || !password || !confirm || !address) {
+  if (!fullName || !email || !password || !confirm) {
     showError('Lengkapi semua data.');
     return false;
   }
@@ -137,7 +135,7 @@ async function submitSeller() {
     email,
     password,
     role: 'seller',
-    store_name,
+    store_name
   });
 
   if (!res || res.ok === false) {

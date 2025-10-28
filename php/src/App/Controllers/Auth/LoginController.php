@@ -30,11 +30,14 @@ class LoginController
         
         $user = User::authenticate($email, $password);
         
+        if (!$user) {
+            return [
+                'ok' => false
+            ];
+        }
+        
         // setup session
         $_SESSION['user']      = $user;
-        // $_SESSION['user_id']   = $user['user_id'];
-        // $_SESSION['role']      = $user['role'];
-        // $_SESSION['full_name'] = $user['full_name'];
         
         return [
             'ok' => true,

@@ -29,11 +29,11 @@ class Database {
         return $row === false ? null : $row;
     }
     
-    public static function executeA(string $sql, array $params = []): int
+    public static function executeQuery(string $sql, array $params = []): int
     {
         $stmt = self::getInstance()->prepare($sql);
         $stmt->execute($params);
-        return $stmt->rowCount(PDO::FETCH_ASSOC);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
     public static function pdo(): PDO

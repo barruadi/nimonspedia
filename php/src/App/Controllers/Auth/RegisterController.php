@@ -3,6 +3,7 @@
 namespace App\Controllers\Auth;
 
 use App\Models\User;
+use App\Models\Store;
 
 class RegisterController
 {
@@ -24,24 +25,31 @@ class RegisterController
         $role       = $req['body']['role'] ?? 'buyer';
         
         // Verifications
-        
+        // [ TODO ]
         
         
         $user = User::create($name, $email, $password, $role);
+        
         if ($user === null) {
             return [
-                'ok' => false,
-                'user' => [
-                    'name' => $name,
-                    'email'     => $email,
-                    'pass'     => $password,
-                    'role'     => $role
-                ]
+                'ok' => false
             ];
         }
         
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
+        if ($role === 'seller') {
+            $store_name  = $req['body']['store_name'] ?? '' ;
+            $description = $req['body']['description'] ?? '' ;
+            $logo_path   = $req['body']['logo_path'] ?? '' ;
+            
+            $store = Store::create($user['user_id'], $store_name, $description, $logo_path);
+            
+            return [
+                'ok' => true,
+                'user' => $user,
+                'store' => $store
+            ];
+        }
+        
         return [
             'ok' => true,
             'user' => $user
