@@ -42,11 +42,23 @@ CREATE TABLE IF NOT EXISTS stores (
 );
 
 
+-- CATEGORIES
+
+CREATE TABLE IF NOT EXISTS categories (
+  category_id    INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name           TEXT NOT NULL UNIQUE,
+  description    TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
 -- PRODUCTS
 
 CREATE TABLE IF NOT EXISTS products (
   product_id     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   store_id       INTEGER NOT NULL REFERENCES stores(store_id) ON DELETE CASCADE,
+  category_id    INTEGER REFERENCES categories(category_id) ON DELETE SET NULL,
   name           TEXT NOT NULL,
   description    TEXT,
   price          NUMERIC(12,2) NOT NULL CHECK (price >= 0),
@@ -60,6 +72,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_store ON products(store_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_price ON products(price);
 CREATE INDEX IF NOT EXISTS idx_products_not_deleted ON products(is_deleted) WHERE is_deleted = FALSE;
 

@@ -1,4 +1,3 @@
--- 02_seed.sql (resilient)
 \set ON_ERROR_STOP on
 
 BEGIN;
@@ -23,7 +22,7 @@ DECLARE
 BEGIN
   FOR t IN
     SELECT unnest(ARRAY[
-      'order_items','orders','cart_items','carts','products','stores','users'
+      'order_items','orders','cart_items','carts','products','categories','stores','users'
     ]) AS t
   LOOP
     IF EXISTS (
@@ -55,32 +54,67 @@ FROM (
 JOIN users u ON u.email = s.owner_email
 ON CONFLICT (store_name) DO NOTHING;
 
--- PRODUCTS (unique per store: (store_id, name))
+-- CATEGORIES (NEW)
+INSERT INTO categories (name, description)
+VALUES
+  ('Electronics', 'Electronic devices and accessories'),
+  ('Computers & Laptops', 'Computing devices and peripherals'),
+  ('Audio & Video', 'Audio and video equipment'),
+  ('Food & Beverages', 'Fresh and packaged food items'),
+  ('Dairy Products', 'Milk, cheese, and dairy items'),
+  ('Beverages', 'Coffee, tea, and drinks'),
+  ('Fresh Produce', 'Fruits and vegetables'),
+  ('Fashion', 'Clothing and accessories'),
+  ('Home & Living', 'Home decor and furniture'),
+  ('Sports & Outdoors', 'Sports equipment and outdoor gear')
+ON CONFLICT (name) DO NOTHING;
+
+-- PRODUCTS (updated with category_id)
 WITH s AS (
   SELECT store_id, store_name FROM stores
+),
+c AS (
+  SELECT category_id, name AS category_name FROM categories
 )
-INSERT INTO products (store_id, name, description, price, stock, image_path)
-SELECT s.store_id, p.name, p.description, p.price, p.stock, p.img
+INSERT INTO products (store_id, category_id, name, description, price, stock, image_path)
+SELECT s.store_id, c.category_id, p.name, p.description, p.price, p.stock, p.img
 FROM s
+CROSS JOIN c
 JOIN (
-  -- Gadget Hub
-  SELECT 'Gadget Hub'::text AS store_name, * FROM (
+  -- Gadget Hub products
+  SELECT 'Gadget Hub'::text AS store_name, 'Electronics'::text AS category_name, * FROM (
     VALUES
       ('Wireless Mouse','2.4GHz ergonomic mouse',12.99,120,'/img/mouse.jpg'),
-      ('Mechanical Keyboard','RGB blue switch keyboard',59.90,60,'/img/keyboard.jpg'),
-      ('USB-C Charger 65W','PD fast charger',29.50,80,'/img/charger.jpg'),
-      ('Noise-Canceling Headphones','Over-ear ANC',129.00,35,'/img/headphones.jpg')
+      ('USB-C Charger 65W','PD fast charger',29.50,80,'/img/charger.jpg')
   ) g(name,description,price,stock,img)
   UNION ALL
-  -- FreshMart
-  SELECT 'FreshMart', * FROM (
+  SELECT 'Gadget Hub', 'Computers & Laptops', * FROM (
     VALUES
-      ('Organic Apples (1kg)','Crisp & sweet',3.99,200,'/img/apples.jpg'),
-      ('Free-Range Eggs (10)','Large, Grade A',2.89,150,'/img/eggs.jpg'),
-      ('Whole Milk (1L)','Fresh dairy milk',1.39,180,'/img/milk.jpg'),
-      ('Arabica Coffee Beans (500g)','Medium roast',8.49,90,'/img/coffee.jpg')
+      ('Mechanical Keyboard','RGB blue switch keyboard',59.90,60,'/img/keyboard.jpg')
+  ) g2(name,description,price,stock,img)
+  UNION ALL
+  SELECT 'Gadget Hub', 'Audio & Video', * FROM (
+    VALUES
+      ('Noise-Canceling Headphones','Over-ear ANC',129.00,35,'/img/headphones.jpg')
+  ) g3(name,description,price,stock,img)
+  UNION ALL
+  -- FreshMart products
+  SELECT 'FreshMart', 'Fresh Produce', * FROM (
+    VALUES
+      ('Organic Apples (1kg)','Crisp & sweet',3.99,200,'/img/apples.jpg')
   ) f(name,description,price,stock,img)
-) p ON p.store_name = s.store_name
+  UNION ALL
+  SELECT 'FreshMart', 'Dairy Products', * FROM (
+    VALUES
+      ('Free-Range Eggs (10)','Large, Grade A',2.89,150,'/img/eggs.jpg'),
+      ('Whole Milk (1L)','Fresh dairy milk',1.39,180,'/img/milk.jpg')
+  ) f2(name,description,price,stock,img)
+  UNION ALL
+  SELECT 'FreshMart', 'Beverages', * FROM (
+    VALUES
+      ('Arabica Coffee Beans (500g)','Medium roast',8.49,90,'/img/coffee.jpg')
+  ) f3(name,description,price,stock,img)
+) p ON p.store_name = s.store_name AND p.category_name = c.category_name
 ON CONFLICT ON CONSTRAINT uq_products_store_name DO NOTHING;
 
 -- CARTS
@@ -106,8 +140,8 @@ UNION ALL
 SELECT (SELECT cart_id FROM cb2), (SELECT product_id FROM pk), 2
 ON CONFLICT (cart_id, product_id) DO NOTHING;
 
--- ORDERS + ORDER ITEMS + totals
--- A
+-- ORDERS + ORDER ITEMS (same as before, products will auto-match)
+-- Order A: Alice from Gadget Hub (approved)
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, delivery_time)
@@ -125,16 +159,7 @@ UNION ALL
 SELECT (SELECT order_id FROM o), (SELECT product_id FROM c), (SELECT price FROM c), 2
 ON CONFLICT DO NOTHING;
 
-UPDATE orders o
-SET total_amount = COALESCE(oi.sum_sub,0), updated_at = NOW()
-FROM (
-  SELECT order_id, SUM(subtotal) AS sum_sub
-  FROM order_items
-  GROUP BY order_id
-) oi
-WHERE o.order_id = oi.order_id;
-
--- B
+-- Order B: Alice from FreshMart (waiting_approval)
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount)
@@ -152,16 +177,7 @@ UNION ALL
 SELECT (SELECT order_id FROM o), (SELECT product_id FROM m), (SELECT price FROM m), 6
 ON CONFLICT DO NOTHING;
 
-UPDATE orders o
-SET total_amount = COALESCE(oi.sum_sub,0), updated_at = NOW()
-FROM (
-  SELECT order_id, SUM(subtotal) AS sum_sub
-  FROM order_items
-  GROUP BY order_id
-) oi
-WHERE o.order_id = oi.order_id;
-
--- C
+-- Order C: Bob from Gadget Hub (on_delivery)
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, delivery_time)
@@ -176,16 +192,7 @@ INSERT INTO order_items (order_id, product_id, price_at, qty)
 SELECT (SELECT order_id FROM o), (SELECT product_id FROM h), (SELECT price FROM h), 1
 ON CONFLICT DO NOTHING;
 
-UPDATE orders o
-SET total_amount = COALESCE(oi.sum_sub,0), updated_at = NOW()
-FROM (
-  SELECT order_id, SUM(subtotal) AS sum_sub
-  FROM order_items
-  GROUP BY order_id
-) oi
-WHERE o.order_id = oi.order_id;
-
--- D
+-- Order D: Bob from FreshMart (received)
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, delivery_time)
@@ -203,16 +210,7 @@ UNION ALL
 SELECT (SELECT order_id FROM o), (SELECT product_id FROM cf), (SELECT price FROM cf), 1
 ON CONFLICT DO NOTHING;
 
-UPDATE orders o
-SET total_amount = COALESCE(oi.sum_sub,0), updated_at = NOW()
-FROM (
-  SELECT order_id, SUM(subtotal) AS sum_sub
-  FROM order_items
-  GROUP BY order_id
-) oi
-WHERE o.order_id = oi.order_id;
-
--- E
+-- Order E: Alice from FreshMart (rejected)
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, reject_reason)
@@ -227,8 +225,9 @@ INSERT INTO order_items (order_id, product_id, price_at, qty)
 SELECT (SELECT order_id FROM o), (SELECT product_id FROM a), (SELECT price FROM a), 1
 ON CONFLICT DO NOTHING;
 
+-- Update all order totals
 UPDATE orders o
-SET total_amount = COALESCE(oi.sum_sub,0), updated_at = NOW()
+SET total_amount = COALESCE(oi.sum_sub, 0), updated_at = NOW()
 FROM (
   SELECT order_id, SUM(subtotal) AS sum_sub
   FROM order_items

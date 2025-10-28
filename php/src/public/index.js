@@ -22,6 +22,15 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
+  '/products/add': {
+    page: '/pages/AddProductPage.html',
+    script: '/script/AddProduct.js',
+  },
+  // Dynamic route for edit product
+  '/products/edit/:id': {
+    page: '/pages/EditProductPage.html',
+    script: '/script/EditProduct.js',
+  }
 };
 
 const app = document.getElementById('app');
@@ -34,19 +43,56 @@ function mountNavbar() {
   }
 }
 
+// Match dynamic routes
+function matchRoute(pathname) {
+  if (routes[pathname]) {
+    return { route: routes[pathname], params: {} };
+  }
+
+  for (const [pattern, route] of Object.entries(routes)) {
+    const regex = new RegExp('^' + pattern.replace(/:\w+/g, '([^/]+)') + '$');
+    const match = pathname.match(regex);
+    
+    if (match) {
+      const paramNames = (pattern.match(/:\w+/g) || []).map(p => p.substring(1));
+      
+      const params = {};
+      paramNames.forEach((name, index) => {
+        params[name] = match[index + 1];
+      });
+      
+      return { route, params };
+    }
+  }
+
+  return { route: routes['/'], params: {} };
+}
+
 async function render(pathname) {
-  const route = routes[pathname] || routes['/'];
+  const { route, params } = matchRoute(pathname);
 
   try {
-    const res = await fetch(route.page, { cache: 'no-store' });
+    const cacheBuster = Date.now();
+    const res = await fetch(`${route.page}?_=${cacheBuster}`, { 
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+    
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 
     const html = await res.text();
     app.innerHTML = html;
 
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    window.routeParams = params;
+
     if (route.script) {
       const modulePath = route.script.replace(/^\//, './');
-      await import(modulePath);
+      await import(`${modulePath}?_=${cacheBuster}`);
     }
   } catch (e) {
     app.innerHTML = `
