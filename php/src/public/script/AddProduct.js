@@ -1,253 +1,294 @@
 import { api } from '../utils/api.js';
 
-// Initialize Quill Rich Text Editor
-const quill = new Quill('#editor', {
-    theme: 'snow',
-    placeholder: 'Enter product description (max 1000 characters)...',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            ['clean']
-        ]
-    }
-});
+function initAddProductPage() {
+    console.log('DOM ready, initializing page...');
 
-// Character limit for description
-quill.on('text-change', function() {
-    const text = quill.getText();
-    if (text.length > 1000) {
-        quill.deleteText(1000, text.length);
-        document.getElementById('descError').textContent = 'Maximum 1000 characters';
-    } else {
-        document.getElementById('descError').textContent = '';
-    }
-});
+    // Image Upload Handler
 
-// Fetch store info and categories when page loads
-async function initForm() {
-    try {
-        const result = await api.get('/seller/products/add');
-        
-        if (!result || !result.ok) {
-            showToast(result?.error || 'Unauthorized', 'error');
-            setTimeout(() => window.location.href = '/login', 1500);
-            return;
-        }
-        
-        // Set store info
-        document.getElementById('store_id').value = result.data.store_id;
-        document.getElementById('store_name').textContent = result.data.store_name || 'Unknown';
-        
-        // Populate categories
-        if (result.data.categories) {
-            populateCategories(result.data.categories);
-        }
-        
-    } catch (error) {
-        console.error('Error fetching store info:', error);
-        showToast('Failed to load store information', 'error');
-    }
-}
+    const uploadBtn = document.getElementById('uploadBtn');
+    const productImageInput = document.getElementById('productImage');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
 
-// Fetch categories from API
-async function fetchCategories() {
-    try {
-        const result = await api.get('/categories'); // sesuaikan endpoint
-        if (result && result.ok) {
-            populateCategories(result.data);
-        }
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-    }
-}
-
-// Populate category dropdown
-function populateCategories(categories) {
-    const select = document.getElementById('productCategory');
-    categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.category_id;
-        option.textContent = cat.name;
-        select.appendChild(option);
+    // Debug: Check if elements exist
+    console.log('Elements found:', {
+        uploadBtn: !!uploadBtn,
+        productImageInput: !!productImageInput,
+        imagePlaceholder: !!imagePlaceholder,
+        imagePreviewContainer: !!imagePreviewContainer,
+        imagePreview: !!imagePreview
     });
-}
 
-// Image preview handler
-document.getElementById('productImage').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const errorEl = document.getElementById('imageError');
-    errorEl.textContent = '';
-    
-    if (!file) return;
-    
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-        errorEl.textContent = 'Only JPG, JPEG, PNG, WEBP allowed';
-        e.target.value = '';
-        return;
-    }
-    
-    // Validate file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB
-    if (file.size > maxSize) {
-        errorEl.textContent = 'File size must be less than 2MB';
-        e.target.value = '';
-        return;
-    }
-    
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        document.getElementById('previewImage').src = event.target.result;
-        document.getElementById('previewContainer').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-});
+    // Click upload button -> trigger file input
+    uploadBtn?.addEventListener('click', () => {
+        productImageInput?.click();
+    });
 
-// Change image button
-document.getElementById('changeImageBtn').addEventListener('click', function() {
-    document.getElementById('productImage').click();
-});
+    // Also make container clickable
+    document.querySelector('.image-upload-container')?.addEventListener('click', () => {
+        productImageInput?.click();
+    });
 
-// Cancel button
-document.getElementById('cancelBtn').addEventListener('click', function() {
-    if (confirm('Batal menambahkan produk? Perubahan tidak akan disimpan.')) {
-        window.location.href = '/seller/product-management'; // sesuaikan route
-    }
-});
-
-// Form validation
-function validateForm(formData) {
-    let isValid = true;
-    
-    // Clear previous errors
-    document.querySelectorAll('.error').forEach(el => el.textContent = '');
-    
-    // Name validation
-    const name = formData.get('name');
-    if (!name || name.length > 200) {
-        document.getElementById('nameError').textContent = 'Name required (max 200 chars)';
-        isValid = false;
-    }
-    
-    // Description validation
-    const descText = quill.getText().trim();
-    if (descText.length === 0 || descText.length > 1000) {
-        document.getElementById('descError').textContent = 'Description required (max 1000 chars)';
-        isValid = false;
-    }
-    
-    // Category validation
-    const category = formData.get('category_id');
-    if (!category) {
-        document.getElementById('categoryError').textContent = 'Category required';
-        isValid = false;
-    }
-    
-    // Price validation
-    const price = parseFloat(formData.get('price'));
-    if (!price || price < 1000) {
-        document.getElementById('priceError').textContent = 'Price must be at least Rp 1,000';
-        isValid = false;
-    }
-    
-    // Stock validation
-    const stock = parseInt(formData.get('stock'));
-    if (stock < 0 || isNaN(stock)) {
-        document.getElementById('stockError').textContent = 'Stock must be 0 or more';
-        isValid = false;
-    }
-    
-    // Image validation
-    const image = formData.get('image');
-    if (!image || image.size === 0) {
-        document.getElementById('imageError').textContent = 'Product image required';
-        isValid = false;
-    }
-    
-    return isValid;
-}
-
-// Show toast notification
-function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.style.background = type === 'success' ? '#4CAF50' : '#f44336';
-    toast.style.display = 'block';
-    setTimeout(() => {
-        toast.style.display = 'none';
-    }, 3000);
-}
-
-// Handle form submission
-const form = document.getElementById('addProductForm');
-if (form) {
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    // Handle file selection
+    productImageInput?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
         
-        // Get Quill content and set to hidden input
-        const descHtml = quill.root.innerHTML;
-        document.getElementById('productDescription').value = descHtml;
+        if (!file) return;
         
-        // Get form data
-        const formData = new FormData(e.target);
-        
-        // Client-side validation
-        if (!validateForm(formData)) {
-            showToast('Please fix validation errors', 'error');
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showToast('Format file harus JPG, PNG, atau WEBP', 'error');
+            e.target.value = '';
             return;
         }
         
-        // Disable submit button
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Uploading...';
+        // Validate file size (max 2MB)
+        const maxSize = 2 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showToast('Ukuran file maksimal 2MB', 'error');
+            e.target.value = '';
+            return;
+        }
         
-        // Show progress bar
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        progressBar.style.display = 'block';
-        
-        // Simulate progress (you can use XHR for real progress)
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-            progress += 10;
-            progressFill.style.width = progress + '%';
-            if (progress >= 90) clearInterval(progressInterval);
-        }, 100);
-        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            imagePreview.src = event.target.result;
+            imagePlaceholder.style.display = 'none';
+            imagePreviewContainer.style.display = 'flex';
+            uploadBtn.textContent = 'Ganti Foto';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Fetch Categories (using api/categories)
+
+    async function fetchCategories() {
         try {
-            const result = await api.post('/seller/products/add', formData);
+            console.log('Fetching categories...');
+            const result = await api.get('/categories');
             
-            clearInterval(progressInterval);
-            progressFill.style.width = '100%';
+            console.log('Categories response:', result);
             
-            if (result && result.ok) {
-                showToast('Produk berhasil ditambahkan', 'success');
-                
-                // Redirect after 1.5 seconds
-                setTimeout(() => {
-                    window.location.href = '/seller/product-management';
-                }, 1500);
-                
+            if (result && result.ok && result.data) {
+                console.log('Categories data received:', result.data.length, 'items');
+                populateCategories(result.data);
             } else {
-                throw new Error(result?.error || 'Failed to add product');
+                console.error('Invalid categories response:', result);
+            }
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    }
+
+    function populateCategories(categories) {
+        const select = document.getElementById('productCategory');
+        
+        console.log('Checking productCategory element:', select);
+        
+        if (!select) {
+            console.error('Category select not found in DOM!');
+            console.log('Available select elements:', document.querySelectorAll('select'));
+            return;
+        }
+        
+        console.log('Category select found, populating...');
+        
+        // Clear existing options (keep placeholder)
+        select.innerHTML = '<option value="">Pilih kategori produk</option>';
+        
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.category_id;
+            option.textContent = cat.name;
+            select.appendChild(option);
+        });
+        
+        console.log('Categories populated:', select.options.length - 1, 'options added');
+    }
+
+    // Init Form
+
+    async function initForm() {
+        try {
+            console.log('Fetching store info...');
+            const result = await api.get('/seller/products/add');
+            
+            console.log('Store info response:', result);
+            
+            if (!result || !result.ok) {
+                console.warn('Store info request failed:', result);
+                // Don't block category fetch if store info fails
+                // showToast('Unauthorized - Please login as seller', 'error');
+                // setTimeout(() => window.location.href = '/login', 1500);
+                // return;
+            } else {
+                // Set store ID
+                const storeIdInput = document.getElementById('store_id');
+                if (storeIdInput) {
+                    storeIdInput.value = result.data.store_id;
+                    console.log('Store ID set:', result.data.store_id);
+                } else {
+                    console.error('store_id input not found!');
+                }
             }
             
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            showToast(error.message || 'Network error. Please try again.', 'error');
+            // Fetch categories (always, even if store info fails)
+            await fetchCategories();
             
-            // Re-enable submit button
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Simpan';
-            progressBar.style.display = 'none';
-            progressFill.style.width = '0%';
+        } catch (error) {
+            console.error('Error in initForm:', error);
+            showToast('Gagal memuat informasi toko', 'error');
         }
-    });
+    }
+
+    // Form Validation
+
+    function validateForm(formData) {
+        let isValid = true;
+        
+        // Clear previous errors
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        
+        // Name
+        const name = formData.get('name');
+        if (!name || name.trim().length === 0) {
+            document.getElementById('nameError').textContent = 'Nama produk wajib diisi';
+            isValid = false;
+        } else if (name.length > 200) {
+            document.getElementById('nameError').textContent = 'Maksimal 200 karakter';
+            isValid = false;
+        }
+        
+        // Description
+        const desc = formData.get('description');
+        if (!desc || desc.trim().length === 0) {
+            document.getElementById('descError').textContent = 'Deskripsi wajib diisi';
+            isValid = false;
+        } else if (desc.length > 1000) {
+            document.getElementById('descError').textContent = 'Maksimal 1000 karakter';
+            isValid = false;
+        }
+        
+        // Category
+        const category = formData.get('category_id');
+        if (!category) {
+            document.getElementById('categoryError').textContent = 'Kategori wajib dipilih';
+            isValid = false;
+        }
+        
+        // Price
+        const price = parseFloat(formData.get('price'));
+        if (!price || price < 1000) {
+            document.getElementById('priceError').textContent = 'Harga minimal Rp 1.000';
+            isValid = false;
+        }
+        
+        // Stock
+        const stock = parseInt(formData.get('stock'));
+        if (isNaN(stock) || stock < 0) {
+            document.getElementById('stockError').textContent = 'Stok minimal 0';
+            isValid = false;
+        }
+        
+        // Image
+        const image = formData.get('image');
+        if (!image || image.size === 0) {
+            showToast('Foto produk wajib diunggah', 'error');
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+
+    // Form Submission
+
+    const form = document.getElementById('addProductForm');
+    if (form) {
+        console.log('Form found, attaching submit handler');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            // Add image file
+            const imageFile = productImageInput?.files[0];
+            if (imageFile) {
+                formData.set('image', imageFile);
+            }
+            
+            // Validate
+            if (!validateForm(formData)) {
+                return;
+            }
+            
+            // Disable submit button
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Menyimpan...';
+            
+            try {
+                const result = await api.post('/seller/products/add', formData);
+                
+                if (result && result.ok) {
+                    showToast('Produk berhasil ditambahkan!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/seller/products';
+                    }, 1500);
+                } else {
+                    throw new Error(result?.error || 'Gagal menambahkan produk');
+                }
+                
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                showToast(error.message, 'error');
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Simpan';
+            }
+        });
+    } else {
+        console.error('Form #addProductForm not found!');
+    }
+
+    // Cancel button
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            if (confirm('Batal menambahkan produk? Perubahan tidak akan disimpan.')) {
+                window.location.href = '/seller/products';
+            }
+        });
+    }
+
+    // Toast Notification
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        if (!toast) {
+            console.error('Toast element not found!');
+            return;
+        }
+        
+        toast.textContent = message;
+        toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+        toast.style.display = 'block';
+        
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3000);
+    }
+
+    console.log('Initializing AddProduct page...');
+    initForm();
 }
 
-// Initialize form on page load
-initForm();
+if (document.readyState === 'loading') {
+    console.log('DOM still loading, waiting...');
+    document.addEventListener('DOMContentLoaded', initAddProductPage);
+} else {
+    console.log('DOM already loaded, running immediately');
+    setTimeout(initAddProductPage, 100);
+}
