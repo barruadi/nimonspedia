@@ -46,7 +46,7 @@ class Product
         $db = self::getDB();
         $stmt = $db->prepare("
             SELECT * FROM products 
-            WHERE store_id = :store_id AND is_deleted = FALSE
+            WHERE store_id = :store_id AND is_deleted <> TRUE
             ORDER BY created_at DESC
         ");
         $stmt->execute(['store_id' => $storeId]);
