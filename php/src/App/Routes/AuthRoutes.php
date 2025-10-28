@@ -15,8 +15,9 @@ $router->group([
   $r->post('/login',    fn($req) => (new LoginController())->login($req));
   $r->get('/register',  fn($req) => (new RegisterController())->show());
   $r->post('/register', fn($req) => (new RegisterController())->register($req));
-  $r->post('/logout',   fn($req) => (new LogoutController())->logout($req));
 });
+
+$router->get('/api/logout', fn($req) => (new LogoutController())->logout(), [$auth]);
 
 // Sanity checks ------------------------
 $router->get('/api/me', function ($req) {
@@ -24,8 +25,8 @@ $router->get('/api/me', function ($req) {
     return [
         'authenticated' => (bool)$u,
         'user' => $u ? [
-            'id'    => $u['id'],
-            'name'  => $u['name'],
+            'id'    => $u['user_id'],
+            'name'  => $u['full_name'],
             'email' => $u['email'],
             'role'  => $u['role'],
         ] : null
@@ -36,3 +37,10 @@ $router->post('/api/_echo', fn($req) => [
   'content_type' => $_SERVER['CONTENT_TYPE'] ?? null,
   'body' => $req['body'],
 ]);
+
+$router->get('/api/session', function ($req) {
+    return [
+        'session' => $_SESSION,
+        'session_id' => session_id(),
+    ];
+});
