@@ -14,7 +14,7 @@ session_start([
 $app = new Application();
 
 $router = $app->router;
-foreach (glob(__DIR__ . '/app/routes/*.php') as $file) {
+foreach (glob(__DIR__ . '/App/Routes/*.php') as $file) {
     require $file;
 }
 
