@@ -7,25 +7,21 @@ use App\Middlewares\AuthMiddleware;
 use App\Controllers\Seller\{DashboardController, ProductManagementController};
 
 $auth = AuthMiddleware::requireAuth();
-// TODO: Add role check for 'seller' here, may be something like below
-// $auth = AuthMiddleware::requireRole('seller');
-
 
 $router->group([
   'prefix'      => '/api/seller',
   'middleware'  => [$auth],
-  /* TODO: If sellerOnly middleware is already defined
-    'middleware'  => [$auth, $sellerOnly],  */
     ], function($r) {
-        $r->get('/dashboard', fn($req) => (new DashboardController())->showDashboard());
-        $r->get('/products/add',  fn($req) => (new ProductManagementController())->showAddProductForm());
-        $r->post('/products/add', fn($req) => (new ProductManagementController())->handleAddProduct($req));
+        $r->get('/dashboard',           fn($req) => (new DashboardController())->showDashboard());
+        $r->get('/products',            fn($req) => (new ProductManagementController())->getStoreProducts());
+        $r->get('/products/add',        fn($req) => (new ProductManagementController())->showAddProductForm());
+        $r->post('/products/add',       fn($req) => (new ProductManagementController())->handleAddProduct($req));
         $r->get('/products/edit/{id}',  fn($req, $id) => (new ProductManagementController())->showEditProductForm($id));
         $r->post('/products/edit/{id}', fn($req, $id) => (new ProductManagementController())->handleEditProduct($req, $id));
     }); 
 
-// PUBLIC ENDPOINTS
-// GET /api/categories - to populate categories dropdown
+// Public Endpoints (can be called from non-sellers)
+// GET /api/categories return categories list
 $router->get('/api/categories', function() {
     $db = \App\Core\Database::getInstance();
     $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
@@ -42,7 +38,7 @@ $router->get('/api/categories', function() {
     exit; 
 });
 
-// SANITY CHECKS
+// Sanity Checks (get and post)
 $router->get('/api/me', function ($req) {
     $u = $_SESSION['user'] ?? null;
     return [
