@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Profil</title>
+    <link rel="stylesheet" href="/styles/Profile.css">
+  </head>
+
+  <body>
+    <main class="profile-page">
+      <!-- LEFT ILLUSTRATION / MARKETING -->
+      <section class="profile-left">
+        <div class="profile-illus">
+          <img src="/assets/profile-hero.png" class="hero-img" alt="Edit Profil" />
+        </div>
+      </section>
+
+      <!-- RIGHT CARD -->
+      <section class="profile-card" id="profile-root">
+        <div id="profile-loading" class="loading-row">Loading…</div>
+
+        <div id="profile-content" style="display:none">
+          <h2 class="card-title">Ubah Biodata Diri</h2>
+
+          <!-- ROW: NAME -->
+          <div class="info-row">
+            <div class="info-label">Nama</div>
+            <div class="info-value">
+              <span id="p-name" class="info-text"></span>
+              <button id="editNameBtn" class="link-edit">Ubah</button>
+            </div>
+          </div>
+
+          <!-- inline name edit form (starts hidden) -->
+          <form id="nameForm" class="edit-inline" style="display:none">
+            <input id="nameInput" class="inline-input" type="text" />
+            <div class="inline-actions">
+              <button type="button" id="cancelNameBtn" class="cancel-btn">Batal</button>
+              <button type="submit" class="save-btn">Simpan</button>
+            </div>
+          </form>
+
+          <!-- ROW: EMAIL -->
+          <div class="info-row">
+            <div class="info-label">Email</div>
+            <div class="info-value">
+              <span id="p-email" class="info-text"></span>
+            </div>
+          </div>
+
+          <!-- CHANGE PASSWORD BUTTON (shows password box below when clicked) -->
+          <button id="changePwBtn" class="pw-btn">Ubah kata sandi</button>
+
+          <!-- password change form (hidden by default) -->
+          <form id="pwForm" class="pw-form" style="display:none">
+            <div class="pw-field">
+              <label>Password Lama</label>
+              <input id="oldPwInput" type="password" placeholder="Masukkan password lama" required />
+            </div>
+            <div class="pw-field">
+              <label>Password Baru</label>
+              <input id="newPwInput" type="password" placeholder="Masukkan password baru" required />
+            </div>
+            <div class="pw-field">
+              <label>Ulangi Password Baru</label>
+              <input id="newPwConfirmInput" type="password" placeholder="Ulangi password baru" required />
+            </div>
+
+            <div class="pw-actions">
+              <button type="button" id="cancelPwBtn" class="cancel-btn">Batal</button>
+              <button type="submit" class="save-btn">Simpan</button>
+            </div>
+          </form>
+
+          <!-- error / status -->
+          <div id="profile-error" class="error-msg" style="display:none"></div>
+          <div id="profile-success" class="success-msg" style="display:none"></div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/script/Profile.js"></script>
+  </body>
+</html>

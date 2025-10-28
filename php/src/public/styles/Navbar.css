@@ -1,0 +1,215 @@
+.app-nav {
+  --green: #2f9d4a;
+  --green-bg: #d5edd8;
+  --border-gray: rgba(0,0,0,0.08);
+  --radius-full: 999px;
+  --radius-card: 10px;
+  --text-dark: #111827;
+  --text-dim: #6b7280;
+  --bg-nav: #ffffff;
+
+  font-family: system-ui, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
+  background: var(--bg-nav);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  padding: .75rem 1rem;
+  color: var(--text-dark);
+}
+
+.app-nav-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* LEFT BRAND */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: .6rem;
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand-text {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+/* CENTER SEARCH */
+.search-wrap {
+  flex: 1 1 auto;
+  max-width: 480px;
+  position: relative;
+  background: #fff;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-gray);
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  padding: .5rem .75rem .5rem 2.5rem;
+}
+.search-input {
+  border: 0;
+  outline: none;
+  width: 100%;
+  font-size: .9rem;
+  line-height: 1.4;
+  color: var(--text-dark);
+}
+.search-input::placeholder {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+.search-btn {
+  position: absolute;
+  left: .75rem;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+}
+.search-icon {
+  width: 20px;
+  height: 20px;
+  background-size: 20px 20px;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* magnifying glass svg */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" stroke="%236b7280" fill="none" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.2-3.2"/></svg>');
+}
+
+/* RIGHT ACTIONS */
+.nav-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-left: auto;
+  font-size: .9rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+/* logged OUT buttons */
+.login-btn {
+  text-decoration: none;
+  color: var(--text-dark);
+  padding: .5rem .75rem;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+  border: 2px solid transparent;
+}
+
+.login-btn:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+.register-btn {
+  text-decoration: none;
+  background: var(--green);
+  color: #fff;
+  padding: .5rem .9rem;
+  font-weight: 600;
+  font-size: .9rem;
+  border-radius: var(--radius-full);
+  line-height: 1.2;
+  border: 2px solid var(--green);
+}
+.register-btn:hover {
+  background: #237f3a; /* darker green hover */
+  border-color: #237f3a;
+}
+
+/* logged IN: profile + logout */
+.profile-link {
+  text-decoration: none;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  border-radius: var(--radius-full);
+  padding: .4rem .6rem .4rem .4rem;
+  border: 2px solid transparent;
+}
+.profile-link:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+.avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--green-bg);
+  border: 2px solid var(--green);
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.profile-name {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  line-height: 1.2;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 2px solid rgba(0,0,0,0.08);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: .5rem .75rem;
+  color: var(--text-dark);
+}
+.logout-btn:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+/* RESPONSIVE */
+@media (max-width: 800px) {
+  .app-nav-inner {
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .nav-actions {
+    order: 2;
+    margin-left: 0;
+    flex: 0 0 auto;
+  }
+
+  .brand {
+    order: 1;
+  }
+}
