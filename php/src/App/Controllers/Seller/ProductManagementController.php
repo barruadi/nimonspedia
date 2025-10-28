@@ -9,6 +9,11 @@ class ProductManagementController
     //  Show the add product form
     public static function showAddProductForm(): array
     {
+        // Start session
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
@@ -25,7 +30,7 @@ class ProductManagementController
             WHERE owner_id = :owner_id 
             LIMIT 1
         ");
-        $stmt->execute(['owner_id' => $user['id']]);
+        $stmt->execute(['owner_id' => $user['user_id']]);
         $store = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$store) {
@@ -53,6 +58,11 @@ class ProductManagementController
     // Handles the submission of the add product form
     public static function handleAddProduct(array $req): array
     {
+        // Start session
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
@@ -63,7 +73,7 @@ class ProductManagementController
         // Get seller's store
         $db = \App\Core\Database::getInstance();
         $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['id']]);
+        $stmt->execute(['owner_id' => $user['user_id']]);
         $store = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$store) {
@@ -76,7 +86,7 @@ class ProductManagementController
         $description = $req['body']['description'] ?? '';
         $categoryId = $req['body']['category_id'] ?? null;
         $price = $req['body']['price'] ?? null;
-        $stock = $req['body']['stock'] ?? null;
+        $stock = $req['body']['stock'] ?? 0; // Default to 0
 
         // Server-side validation
         if (!$name || strlen($name) > 200) {
@@ -130,6 +140,10 @@ class ProductManagementController
                 'image_path' => $imagePath,
             ]);
 
+            if (!$productId) {
+                throw new \Exception('Failed to create product');
+            }
+
             http_response_code(201);
             return [
                 'ok' => true,
@@ -182,9 +196,6 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Failed to upload file'];
         }
 
-        // TODO: Image optimization (resize, compress) - optional
-        // self::optimizeImage($filepath);
-
         return [
             'ok' => true,
             'path' => '/uploads/products/' . $filename
@@ -201,6 +212,11 @@ class ProductManagementController
     // Renders the edit product form for sellers
     public static function showEditProductForm(int $productId): array
     {
+        // Start session
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
@@ -219,7 +235,7 @@ class ProductManagementController
         // Get seller's store
         $db = \App\Core\Database::getInstance();
         $stmt = $db->prepare("SELECT store_id, store_name FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['id']]);
+        $stmt->execute(['owner_id' => $user['user_id']]);
         $store = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$store) {
@@ -251,6 +267,11 @@ class ProductManagementController
     // Handles the submission of the edit product form
     public static function handleEditProduct(array $req, int $productId): array
     {
+        // Start session
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
@@ -269,7 +290,7 @@ class ProductManagementController
         // Get seller's store
         $db = \App\Core\Database::getInstance();
         $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['id']]);
+        $stmt->execute(['owner_id' => $user['user_id']]);
         $store = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         if (!$store) {
@@ -288,7 +309,7 @@ class ProductManagementController
         $description = $req['body']['description'] ?? '';
         $categoryId = $req['body']['category_id'] ?? null;
         $price = $req['body']['price'] ?? null;
-        $stock = $req['body']['stock'] ?? null;
+        $stock = $req['body']['stock'] ?? 0;
 
         // Server-side validation
         if (!$name || strlen($name) > 200) {
