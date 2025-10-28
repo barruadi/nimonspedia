@@ -95,9 +95,100 @@ class Router
         return [$regex, $paramNames];
     }
     
+    // Helper function to parse multipart/form-data for PUT/PATCH
+    private function parseFormData(): array
+    {
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        
+        // Only parse if it's multipart/form-data
+        if (strpos($contentType, 'multipart/form-data') === false) {
+            return ['body' => [], 'files' => []];
+        }
+        
+        // Get boundary
+        preg_match('/boundary=(.*)$/', $contentType, $matches);
+        if (!isset($matches[1])) {
+            return ['body' => [], 'files' => []];
+        }
+        
+        $boundary = $matches[1];
+        $rawData = file_get_contents('php://input');
+        
+        // Split by boundary
+        $parts = array_slice(explode("--$boundary", $rawData), 1, -1);
+        
+        $body = [];
+        $files = [];
+        
+        foreach ($parts as $part) {
+            // Skip empty parts
+            if (trim($part) === '') continue;
+            
+            // Split headers and content
+            list($rawHeaders, $content) = explode("\r\n\r\n", $part, 2);
+            
+            // Remove trailing \r\n
+            $content = substr($content, 0, -2);
+            
+            // Parse headers
+            $headers = [];
+            foreach (explode("\r\n", $rawHeaders) as $header) {
+                if (strpos($header, ':') !== false) {
+                    list($key, $value) = explode(':', $header, 2);
+                    $headers[strtolower(trim($key))] = trim($value);
+                }
+            }
+            
+            // Get Content-Disposition
+            $disposition = $headers['content-disposition'] ?? '';
+            
+            // Extract name
+            if (preg_match('/name="([^"]+)"/', $disposition, $nameMatch)) {
+                $name = $nameMatch[1];
+                
+                // Check if it's a file
+                if (preg_match('/filename="([^"]*)"/', $disposition, $fileMatch)) {
+                    $filename = $fileMatch[1];
+                    
+                    // Save file to tmp
+                    $tmpName = tempnam(sys_get_temp_dir(), 'php_upload_');
+                    file_put_contents($tmpName, $content);
+                    
+                    $files[$name] = [
+                        'name' => $filename,
+                        'type' => $headers['content-type'] ?? 'application/octet-stream',
+                        'tmp_name' => $tmpName,
+                        'error' => UPLOAD_ERR_OK,
+                        'size' => strlen($content)
+                    ];
+                } else {
+                    // Regular field
+                    $body[$name] = $content;
+                }
+            }
+        }
+        
+        return ['body' => $body, 'files' => $files];
+    }
+    
     public function dispatch(array $request) {
         $method = strtoupper($request['method'] ?? 'GET');
         $path   = $request['path'] ?? '/';
+
+        // ADDED: Parse FormData for PUT/PATCH requests
+        if (($method === 'PUT' || $method === 'PATCH') && 
+            strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false) {
+            
+            $parsed = $this->parseFormData();
+            
+            // Merge parsed data into request
+            $request['body'] = array_merge($request['body'] ?? [], $parsed['body']);
+            
+            // Populate global $_FILES for compatibility
+            foreach ($parsed['files'] as $name => $file) {
+                $_FILES[$name] = $file;
+            }
+        }
 
         foreach ($this->routes[$method] ?? [] as $route) {
             if (preg_match($route['pattern'], $path, $m)) {
