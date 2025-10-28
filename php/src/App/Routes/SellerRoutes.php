@@ -16,13 +16,13 @@ $router->group([
   'middleware'  => [$auth],
   /* TODO: If sellerOnly middleware is already defined
     'middleware'  => [$auth, $sellerOnly],  */
-], function($r) {
-    $r->get('/dashboard', fn($req) => (new DashboardController())->showDashboard());
-    $r->get('/products/add',  fn($req) => ProductManagementController::showAddProductForm());
-    $r->post('/products/add', fn($req) => ProductManagementController::handleAddProduct($req));
-    $r->get('/products/edit/{id}',  fn($req, $id) => ProductManagementController::showEditProductForm($id));
-    $r->post('/products/edit/{id}', fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
-}); 
+    ], function($r) {
+        $r->get('/login',     fn($req) => (new LoginController())->show());
+        $r->post('/login',    fn($req) => (new LoginController())->login($req));
+        $r->get('/register',  fn($req) => (new RegisterController())->show());
+        $r->post('/register', fn($req) => (new RegisterController())->register($req));
+        $r->post('/logout',   fn($req) => (new LogoutController())->logout($req));
+    }); 
 
 // PUBLIC ENDPOINTS
 // GET /api/categories - to populate categories dropdown
