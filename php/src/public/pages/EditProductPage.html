@@ -3,203 +3,149 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Product Management: Edit Product</title>
-    <!-- Rich text editor CDN (Quill.js) -->
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <style>
-      .preview-container {
-        margin: 10px 0;
-      }
-      .preview-image {
-        max-width: 300px;
-        max-height: 300px;
-        border: 1px solid #ccc;
-        padding: 5px;
-        display: block;
-        margin-bottom: 10px;
-      }
-      .error { color: red; font-size: 0.9em; }
-      .progress-bar {
-        width: 100%;
-        height: 20px;
-        background: #f0f0f0;
-        border-radius: 5px;
-        overflow: hidden;
-        display: none;
-        margin: 10px 0;
-      }
-      .progress-fill {
-        height: 100%;
-        background: #4CAF50;
-        width: 0%;
-        transition: width 0.3s;
-      }
-      .toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #4CAF50;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 5px;
-        display: none;
-        z-index: 1000;
-      }
-      /* Confirmation Modal */
-      .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.4);
-      }
-      .modal-content {
-        background-color: #fefefe;
-        margin: 15% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
-        max-width: 400px;
-        border-radius: 5px;
-      }
-      .modal-buttons {
-        margin-top: 20px;
-        text-align: right;
-      }
-      .modal-buttons button {
-        margin-left: 10px;
-      }
-    </style>
+    <title>Edit Product - Nimonspedia</title>
+    <link rel="stylesheet" href="/styles/AddProduct.css">
   </head>
   <body>
-    <h1>Edit Product</h1>
-    <p>Store: <span id="store_name">Loading...</span></p>
-    <p>Product ID: <span id="current_product_id">-</span></p>
-
-    <form id="editProductForm" enctype="multipart/form-data">
-      <!-- Hidden fields -->
-      <input type="hidden" id="product_id" name="product_id" />
-      <input type="hidden" id="store_id" name="store_id" />
-
-      <!-- Product Name -->
-      <label for="productName">Product Name: <span style="color:red">*</span></label>
-      <input 
-        id="productName" 
-        name="name" 
-        type="text" 
-        maxlength="200"
-        required 
-        placeholder="Enter product name (max 200 characters)"
-      />
-      <span class="error" id="nameError"></span>
-      <br><br>
-
-      <!-- Description (Rich Text) -->
-      <label for="productDescription">Description: <span style="color:red">*</span></label>
-      <div id="editor" style="height: 200px;"></div>
-      <input type="hidden" id="productDescription" name="description">
-      <span class="error" id="descError"></span>
-      <br><br>
-
-      <!-- Category -->
-      <label for="productCategory">Category: <span style="color:red">*</span></label>
-      <select id="productCategory" name="category_id" required>
-        <option value="">-- Select Category --</option>
-        <!-- Categories will be populated from API -->
-      </select>
-      <span class="error" id="categoryError"></span>
-      <br><br>
-
-      <!-- Price -->
-      <label for="productPrice">Price (Rp): <span style="color:red">*</span></label>
-      <input 
-        id="productPrice" 
-        name="price" 
-        type="number" 
-        step="0.01" 
-        min="1000" 
-        required 
-        placeholder="Min. Rp 1,000"
-      />
-      <span class="error" id="priceError"></span>
-      <small style="color: orange; display: block;">
-        Warning: Changing price will not affect past transactions
-      </small>
-      <br><br>
-
-      <!-- Stock -->
-      <label for="productStock">Stock: <span style="color:red">*</span></label>
-      <input 
-        id="productStock" 
-        name="stock" 
-        type="number" 
-        min="0" 
-        required 
-        placeholder="0"
-      />
-      <span class="error" id="stockError"></span>
-      <small style="display: block;">
-        Note: This replaces the current stock, not increment
-      </small>
-      <br><br>
-
-      <!-- Current Image Display -->
-      <div class="preview-container" id="currentImageContainer" style="display:none;">
-        <label>Current Image:</label><br>
-        <img id="currentImage" class="preview-image" src="" alt="Current product image">
-        <button type="button" id="changeImageBtn">Ganti Foto</button>
-      </div>
-
-      <!-- New Image Preview -->
-      <div class="preview-container" id="newImageContainer" style="display:none;">
-        <label>New Image Preview:</label><br>
-        <img id="newImagePreview" class="preview-image" src="" alt="New image preview">
-      </div>
-
-      <!-- Image Upload (Hidden, triggered by "Ganti Foto") -->
-      <input 
-        id="productImage" 
-        name="image" 
-        type="file" 
-        accept="image/jpeg,image/jpg,image/png,image/webp"
-        style="display: none;"
-      />
-      <span class="error" id="imageError"></span>
-      <br>
-
-      <!-- Progress Bar -->
-      <div class="progress-bar" id="progressBar">
-        <div class="progress-fill" id="progressFill"></div>
-      </div>
-
-      <!-- Submit Buttons -->
-      <button type="submit" id="submitBtn">Simpan Perubahan</button>
-      <button type="button" id="cancelBtn">Batal</button>
-    </form>
-
-    <!-- Confirmation Modal -->
-    <div id="confirmModal" class="modal">
-      <div class="modal-content">
-        <h3>Konfirmasi Perubahan</h3>
-        <p>Apakah Anda yakin ingin menyimpan perubahan produk ini?</p>
-        <p style="color: orange; font-size: 0.9em;">
-          Perubahan harga tidak akan mempengaruhi transaksi yang sudah ada.
-        </p>
-        <div class="modal-buttons">
-          <button type="button" id="cancelConfirm">Batal</button>
-          <button type="button" id="proceedConfirm">Ya, Simpan</button>
+    <div class="add-product-page">
+      <!-- Left Side - Product Image Upload -->
+      <div class="product-image-section">
+        <div class="image-upload-container">
+          <input type="file" id="productImage" accept="image/*" hidden />
+          
+          <!-- Preview Container -->
+          <div id="imagePreviewContainer" class="image-preview" style="display: flex;">
+            <img id="imagePreview" src="" alt="Product Preview" />
+          </div>
+          
+          <!-- Placeholder (shown when no image) -->
+          <div id="imagePlaceholder" class="image-placeholder" style="display: none;">
+            <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <p class="placeholder-text">Belum ada foto produk yang diunggah</p>
+          </div>
         </div>
+        
+        <button type="button" id="uploadBtn" class="upload-btn">
+          Ganti Foto
+        </button>
+        <p style="font-size: 0.75rem; color: #6b7280; text-align: center; margin-top: 0.5rem;">
+          Kosongkan jika tidak ingin mengganti foto
+        </p>
+      </div>
+
+      <!-- Right Side - Product Details Form -->
+      <div class="product-details-section">
+        <h1 class="form-title">Edit Produk</h1>
+
+        <form id="editProductForm" class="product-form">
+          <input type="hidden" id="product_id" name="product_id" />
+          <input type="hidden" id="store_id" name="store_id" />
+
+          <!-- Product Name -->
+          <div class="form-group">
+            <label for="productName" class="form-label">
+              Nama Produk<span class="required">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="productName" 
+              name="name" 
+              class="form-input" 
+              placeholder="Masukkan nama produk (maksimal 200 karakter)"
+              maxlength="200"
+              required 
+            />
+            <span class="error-message" id="nameError"></span>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="productDescription" class="form-label">
+              Deskripsi<span class="required">*</span>
+            </label>
+            <textarea 
+              id="productDescription" 
+              name="description" 
+              class="form-textarea" 
+              placeholder="Masukkan deskripsi produk (maksimal 1000 karakter)"
+              maxlength="1000"
+              rows="4"
+              required
+            ></textarea>
+            <span class="error-message" id="descError"></span>
+          </div>
+
+          <!-- Category & Price Row -->
+          <div class="form-row">
+            <!-- Category -->
+            <div class="form-group form-group-half">
+              <label for="productCategory" class="form-label">
+                Kategori<span class="required">*</span>
+              </label>
+              <select 
+                id="productCategory" 
+                name="category_id" 
+                class="form-select"
+                required
+              >
+                <option value="">Pilih kategori produk</option>
+              </select>
+              <span class="error-message" id="categoryError"></span>
+            </div>
+
+            <!-- Price -->
+            <div class="form-group form-group-half">
+              <label for="productPrice" class="form-label">
+                Harga<span class="required">*</span>
+              </label>
+              <input 
+                type="number" 
+                id="productPrice" 
+                name="price" 
+                class="form-input" 
+                placeholder="Masukkan harga dalam rupiah (minimal 1000)"
+                min="1000"
+                step="1"
+                required 
+              />
+              <span class="error-message" id="priceError"></span>
+            </div>
+          </div>
+
+          <!-- Stock -->
+          <div class="form-group">
+            <label for="productStock" class="form-label">
+              Stok<span class="required">*</span>
+            </label>
+            <input 
+              type="number" 
+              id="productStock" 
+              name="stock" 
+              class="form-input" 
+              placeholder="Masukkan jumlah stok (minimal 0)"
+              min="0"
+              required 
+            />
+            <span class="error-message" id="stockError"></span>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button type="button" id="cancelBtn" class="btn btn-cancel">
+              Batal
+            </button>
+            <button type="submit" id="submitBtn" class="btn btn-submit">
+              Simpan Perubahan
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
     <!-- Toast Notification -->
-    <div class="toast" id="toast"></div>
-
-    <!-- Rich Text Editor -->
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-    <script type="module" src="/script/EditProduct.js"></script>
+    <div id="toast" class="toast" style="display: none;"></div>
   </body>
 </html>

@@ -1,307 +1,345 @@
 import { api } from '../utils/api.js';
 
-// Initialize Quill Rich Text Editor
-const quill = new Quill('#editor', {
-    theme: 'snow',
-    placeholder: 'Enter product description (max 1000 characters)...',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            ['clean']
-        ]
-    }
-});
+console.log('📄 EditProduct.js loaded');
 
-// Character limit for description
-quill.on('text-change', function() {
-    const text = quill.getText();
-    if (text.length > 1000) {
-        quill.deleteText(1000, text.length);
-        document.getElementById('descError').textContent = 'Maximum 1000 characters';
-    } else {
-        document.getElementById('descError').textContent = '';
-    }
-});
+function initEditProductPage() {
+    console.log('🚀 DOM ready, initializing edit page...');
 
-// Get product ID from URL query parameter
-function getProductIdFromURL() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('id');
-}
-
-// Fetch categories from API
-async function fetchCategories() {
-    try {
-        const result = await api.get('/categories');
-        if (result && result.ok) {
-            populateCategories(result.data);
-        }
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-    }
-}
-
-// Populate category dropdown
-function populateCategories(categories) {
-    const select = document.getElementById('productCategory');
-    categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.category_id;
-        option.textContent = cat.name;
-        select.appendChild(option);
-    });
-}
-
-// Fetch product data and store info when page loads
-async function initForm() {
-    const productId = getProductIdFromURL();
+    // Get product ID from route params
+    const productId = window.routeParams?.id;
     
     if (!productId) {
-        showToast('Product ID not found in URL', 'error');
-        setTimeout(() => window.location.href = '/seller/product-management', 1500);
+        showToast('Product ID tidak ditemukan', 'error');
+        setTimeout(() => window.location.href = '/products', 1500);
         return;
     }
-    
-    document.getElementById('current_product_id').textContent = productId;
-    document.getElementById('product_id').value = productId;
-    
-    try {
-        const result = await api.get(`/seller/products/edit/${productId}`);
-        
-        if (!result || !result.ok) {
-            showToast(result?.error || 'Failed to load product data', 'error');
-            setTimeout(() => window.location.href = '/seller/product-management', 1500);
-            return;
-        }
-        
-        const product = result.data.product;
-        const store = result.data.store;
-        const categories = result.data.categories;
-        
-        // Populate form
-        document.getElementById('store_id').value = store.store_id;
-        document.getElementById('store_name').textContent = store.store_name || 'Unknown';
-        
-        document.getElementById('productName').value = product.name || '';
-        quill.root.innerHTML = product.description || '';
-        document.getElementById('productPrice').value = product.price || 0;
-        document.getElementById('productStock').value = product.stock || 0;
-        
-        // Populate categories
-        populateCategories(categories);
-        if (product.category_id) {
-            document.getElementById('productCategory').value = product.category_id;
-        }
-        
-        // Display current image
-        if (product.image_path) {
-            document.getElementById('currentImage').src = product.image_path;
-            document.getElementById('currentImageContainer').style.display = 'block';
-        }
-        
-    } catch (error) {
-        console.error('Error fetching product data:', error);
-        showToast('Failed to load product information', 'error');
-    }
-}
 
-// "Ganti Foto" button - trigger file input
-document.getElementById('changeImageBtn').addEventListener('click', function() {
-    document.getElementById('productImage').click();
-});
+    console.log('📦 Product ID:', productId);
 
-// Image preview for new upload
-document.getElementById('productImage').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const errorEl = document.getElementById('imageError');
-    errorEl.textContent = '';
-    
-    if (!file) return;
-    
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-        errorEl.textContent = 'Only JPG, JPEG, PNG, WEBP allowed';
-        e.target.value = '';
-        return;
-    }
-    
-    // Validate file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024;
-    if (file.size > maxSize) {
-        errorEl.textContent = 'File size must be less than 2MB';
-        e.target.value = '';
-        return;
-    }
-    
-    // Show new image preview
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        document.getElementById('newImagePreview').src = event.target.result;
-        document.getElementById('newImageContainer').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-});
+    // ==========================================
+    // IMAGE UPLOAD HANDLER
+    // ==========================================
 
-// Cancel button
-document.getElementById('cancelBtn').addEventListener('click', function() {
-    if (confirm('Batal mengubah produk? Perubahan tidak akan disimpan.')) {
-        window.location.href = '/seller/product-management';
-    }
-});
+    const uploadBtn = document.getElementById('uploadBtn');
+    const productImageInput = document.getElementById('productImage');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    const imagePreview = document.getElementById('imagePreview');
 
-// Form validation
-function validateForm(formData) {
-    let isValid = true;
-    
-    // Clear previous errors
-    document.querySelectorAll('.error').forEach(el => el.textContent = '');
-    
-    // Name validation
-    const name = formData.get('name');
-    if (!name || name.length > 200) {
-        document.getElementById('nameError').textContent = 'Name required (max 200 chars)';
-        isValid = false;
-    }
-    
-    // Description validation
-    const descText = quill.getText().trim();
-    if (descText.length === 0 || descText.length > 1000) {
-        document.getElementById('descError').textContent = 'Description required (max 1000 chars)';
-        isValid = false;
-    }
-    
-    // Category validation
-    const category = formData.get('category_id');
-    if (!category) {
-        document.getElementById('categoryError').textContent = 'Category required';
-        isValid = false;
-    }
-    
-    // Price validation
-    const price = parseFloat(formData.get('price'));
-    if (!price || price < 1000) {
-        document.getElementById('priceError').textContent = 'Price must be at least Rp 1,000';
-        isValid = false;
-    }
-    
-    // Stock validation
-    const stock = parseInt(formData.get('stock'));
-    if (stock < 0 || isNaN(stock)) {
-        document.getElementById('stockError').textContent = 'Stock must be 0 or more';
-        isValid = false;
-    }
-    
-    return isValid;
-}
+    let currentImagePath = null;
+    let imageChanged = false;
 
-// Show toast notification
-function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.style.background = type === 'success' ? '#4CAF50' : '#f44336';
-    toast.style.display = 'block';
-    setTimeout(() => {
-        toast.style.display = 'none';
-    }, 3000);
-}
-
-// Show confirmation modal
-function showConfirmationModal() {
-    document.getElementById('confirmModal').style.display = 'block';
-}
-
-// Hide confirmation modal
-function hideConfirmationModal() {
-    document.getElementById('confirmModal').style.display = 'none';
-}
-
-// Cancel confirmation
-document.getElementById('cancelConfirm').addEventListener('click', hideConfirmationModal);
-
-// Proceed with submission
-document.getElementById('proceedConfirm').addEventListener('click', function() {
-    hideConfirmationModal();
-    submitForm();
-});
-
-// Handle form submission (with confirmation)
-const form = document.getElementById('editProductForm');
-if (form) {
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // Get Quill content and set to hidden input
-        const descHtml = quill.root.innerHTML;
-        document.getElementById('productDescription').value = descHtml;
-        
-        // Get form data
-        const formData = new FormData(e.target);
-        
-        // Client-side validation
-        if (!validateForm(formData)) {
-            showToast('Please fix validation errors', 'error');
-            return;
-        }
-        
-        // Show confirmation modal
-        showConfirmationModal();
+    // Click upload button -> trigger file input
+    uploadBtn?.addEventListener('click', () => {
+        productImageInput?.click();
     });
-}
 
-// Actual form submission logic
-async function submitForm() {
-    const formData = new FormData(document.getElementById('editProductForm'));
-    const productId = formData.get('product_id');
-    
-    // Disable submit button
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Updating...';
-    
-    // Show progress bar
-    const progressBar = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
-    progressBar.style.display = 'block';
-    
-    // Simulate progress
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-        progress += 10;
-        progressFill.style.width = progress + '%';
-        if (progress >= 90) clearInterval(progressInterval);
-    }, 100);
-    
-    try {
-        const result = await api.post(`/seller/products/edit/${productId}`, formData);
+    // Also make container clickable
+    document.querySelector('.image-upload-container')?.addEventListener('click', (e) => {
+        if (!e.target.closest('button')) {
+            productImageInput?.click();
+        }
+    });
+
+    // Handle file selection
+    productImageInput?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
         
-        clearInterval(progressInterval);
-        progressFill.style.width = '100%';
+        if (!file) return;
         
-        if (result && result.ok) {
-            showToast('Produk berhasil diupdate', 'success');
-            
-            // Redirect after 1.5 seconds
-            setTimeout(() => {
-                window.location.href = '/seller/product-management';
-            }, 1500);
-            
-        } else {
-            throw new Error(result?.error || 'Failed to update product');
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showToast('Format file harus JPG, PNG, atau WEBP', 'error');
+            e.target.value = '';
+            return;
         }
         
-    } catch (error) {
-        console.error('Error submitting form:', error);
-        showToast(error.message || 'Network error. Please try again.', 'error');
+        // Validate file size (max 2MB)
+        const maxSize = 2 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showToast('Ukuran file maksimal 2MB', 'error');
+            e.target.value = '';
+            return;
+        }
         
-        // Re-enable submit button
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Simpan Perubahan';
-        progressBar.style.display = 'none';
-        progressFill.style.width = '0%';
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            imagePreview.src = event.target.result;
+            imagePlaceholder.style.display = 'none';
+            imagePreviewContainer.style.display = 'flex';
+            uploadBtn.textContent = 'Ganti Foto';
+            imageChanged = true;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // ==========================================
+    // FETCH CATEGORIES
+    // ==========================================
+
+    async function fetchCategories() {
+        try {
+            console.log('🔄 Fetching categories...');
+            const result = await api.get('/categories');
+            
+            if (result && result.ok && result.data) {
+                console.log('✅ Categories received:', result.data.length);
+                return result.data;
+            } else {
+                console.error('❌ Invalid categories response');
+                return [];
+            }
+        } catch (error) {
+            console.error('❌ Error fetching categories:', error);
+            return [];
+        }
     }
+
+    function populateCategories(categories, selectedId = null) {
+        const select = document.getElementById('productCategory');
+        
+        if (!select) {
+            console.error('❌ Category select not found');
+            return;
+        }
+        
+        select.innerHTML = '<option value="">Pilih kategori produk</option>';
+        
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.category_id;
+            option.textContent = cat.name;
+            
+            if (selectedId && cat.category_id == selectedId) {
+                option.selected = true;
+            }
+            
+            select.appendChild(option);
+        });
+        
+        console.log('✅ Categories populated, selected:', selectedId);
+    }
+
+    // ==========================================
+    // LOAD PRODUCT DATA
+    // ==========================================
+
+    async function loadProductData() {
+        try {
+            console.log('🔄 Loading product data...');
+            
+            const result = await api.get(`/seller/products/edit/${productId}`);
+            
+            console.log('📦 Product data response:', result);
+            
+            if (!result || !result.ok) {
+                throw new Error(result?.error || 'Failed to load product data');
+            }
+
+            const { product, store, categories } = result.data;
+
+            // Set form values
+            document.getElementById('product_id').value = product.product_id;
+            document.getElementById('store_id').value = store.store_id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productDescription').value = product.description;
+            document.getElementById('productPrice').value = product.price;
+            document.getElementById('productStock').value = product.stock;
+
+            // Set image preview
+            if (product.image_path) {
+                currentImagePath = product.image_path;
+                imagePreview.src = product.image_path;
+                imagePreviewContainer.style.display = 'flex';
+                imagePlaceholder.style.display = 'none';
+            }
+
+            // Populate and select category
+            populateCategories(categories, product.category_id);
+
+            console.log('✅ Product data loaded successfully');
+
+        } catch (error) {
+            console.error('❌ Error loading product:', error);
+            showToast(error.message, 'error');
+            setTimeout(() => window.location.href = '/products', 2000);
+        }
+    }
+
+    // ==========================================
+    // FORM VALIDATION
+    // ==========================================
+
+    function validateForm(formData) {
+        let isValid = true;
+        
+        // Clear previous errors
+        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+        
+        // Name
+        const name = formData.get('name');
+        if (!name || name.trim().length === 0) {
+            document.getElementById('nameError').textContent = 'Nama produk wajib diisi';
+            isValid = false;
+        } else if (name.length > 200) {
+            document.getElementById('nameError').textContent = 'Maksimal 200 karakter';
+            isValid = false;
+        }
+        
+        // Description
+        const desc = formData.get('description');
+        if (!desc || desc.trim().length === 0) {
+            document.getElementById('descError').textContent = 'Deskripsi wajib diisi';
+            isValid = false;
+        } else if (desc.length > 1000) {
+            document.getElementById('descError').textContent = 'Maksimal 1000 karakter';
+            isValid = false;
+        }
+        
+        // Category
+        const category = formData.get('category_id');
+        if (!category) {
+            document.getElementById('categoryError').textContent = 'Kategori wajib dipilih';
+            isValid = false;
+        }
+        
+        // Price
+        const price = parseFloat(formData.get('price'));
+        if (!price || price < 1000) {
+            document.getElementById('priceError').textContent = 'Harga minimal Rp 1.000';
+            isValid = false;
+        }
+        
+        // Stock
+        const stock = parseInt(formData.get('stock'));
+        if (isNaN(stock) || stock < 0) {
+            document.getElementById('stockError').textContent = 'Stok minimal 0';
+            isValid = false;
+        }
+        
+        return isValid;
+    }
+
+    // ==========================================
+    // FORM SUBMISSION
+    // ==========================================
+
+    const form = document.getElementById('editProductForm');
+    if (form) {
+        console.log('✅ Form found, attaching submit handler');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            // Only add image if changed
+            if (imageChanged) {
+                const imageFile = productImageInput?.files[0];
+                if (imageFile) {
+                    formData.set('image', imageFile);
+                }
+            }
+            
+            // Validate
+            if (!validateForm(formData)) {
+                return;
+            }
+            
+            // Disable submit button
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Menyimpan...';
+            
+            try {
+                const result = await api.post(`/seller/products/edit/${productId}`, formData);
+                
+                if (result && result.ok) {
+                    showToast('Produk berhasil diperbarui!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/products';
+                    }, 1500);
+                } else {
+                    throw new Error(result?.error || 'Gagal memperbarui produk');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error submitting form:', error);
+                showToast(error.message, 'error');
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Simpan Perubahan';
+            }
+        });
+    } else {
+        console.error('❌ Form #editProductForm not found!');
+    }
+
+    // Cancel button
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            if (confirm('Batal mengedit produk? Perubahan tidak akan disimpan.')) {
+                window.location.href = '/products';
+            }
+        });
+    }
+
+    // ==========================================
+    // TOAST NOTIFICATION
+    // ==========================================
+
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        if (!toast) {
+            console.error('❌ Toast element not found!');
+            return;
+        }
+        
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        
+        const icon = icons[type] || icons.success;
+        
+        toast.innerHTML = `
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-message">${message}</span>
+        `;
+        
+        toast.className = `toast ${type}`;
+        toast.style.display = 'flex';
+        
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                toast.style.display = 'none';
+                toast.style.animation = '';
+            }, 300);
+        }, 3000);
+    }
+
+    // ==========================================
+    // INITIALIZE
+    // ==========================================
+
+    console.log('📄 Initializing EditProduct page...');
+    loadProductData();
 }
 
-// Initialize form on page load
-initForm();
+// ==========================================
+// WAIT FOR DOM
+// ==========================================
+
+if (document.readyState === 'loading') {
+    console.log('⏳ DOM still loading, waiting...');
+    document.addEventListener('DOMContentLoaded', initEditProductPage);
+} else {
+    console.log('✅ DOM already loaded, running immediately');
+    setTimeout(initEditProductPage, 100);
+}
