@@ -114,7 +114,7 @@ class Product
         }
         
         // Add updated_at timestamp
-        $fields[] = "updated_at = NOW()";  // ← Changed to NOW()
+        $fields[] = "updated_at = NOW()";
         
         if (empty($fields)) {
             return false; // nothing to update
