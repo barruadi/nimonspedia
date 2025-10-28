@@ -6,22 +6,19 @@ use App\Models\Product;
 
 class ProductManagementController
 {
-    // Renders the add product form for sellers
+    //  Show the add product form
     public static function showAddProductForm(): array
     {
-        // Check authentication
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
             http_response_code(403);
-            return [
-                'ok' => false, 
-                'error' => 'Unauthorized: Not a seller'
-            ];
+            return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
         }
 
-        // Get seller's store
         $db = \App\Core\Database::getInstance();
+        
+        // Get seller's store
         $stmt = $db->prepare("
             SELECT store_id, store_name, description, logo_path 
             FROM stores 
@@ -33,13 +30,13 @@ class ProductManagementController
 
         if (!$store) {
             http_response_code(404);
-            return [
-                'ok' => false, 
-                'error' => 'Store not found. Please create a store first.'
-            ];
+            return ['ok' => false, 'error' => 'Store not found. Please create a store first.'];
         }
 
-        // Return store info for frontend
+        // Get categories
+        $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
+        $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
         http_response_code(200);
         return [
             'ok' => true,
@@ -48,7 +45,7 @@ class ProductManagementController
                 'store_name' => $store['store_name'],
                 'store_description' => $store['description'] ?? null,
                 'store_logo' => $store['logo_path'] ?? null,
-                'categories' => $categories
+                'categories' => $categories,
             ]
         ];
     }
