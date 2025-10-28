@@ -14,9 +14,7 @@
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
 }
 
-/* ==========================================
-   LEFT SIDE - IMAGE UPLOAD
-   ========================================== */
+/* Left Side - Image Upload */
 
 .product-image-section {
     flex: 0 0 380px;
@@ -104,9 +102,7 @@
     transform: scale(0.98);
 }
 
-/* ==========================================
-   RIGHT SIDE - FORM
-   ========================================== */
+/* Right Side - Form */
 
 .product-details-section {
     flex: 1;
@@ -265,9 +261,7 @@
     transform: scale(0.98);
 }
 
-/* ==========================================
-   TOAST NOTIFICATION
-   ========================================== */
+/* Toast Notification */
 
 .toast {
     position: fixed;
@@ -300,9 +294,7 @@
     }
 }
 
-/* ==========================================
-   RESPONSIVE
-   ========================================== */
+/* Responsive Design */
 
 @media (max-width: 1024px) {
     .add-product-page {

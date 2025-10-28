@@ -236,7 +236,7 @@ function initAddProductPage() {
                 if (result && result.ok) {
                     showToast('Produk berhasil ditambahkan!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/seller/products';
+                        window.location.href = '/products';
                     }, 1500);
                 } else {
                     throw new Error(result?.error || 'Gagal menambahkan produk');
@@ -259,7 +259,7 @@ function initAddProductPage() {
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
             if (confirm('Batal menambahkan produk? Perubahan tidak akan disimpan.')) {
-                window.location.href = '/seller/products';
+                window.location.href = '/products';
             }
         });
     }
