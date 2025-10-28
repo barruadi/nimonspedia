@@ -16,7 +16,7 @@ function initEditProductPage() {
 
     console.log('Product ID:', productId);
 
-    // Image Upload Handler
+    // Image Upload
 
     const uploadBtn = document.getElementById('uploadBtn');
     const productImageInput = document.getElementById('productImage');
@@ -244,7 +244,7 @@ function initEditProductPage() {
             submitBtn.textContent = 'Menyimpan...';
             
             try {
-                const result = await api.post(`/seller/products/edit/${productId}`, formData);
+                const result = await api.put(`/seller/products/edit/${productId}`, formData);
                 
                 if (result && result.ok) {
                     showToast('Produk berhasil diperbarui!', 'success');

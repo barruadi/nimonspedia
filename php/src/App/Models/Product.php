@@ -31,7 +31,8 @@ class Product
         $db = self::getDB();
         $stmt = $db->prepare("
             SELECT * FROM products 
-            WHERE product_id = :id AND is_deleted = FALSE
+            WHERE product_id = :id 
+            AND is_deleted <> TRUE
         ");
         $stmt->execute(['id' => $productId]);
         
@@ -45,7 +46,7 @@ class Product
         $db = self::getDB();
         $stmt = $db->prepare("
             SELECT * FROM products 
-            WHERE store_id = :store_id AND is_deleted = FALSE
+            WHERE store_id = :store_id AND is_deleted <> TRUE
             ORDER BY created_at DESC
         ");
         $stmt->execute(['store_id' => $storeId]);
@@ -66,7 +67,7 @@ class Product
         
         $stmt->execute([
             'store_id'    => $data['store_id'],
-            'category_id' => $data['category_id'] ?? null,  // ← FIXED
+            'category_id' => $data['category_id'] ?? null,
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
             'price'       => $data['price'],
@@ -113,7 +114,7 @@ class Product
         }
         
         // Add updated_at timestamp
-        $fields[] = "updated_at = NOW()";  // ← Changed to NOW()
+        $fields[] = "updated_at = NOW()";
         
         if (empty($fields)) {
             return false; // nothing to update
@@ -125,6 +126,7 @@ class Product
         return $stmt->execute($params);
     }
 
+    // Soft delete product (by turning is_deleted to TRUE)
     public static function softDelete(int $productId): bool
     {
         $db = self::getDB();

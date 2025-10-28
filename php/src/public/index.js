@@ -22,6 +22,10 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
+  '/products': {
+    page: '/pages/ProductManagementPage.html',
+    script: '/script/ProductManagement.js',
+  },
   '/products/add': {
     page: '/pages/AddProductPage.html',
     script: '/script/AddProduct.js',
