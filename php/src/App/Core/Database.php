@@ -33,7 +33,7 @@ class Database {
     {
         $stmt = self::getInstance()->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->rowCount();
     }
     
     public static function pdo(): PDO
