@@ -31,7 +31,8 @@ class Product
         $db = self::getDB();
         $stmt = $db->prepare("
             SELECT * FROM products 
-            WHERE product_id = :id AND is_deleted = FALSE
+            WHERE product_id = :id 
+            AND is_deleted <> TRUE
         ");
         $stmt->execute(['id' => $productId]);
         
