@@ -14,12 +14,12 @@ $router->group([
     'middleware'  => [$auth],
 ], function($r) {
     $r->get('/dashboard',           fn($req) => DashboardController::showDashboard());
-    $r->get('/store',               fn($req) => DashboardController::updateStoreInfo($req));
+    $r->put('/store',               fn($req) => DashboardController::updateStoreInfo($req));
     $r->get('/products',            fn($req) => ProductManagementController::getStoreProducts());
     $r->get('/products/add',        fn($req) => ProductManagementController::showAddProductForm());
-    $r->post('/products',           fn($req) => ProductManagementController::handleAddProduct($req));
-    $r->get('/products/{id}/edit',  fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
-    $r->put('/products/{id}',       fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
+    $r->post('/products/add',       fn($req) => ProductManagementController::handleAddProduct($req));
+    $r->get('/products/edit/{id}',  fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
+    $r->put('/products/edit/{id}',  fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
     $r->delete('/products/{id}',    fn($req, $id) => ProductManagementController::deleteProduct($id)); 
 }); 
 
@@ -38,3 +38,5 @@ $router->get('/api/categories', function() {
     
     exit; 
 });
+
+
