@@ -16,7 +16,7 @@ function initEditProductPage() {
 
     console.log('Product ID:', productId);
 
-    // Image Upload Handler
+    // Image Upload
 
     const uploadBtn = document.getElementById('uploadBtn');
     const productImageInput = document.getElementById('productImage');
