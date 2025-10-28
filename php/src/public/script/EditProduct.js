@@ -1,9 +1,9 @@
 import { api } from '../utils/api.js';
 
-console.log('📄 EditProduct.js loaded');
+console.log('EditProduct.js loaded');
 
 function initEditProductPage() {
-    console.log('🚀 DOM ready, initializing edit page...');
+    console.log('DOM ready, initializing edit page...');
 
     // Get product ID from route params
     const productId = window.routeParams?.id;
@@ -14,11 +14,9 @@ function initEditProductPage() {
         return;
     }
 
-    console.log('📦 Product ID:', productId);
+    console.log('Product ID:', productId);
 
-    // ==========================================
-    // IMAGE UPLOAD HANDLER
-    // ==========================================
+    // Image Upload Handler
 
     const uploadBtn = document.getElementById('uploadBtn');
     const productImageInput = document.getElementById('productImage');
@@ -75,24 +73,22 @@ function initEditProductPage() {
         reader.readAsDataURL(file);
     });
 
-    // ==========================================
-    // FETCH CATEGORIES
-    // ==========================================
+    // Fetch GCategories
 
     async function fetchCategories() {
         try {
-            console.log('🔄 Fetching categories...');
+            console.log('Fetching categories...');
             const result = await api.get('/categories');
             
             if (result && result.ok && result.data) {
-                console.log('✅ Categories received:', result.data.length);
+                console.log('Categories received:', result.data.length);
                 return result.data;
             } else {
-                console.error('❌ Invalid categories response');
+                console.error('Invalid categories response');
                 return [];
             }
         } catch (error) {
-            console.error('❌ Error fetching categories:', error);
+            console.error('Error fetching categories:', error);
             return [];
         }
     }
@@ -101,7 +97,7 @@ function initEditProductPage() {
         const select = document.getElementById('productCategory');
         
         if (!select) {
-            console.error('❌ Category select not found');
+            console.error('Category select not found');
             return;
         }
         
@@ -119,20 +115,18 @@ function initEditProductPage() {
             select.appendChild(option);
         });
         
-        console.log('✅ Categories populated, selected:', selectedId);
+        console.log('Categories populated, selected:', selectedId);
     }
 
-    // ==========================================
-    // LOAD PRODUCT DATA
-    // ==========================================
+    // Load Product Data
 
     async function loadProductData() {
         try {
-            console.log('🔄 Loading product data...');
+            console.log('Loading product data...');
             
             const result = await api.get(`/seller/products/edit/${productId}`);
             
-            console.log('📦 Product data response:', result);
+            console.log('Product data response:', result);
             
             if (!result || !result.ok) {
                 throw new Error(result?.error || 'Failed to load product data');
@@ -159,18 +153,16 @@ function initEditProductPage() {
             // Populate and select category
             populateCategories(categories, product.category_id);
 
-            console.log('✅ Product data loaded successfully');
+            console.log('Product data loaded successfully');
 
         } catch (error) {
-            console.error('❌ Error loading product:', error);
+            console.error('Error loading product:', error);
             showToast(error.message, 'error');
             setTimeout(() => window.location.href = '/products', 2000);
         }
     }
 
-    // ==========================================
-    // FORM VALIDATION
-    // ==========================================
+    // Form Validation
 
     function validateForm(formData) {
         let isValid = true;
@@ -222,13 +214,11 @@ function initEditProductPage() {
         return isValid;
     }
 
-    // ==========================================
-    // FORM SUBMISSION
-    // ==========================================
+    // Form Submission
 
     const form = document.getElementById('editProductForm');
     if (form) {
-        console.log('✅ Form found, attaching submit handler');
+        console.log('Form found, attaching submit handler');
         
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -266,7 +256,7 @@ function initEditProductPage() {
                 }
                 
             } catch (error) {
-                console.error('❌ Error submitting form:', error);
+                console.error('Error submitting form:', error);
                 showToast(error.message, 'error');
                 
                 submitBtn.disabled = false;
@@ -274,7 +264,7 @@ function initEditProductPage() {
             }
         });
     } else {
-        console.error('❌ Form #editProductForm not found!');
+        console.error('Form #editProductForm not found!');
     }
 
     // Cancel button
@@ -287,59 +277,33 @@ function initEditProductPage() {
         });
     }
 
-    // ==========================================
-    // TOAST NOTIFICATION
-    // ==========================================
+    // Toast Notification
 
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
         if (!toast) {
-            console.error('❌ Toast element not found!');
+            console.error('Toast element not found!');
             return;
         }
         
-        const icons = {
-            success: '✅',
-            error: '❌',
-            warning: '⚠️',
-            info: 'ℹ️'
-        };
-        
-        const icon = icons[type] || icons.success;
-        
-        toast.innerHTML = `
-            <span class="toast-icon">${icon}</span>
-            <span class="toast-message">${message}</span>
-        `;
-        
+        toast.textContent = message;
         toast.className = `toast ${type}`;
-        toast.style.display = 'flex';
+        toast.style.display = 'block';
         
         setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s ease';
-            setTimeout(() => {
-                toast.style.display = 'none';
-                toast.style.animation = '';
-            }, 300);
+            toast.style.display = 'none';
         }, 3000);
     }
 
-    // ==========================================
-    // INITIALIZE
-    // ==========================================
-
-    console.log('📄 Initializing EditProduct page...');
+    console.log('Initializing EditProduct page...');
     loadProductData();
 }
 
-// ==========================================
-// WAIT FOR DOM
-// ==========================================
 
 if (document.readyState === 'loading') {
-    console.log('⏳ DOM still loading, waiting...');
+    console.log('DOM still loading, waiting...');
     document.addEventListener('DOMContentLoaded', initEditProductPage);
 } else {
-    console.log('✅ DOM already loaded, running immediately');
+    console.log('DOM already loaded, running immediately');
     setTimeout(initEditProductPage, 100);
 }

@@ -121,9 +121,9 @@ function initAddProductPage() {
             if (!result || !result.ok) {
                 console.warn('Store info request failed:', result);
                 // Don't block category fetch if store info fails
-                // showToast('Unauthorized - Please login as seller', 'error');
-                // setTimeout(() => window.location.href = '/login', 1500);
-                // return;
+                showToast('Unauthorized - Please login as seller', 'error');
+                setTimeout(() => window.location.href = '/login', 1500);
+                return;
             } else {
                 // Set store ID
                 const storeIdInput = document.getElementById('store_id');
