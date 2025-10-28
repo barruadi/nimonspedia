@@ -125,6 +125,7 @@ class Product
         return $stmt->execute($params);
     }
 
+    // Soft delete product (by turning is_deleted to TRUE)
     public static function softDelete(int $productId): bool
     {
         $db = self::getDB();
