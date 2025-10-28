@@ -14,7 +14,7 @@ class User {
     public string $role;
     public int    $balance;
     public string $created_at;
-    public string $update_at;
+    public string $updated_at;
 
     public static function create(
         string $name,
@@ -95,5 +95,27 @@ class User {
 
         unset($user['password_hash']);
         return $user;
+    }
+    
+    public static function updatePassword(
+        string $new_password,
+        int    $user_id
+    ): bool
+    {
+        $hash = password_hash($new_password, PASSWORD_DEFAULT);
+        
+        $query = "
+            UPDATE users
+            SET password_hash = :password_hash,
+                updated_at    = NOW()
+            WHERE user_id = :user_id
+        ";
+        
+        $row_affected = Database::executeQuery($query, [
+            ':password_hash' => $hash,
+            ':user_id'       => $user_id,
+        ]);
+        
+        return $row_affected === 1;
     }
 }
