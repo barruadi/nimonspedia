@@ -18,8 +18,8 @@ $router->group([
     $r->get('/products',                    fn($req) => ProductManagementController::getStoreProducts());
     $r->get('/products/add',                fn($req) => ProductManagementController::showAddProductForm());
     $r->post('/products/add',               fn($req) => ProductManagementController::handleAddProduct($req));
-    $r->get('/products/{id}',          fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
-    $r->put('/products/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
+    $r->get('/products/edit/{id}',          fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
+    $r->put('/products/edit/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
     $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
 }); 
 

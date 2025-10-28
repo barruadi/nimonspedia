@@ -53,7 +53,7 @@ class ProductManagementController
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
             WHERE p.store_id = :store_id
-            AND p.deleted_at IS NULL
+            AND p.is_deleted <> TRUE
             ORDER BY p.created_at DESC
         ");
         $stmt->execute(['store_id' => $store['store_id']]);

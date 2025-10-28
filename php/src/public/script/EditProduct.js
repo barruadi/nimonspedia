@@ -124,7 +124,7 @@ function initEditProductPage() {
         try {
             console.log('Loading product data...');
             
-            const result = await api.get(`/seller/products/${productId}`);
+            const result = await api.get(`/seller/products/edit/${productId}`);
             
             console.log('Product data response:', result);
             
@@ -244,7 +244,7 @@ function initEditProductPage() {
             submitBtn.textContent = 'Menyimpan...';
             
             try {
-                const result = await api.put(`/seller/products/${productId}`, formData);
+                const result = await api.put(`/seller/products/edit/${productId}`, formData);
                 
                 if (result && result.ok) {
                     showToast('Produk berhasil diperbarui!', 'success');

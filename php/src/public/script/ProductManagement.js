@@ -270,7 +270,7 @@ function initProductManagementPage() {
 
     function handleEdit(productId) {
         console.log('Edit product:', productId);
-        window.location.href = `/products/${productId}`;
+        window.location.href = `/products/edit/${productId}`;
     }
 
     async function handleDelete(productId, productName) {
@@ -308,13 +308,13 @@ function initProductManagementPage() {
 
     if (addProductBtn) {
         addProductBtn.addEventListener('click', () => {
-            window.location.href = '/seller/products/add';
+            window.location.href = '/products/add';
         })
     }
 
     if (addFirstProductBtn) {
         addFirstProductBtn.addEventListener('click', () => {
-            window.location.href = '/seller/products/add';
+            window.location.href = '/products/add';
         });
     }
 
