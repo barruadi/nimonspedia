@@ -13,14 +13,14 @@ $router->group([
     'prefix'      => '/api/seller',
     'middleware'  => [$auth],
 ], function($r) {
-    $r->get('/dashboard',           fn($req) => DashboardController::showDashboard());
-    $r->put('/store',               fn($req) => DashboardController::updateStoreInfo($req));
-    $r->get('/products',            fn($req) => ProductManagementController::getStoreProducts());
-    $r->get('/products/add',        fn($req) => ProductManagementController::showAddProductForm());
-    $r->post('/products/add',       fn($req) => ProductManagementController::handleAddProduct($req));
-    $r->get('/products/edit/{id}',  fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
-    $r->put('/products/edit/{id}',  fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
-    $r->delete('/products/{id}',    fn($req, $id) => ProductManagementController::deleteProduct($id)); 
+    $r->get('/dashboard',                   fn($req) => DashboardController::showDashboard());
+    $r->put('/store',                       fn($req) => DashboardController::updateStoreInfo($req));
+    $r->get('/products',                    fn($req) => ProductManagementController::getStoreProducts());
+    $r->get('/products/add',                fn($req) => ProductManagementController::showAddProductForm());
+    $r->post('/products/add',               fn($req) => ProductManagementController::handleAddProduct($req));
+    $r->get('/products/{id}',          fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
+    $r->put('/products/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
+    $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
 }); 
 
 // Public Endpoints (can be called from non-sellers)

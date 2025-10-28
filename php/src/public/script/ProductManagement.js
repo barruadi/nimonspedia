@@ -270,7 +270,7 @@ function initProductManagementPage() {
 
     function handleEdit(productId) {
         console.log('Edit product:', productId);
-        window.location.href = `/seller/products/edit/${productId}`;
+        window.location.href = `/products/${productId}`;
     }
 
     async function handleDelete(productId, productName) {

@@ -31,7 +31,7 @@ const routes = {
     script: '/script/AddProduct.js',
   },
   // Dynamic route for edit product
-  '/products/edit/:id': {
+  '/products/:id': {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
   }
