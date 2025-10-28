@@ -1,4 +1,5 @@
-import { api } from './utils/api.js';
+import { api } from '/utils/api.js';
+import '/components/Navbar.js';
 
 const routes = {
   '/': {
@@ -24,6 +25,14 @@ const routes = {
 };
 
 const app = document.getElementById('app');
+const navbarRoot = document.getElementById('navbar-root');
+
+function mountNavbar() {
+  if (!navbarRoot.querySelector('app-navbar')) {
+    const navEl = document.createElement('app-navbar');
+    navbarRoot.appendChild(navEl);
+  }
+}
 
 async function render(pathname) {
   const route = routes[pathname] || routes['/'];
@@ -36,10 +45,9 @@ async function render(pathname) {
     app.innerHTML = html;
 
     if (route.script) {
-      const modulePath = route.script.replace(/^\//, './'); 
+      const modulePath = route.script.replace(/^\//, './');
       await import(modulePath);
     }
-
   } catch (e) {
     app.innerHTML = `
       <section style="padding:1rem">
@@ -64,4 +72,7 @@ function onClick(e) {
 window.addEventListener('popstate', () => render(location.pathname));
 window.addEventListener('click', onClick);
 
+window.render = render;
+
+mountNavbar();
 render(location.pathname);
