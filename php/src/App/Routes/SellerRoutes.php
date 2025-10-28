@@ -10,16 +10,17 @@ use App\Controllers\Seller\{DashboardController, ProductManagementController};
 $auth = AuthMiddleware::requireAuth();
 
 $router->group([
-  'prefix'      => '/api/seller',
-  'middleware'  => [$auth],
-    ], function($r) {
-        $r->get('/dashboard',           fn($req) => (new DashboardController())->showDashboard());
-        $r->get('/products',            fn($req) => (new ProductManagementController())->getStoreProducts());
-        $r->get('/products/add',        fn($req) => (new ProductManagementController())->showAddProductForm());
-        $r->post('/products/add',       fn($req) => (new ProductManagementController())->handleAddProduct($req));
-        $r->get('/products/edit/{id}',  fn($req, $id) => (new ProductManagementController())->showEditProductForm($id));
-        $r->post('/products/edit/{id}', fn($req, $id) => (new ProductManagementController())->handleEditProduct($req, $id));
-    }); 
+    'prefix'      => '/api/seller',
+    'middleware'  => [$auth],
+], function($r) {
+    $r->get('/dashboard', fn($req) => DashboardController::showDashboard());
+    $r->get('/products',            fn($req) => ProductManagementController::getStoreProducts());
+    $r->get('/products/add',        fn($req) => ProductManagementController::showAddProductForm());
+    $r->post('/products',           fn($req) => ProductManagementController::handleAddProduct($req));
+    $r->get('/products/{id}/edit',  fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
+    $r->put('/products/{id}',       fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
+    $r->delete('/products/{id}',    fn($req, $id) => ProductManagementController::deleteProduct($id)); 
+}); 
 
 // Public Endpoints (can be called from non-sellers)
 // GET /api/categories return categories list
@@ -36,22 +37,3 @@ $router->get('/api/categories', function() {
     
     exit; 
 });
-
-// Sanity Checks (get and post)
-$router->get('/api/me', function ($req) {
-    $u = $_SESSION['user'] ?? null;
-    return [
-        'authenticated' => (bool)$u,
-        'user' => $u ? [
-            'id'    => $u['id'],
-            'name'  => $u['name'],
-            'email' => $u['email'],
-            'role'  => $u['role'],
-        ] : null
-    ];
-});
-
-$router->post('/api/_echo', fn($req) => [
-  'content_type' => $_SERVER['CONTENT_TYPE'] ?? null,
-  'body' => $req['body'],
-]);
