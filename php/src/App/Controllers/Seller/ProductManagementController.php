@@ -233,6 +233,10 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
         }
 
+        // Get categories
+        $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
+        $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
         http_response_code(200);
         return [
             'ok' => true,
