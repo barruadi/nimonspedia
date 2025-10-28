@@ -66,7 +66,7 @@ class Product
         
         $stmt->execute([
             'store_id'    => $data['store_id'],
-            'category_id' => $data['category_id'] ?? null,  // ← FIXED
+            'category_id' => $data['category_id'] ?? null,
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
             'price'       => $data['price'],
