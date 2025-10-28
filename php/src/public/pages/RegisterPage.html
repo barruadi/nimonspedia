@@ -1,17 +1,104 @@
 <!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Register</title>
+    <link rel="stylesheet" href="/styles/Register.css">
+  </head>
+
   <body>
-    <form id="registerForm">
-      <input name="full_name" type="text" placeholder="Full name" required>
-      <input name="email" type="email" placeholder="Email" required>
-      <input name="password" type="password" placeholder="Password" required>
-      <input name="confirm_password" type="password" placeholder="Confirm Password" required>
+    <div class="card">
+      <div id="errorBox" class="error-box" style="display:none"></div>
 
-      <button type="submit">Create account</button>
+      <!-- STEP 1: pick role -->
+      <section class="step active" id="step-role">
+        <h2>Pilih tipe akun</h2>
+        <p class="desc">Kami akan menyiapkan pengalaman yang sesuai untuk kamu.</p>
 
-      <p id="registerError" style="color:red; display:none"></p>
-    </form>
+        <div class="role-options">
+          <div class="role-card" data-role="buyer">
+            <strong>Pembeli</strong>
+            <span>Beli produk dari penjual</span>
+          </div>
+          <div class="role-card" data-role="seller">
+            <strong>Penjual</strong>
+            <span>Kelola toko dan pesanan</span>
+          </div>
+        </div>
 
-    <script type="module" src="/script/Register.js" defer></script>
+        <div class="actions">
+          <button id="toStep2" disabled>Lanjut</button>
+        </div>
+      </section>
+
+      <!-- STEP 2: user info -->
+      <section class="step" id="step-user">
+        <h2>Data akun</h2>
+        <p class="desc">Kami butuh beberapa detail dasar.</p>
+
+        <div class="field">
+          <label>Nama lengkap</label>
+          <input id="fullNameInput" type="text" placeholder="Nama lengkap" required />
+        </div>
+
+        <div class="field">
+          <label>Email</label>
+          <input id="emailInput" type="email" placeholder="you@example.com" required />
+        </div>
+
+        <div class="field">
+          <label>Password</label>
+          <input id="passwordInput" type="password" placeholder="••••••••" required />
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="backToStep1">Kembali</button>
+          <button id="toNextAfterUser">Lanjut</button>
+        </div>
+      </section>
+
+      <!-- STEP 3 (seller only): store name -->
+      <section class="step" id="step-store">
+        <h2>Nama toko</h2>
+        <p class="desc">Ini akan tampil ke pembeli.</p>
+
+        <div class="field">
+          <label>Nama Toko</label>
+          <input id="storeNameInput" type="text" placeholder="Contoh: Warung Geprek Mbak Uni" />
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="backToStep2">Kembali</button>
+          <button id="submitSeller">Daftar sebagai Penjual</button>
+        </div>
+      </section>
+
+      <!-- STEP 4 (buyer final submit / review) -->
+      <section class="step" id="step-review">
+        <h2>Konfirmasi</h2>
+        <p class="desc">Periksa data kamu sebelum daftar.</p>
+
+        <div class="summary-line">
+          <span class="summary-label">Peran:</span> <span id="summaryRole"></span>
+        </div>
+        <div class="summary-line">
+          <span class="summary-label">Nama:</span> <span id="summaryName"></span>
+        </div>
+        <div class="summary-line">
+          <span class="summary-label">Email:</span> <span id="summaryEmail"></span>
+        </div>
+        <div class="summary-line seller-only" style="display:none">
+          <span class="summary-label">Nama Toko:</span> <span id="summaryStore"></span>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="backToStep2FromReview">Kembali</button>
+          <button id="submitBuyer">Buat Akun</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- JS at the bottom so DOM is ready -->
+    <script type="module" src="/script/Register.js"></script>
   </body>
 </html>

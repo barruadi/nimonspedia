@@ -11,7 +11,10 @@ form.addEventListener('submit', async (e) => {
   const password = e.target.password.value;
 
   try {
-    const res = await api.post('/login', { email, password });
+    const res = await api.post('/login', { 
+      email, 
+      password 
+    });
     console.log(res);
     if (res?.ok === false) {
       throw new Error(res.error?.message || 'Login failed');
