@@ -15,6 +15,16 @@ function initProductManagementPage() {
     const addFirstProductBtn = document.getElementById('addFirstProductBtn');
     const categoryFilter = document.getElementById('categoryFilter');
     const sortOrder = document.getElementById('sortOrder');
+    const searchInput = document.getElementById('searchInput');
+    let searchTerm = '';
+
+    function debounce(fn, wait = 300) {
+        let t;
+        return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), wait);
+        };
+    }
 
     async function initPage() {
         try {
@@ -83,50 +93,61 @@ function initProductManagementPage() {
     // Filter & Sort Logic
     function getFilteredAndSortedProducts() {
         let filtered = [...products];
-        
-        // Apply category filter
-        const selectedCategory = categoryFilter?.value;
-        if (selectedCategory) {
-            filtered = filtered.filter(p => p.category_id == selectedCategory);
+
+        // Apply search (case-insensitive substring) - checks name & description
+        const q = (searchTerm || '').trim().toLowerCase();
+        if (q) {
+            filtered = filtered.filter(p => {
+                const name = (p.name || '').toLowerCase();
+                const desc = (p.description || '').toLowerCase();
+                const cat = (p.category_name || '').toLowerCase();
+                return name.includes(q) || desc.includes(q) || cat.includes(q);
+            });
         }
-        
-        // Apply sorting
-        const sortValue = sortOrder?.value || 'name-asc';
-        const [field, direction] = sortValue.split('-');
-        
-        filtered.sort((a, b) => {
-            let valueA, valueB;
-            
-            switch(field) {
-                case 'name':
-                    valueA = (a.name || '').toLowerCase();
-                    valueB = (b.name || '').toLowerCase();
-                    break;
-                case 'price':
-                    valueA = parseFloat(a.price) || 0;
-                    valueB = parseFloat(b.price) || 0;
-                    break;
-                case 'stock':
-                    valueA = parseInt(a.stock) || 0;
-                    valueB = parseInt(b.stock) || 0;
-                    break;
-                case 'category':
-                    valueA = (a.category_name || '').toLowerCase();
-                    valueB = (b.category_name || '').toLowerCase();
-                    break;
-                default:
-                    return 0;
-            }
-            
-            if (direction === 'asc') {
-                return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
-            } else {
-                return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
-            }
-        });
-        
-        return filtered;
-    }
+
+         // Apply category filter
+         const selectedCategory = categoryFilter?.value;
+         if (selectedCategory) {
+             filtered = filtered.filter(p => p.category_id == selectedCategory);
+         }
+         
+         // Apply sorting
+         const sortValue = sortOrder?.value || 'name-asc';
+         const [field, direction] = sortValue.split('-');
+         
+         filtered.sort((a, b) => {
+             let valueA, valueB;
+             
+             switch(field) {
+                 case 'name':
+                     valueA = (a.name || '').toLowerCase();
+                     valueB = (b.name || '').toLowerCase();
+                     break;
+                 case 'price':
+                     valueA = parseFloat(a.price) || 0;
+                     valueB = parseFloat(b.price) || 0;
+                     break;
+                 case 'stock':
+                     valueA = parseInt(a.stock) || 0;
+                     valueB = parseInt(b.stock) || 0;
+                     break;
+                 case 'category':
+                     valueA = (a.category_name || '').toLowerCase();
+                     valueB = (b.category_name || '').toLowerCase();
+                     break;
+                 default:
+                     return 0;
+             }
+             
+             if (direction === 'asc') {
+                 return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+             } else {
+                 return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+             }
+         });
+         
+         return filtered;
+     }
 
     function renderProducts() {
         const filteredProducts = getFilteredAndSortedProducts();
@@ -233,8 +254,9 @@ function initProductManagementPage() {
         const editBtn = tr.querySelector('.btn-edit');
         const deleteBtn = tr.querySelector('.btn-delete');
 
+        // pass deleteBtn to handler so it can be disabled during request
         editBtn.addEventListener('click', () => handleEdit(product.product_id));
-        deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name));
+        deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name, deleteBtn));
 
         return tr;
     }
@@ -273,7 +295,7 @@ function initProductManagementPage() {
         window.location.href = `/products/edit/${productId}`;
     }
 
-    async function handleDelete(productId, productName) {
+    async function handleDelete(productId, productName, btnEl) {
         const confirmed = confirm(
             `Apakah Anda yakin ingin menghapus produk "${productName}"?\n\n` +
             `Produk yang dihapus tidak dapat dikembalikan.`
@@ -286,23 +308,36 @@ function initProductManagementPage() {
         try {
             console.log('Deleting product:', productId);
 
-            const result = await api.del(`/seller/products/${productId}`);
-
-            if (result && result.ok) {
-                showToast('Produk berhasil dihapus', 'success');
-                
-                products = products.filter(p => p.product_id !== productId);
-                
-                renderProducts();
+            // Disable button while deleting
+            if (btnEl) {
+                btnEl.disabled = true;
+                const prevText = btnEl.textContent;
+                btnEl.textContent = 'Menghapus...';
+                try {
+                    var result = await api.del(`/seller/products/${productId}`);
+                } finally {
+                    // restore button text/disabled only if still in DOM
+                    if (btnEl) { btnEl.disabled = false; btnEl.textContent = prevText; }
+                }
             } else {
-                throw new Error(result?.error || 'Gagal menghapus produk');
+                var result = await api.del(`/seller/products/${productId}`);
             }
 
-        } catch (error) {
-            console.error('Error deleting product:', error);
-            showToast(error.message, 'error');
-        }
-    }
+             if (result && result.ok) {
+                 showToast('Produk berhasil dihapus', 'success');
+                 
+                 products = products.filter(p => p.product_id !== productId);
+                 
+                 renderProducts();
+             } else {
+                 throw new Error(result?.error || 'Gagal menghapus produk');
+             }
+
+         } catch (error) {
+             console.error('Error deleting product:', error);
+             showToast(error.message, 'error');
+         }
+     }
 
     // Event Listeners
 
@@ -325,12 +360,22 @@ function initProductManagementPage() {
             renderProducts();
         });
     }
-
+ 
     if (sortOrder) {
         sortOrder.addEventListener('change', () => {
             console.log('Sort order changed:', sortOrder.value);
             renderProducts();
         });
+    }
+
+    // NEW: Search listener (debounced)
+    if (searchInput) {
+        const onSearch = debounce((ev) => {
+            searchTerm = ev.target.value || '';
+            console.log('Search term:', searchTerm);
+            renderProducts();
+        }, 300);
+        searchInput.addEventListener('input', onSearch);
     }
 
     function showToast(message, type = 'success') {
