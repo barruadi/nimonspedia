@@ -239,7 +239,7 @@ function initProductManagementPage() {
                     data-product-id="${product.product_id}"
                 >
                     Delete
-                </button>
+                </button> 
             </td>
         `;
 
