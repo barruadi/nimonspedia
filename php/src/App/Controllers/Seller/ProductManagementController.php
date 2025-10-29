@@ -260,9 +260,20 @@ class ProductManagementController
         $filename = uniqid('product_', true) . '.' . $extension;
         $filepath = $uploadDir . $filename;
 
-        // Move uploaded file
+        // Move uploaded file to temp location first
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
             return ['ok' => false, 'error' => 'Failed to upload file'];
+        }
+
+        // Optimize image (resize & compress)
+        try {
+            self::optimizeImage($filepath, $mimeType);
+        } catch (\Exception $e) {
+            // If optimization fails, delete file and return error
+            if (file_exists($filepath)) {
+                unlink($filepath);
+            }
+            return ['ok' => false, 'error' => 'Failed to optimize image: ' . $e->getMessage()];
         }
 
         return [
@@ -271,11 +282,125 @@ class ProductManagementController
         ];
     }
 
-    // TO-DO: Image optimization
-    private static function optimizeImage(string $filepath): void
+    // Optimize image: resize to max 800x800 and compress quality to 85%
+    private static function optimizeImage(string $filepath, string $mimeType): void
     {
-        // Implement with GD or Imagick
-        // Resize to max 800x800, compress quality 85%
+        // Check if GD library is available
+        if (!extension_loaded('gd')) {
+            throw new \Exception('GD library is not available');
+        }
+
+        // Load image based on type
+        $sourceImage = null;
+        switch ($mimeType) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                $sourceImage = @imagecreatefromjpeg($filepath);
+                break;
+            case 'image/png':
+                $sourceImage = @imagecreatefrompng($filepath);
+                break;
+            case 'image/webp':
+                $sourceImage = @imagecreatefromwebp($filepath);
+                break;
+            default:
+                throw new \Exception('Unsupported image type');
+        }
+
+        if (!$sourceImage) {
+            throw new \Exception('Failed to load image');
+        }
+
+        // Get original dimensions
+        $originalWidth = imagesx($sourceImage);
+        $originalHeight = imagesy($sourceImage);
+
+        // Calculate new dimensions (max 800x800, maintain aspect ratio)
+        $maxDimension = 800;
+        $newWidth = $originalWidth;
+        $newHeight = $originalHeight;
+
+        if ($originalWidth > $maxDimension || $originalHeight > $maxDimension) {
+            $ratio = $originalWidth / $originalHeight;
+            
+            if ($originalWidth > $originalHeight) {
+                // Landscape
+                $newWidth = $maxDimension;
+                $newHeight = (int)($maxDimension / $ratio);
+            } else {
+                // Portrait
+                $newHeight = $maxDimension;
+                $newWidth = (int)($maxDimension * $ratio);
+            }
+        }
+
+        // Create new image with calculated dimensions
+        $optimizedImage = imagecreatetruecolor($newWidth, $newHeight);
+
+        if (!$optimizedImage) {
+            imagedestroy($sourceImage);
+            throw new \Exception('Failed to create optimized image');
+        }
+
+        // Preserve transparency for PNG and WebP
+        if ($mimeType === 'image/png' || $mimeType === 'image/webp') {
+            imagealphablending($optimizedImage, false);
+            imagesavealpha($optimizedImage, true);
+            $transparent = imagecolorallocatealpha($optimizedImage, 0, 0, 0, 127);
+            imagefilledrectangle($optimizedImage, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+
+        // Copy and resize
+        $resized = imagecopyresampled(
+            $optimizedImage,
+            $sourceImage,
+            0, 0, 0, 0,
+            $newWidth, $newHeight,
+            $originalWidth, $originalHeight
+        );
+
+        if (!$resized) {
+            imagedestroy($sourceImage);
+            imagedestroy($optimizedImage);
+            throw new \Exception('Failed to resize image');
+        }
+
+        // Save optimized image (overwrite original)
+        $saved = false;
+        switch ($mimeType) {
+            case 'image/jpeg':
+            case 'image/jpg':
+                // Quality: 85% (0-100)
+                $saved = imagejpeg($optimizedImage, $filepath, 85);
+                break;
+            case 'image/png':
+                // Compression level: 6 (0-9, where 9 is max compression)
+                $saved = imagepng($optimizedImage, $filepath, 6);
+                break;
+            case 'image/webp':
+                // Quality: 85% (0-100)
+                $saved = imagewebp($optimizedImage, $filepath, 85);
+                break;
+        }
+
+        // Clean up memory
+        imagedestroy($sourceImage);
+        imagedestroy($optimizedImage);
+
+        if (!$saved) {
+            throw new \Exception('Failed to save optimized image');
+        }
+
+        // Log optimization result
+        $originalSize = filesize($filepath);
+        error_log(sprintf(
+            "Image optimized: %dx%d -> %dx%d, Size: %.2f KB",
+            $originalWidth,
+            $originalHeight,
+            $newWidth,
+            $newHeight,
+            $originalSize / 1024
+        ));
     }
         
     // Returns all the product information needed to show on the edit form

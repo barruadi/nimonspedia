@@ -169,7 +169,7 @@ class DashboardController
             'store_id' => $store['store_id'],
         ];
 
-        // Handle logo upload (optional)
+        // Handle logo upload
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
             $uploadResult = self::handleLogoUpload($_FILES['logo']);
             
