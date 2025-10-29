@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seller Dashboard - Nimonspedia</title>
+    <link rel="stylesheet" href="/styles/Dashboard.css">
+  </head>
+  <body>
+    <div class="dashboard-page">
+        <!-- Loading State -->
+        <div id="loadingState" style="display: none;">
+            <p>Memuat informasi dashboard...</p>
+        </div>
+
+        <!-- Store Header Info -->
+        <div class="store-header" id="storeHeader" style="display: none;">
+            <div class="store-logo-container">
+                <img id="storeLogo" src="/uploads/default-store.png" alt="Store Logo" class="store-logo">
+                <button type="button" id="changeLogoBtn" class="btn-icon" title="Ganti Logo">
+                    Ganti Logo
+                </button>
+                <input type="file" id="logoInput" accept="image/*" style="display: none;">
+            </div>
+            <div class="store-info">
+                <div class="store-header-row">
+                    <h1 id="storeName" class="store-name">Loading...</h1>
+                    <button type="button" id="editStoreBtn" class="btn btn-secondary">
+                        Edit Info
+                    </button>
+                </div>
+                <p id="storeDescription" class="store-description">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Edit Store Form (Hidden by default) -->
+        <div class="edit-store-form" id="editStoreForm" style="display: none;">
+            <h2>Edit Informasi Toko</h2>
+            <form id="storeInfoForm">
+                <div class="form-group">
+                    <label for="editStoreName">Nama Toko *</label>
+                    <input type="text" id="editStoreName" name="store_name" maxlength="100" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStoreDescription">Deskripsi</label>
+                    <textarea id="editStoreDescription" name="description" rows="4" maxlength="500"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-secondary">Batal</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="quick-stats-cards">
+            <div class="stat-card">
+                <h3>Total Produk Unik</h3>
+                <p id="totalProductsCard">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Pesanan Pending</h3>
+                <p id="pendingOrdersCard">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Produk Stok Rendah</h3>
+                <p id="lowStockProductsCard">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Pendapatan</h3>
+                <p id="totalRevenueCard">Rp 0</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions Buttons -->
+        <div class="quick-action-buttons">
+            <button type="button" id="productManagementBtn" class="btn btn-primary">
+                Kelola Produk
+            </button>
+            <button type="button" id="orderManagementBtn" class="btn btn-primary">
+                Lihat Orders
+            </button>
+            <button type="button" id="addProductBtn" class="btn btn-primary">
+                Tambah Produk Baru
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" style="display: none;"></div>
+
+    <script type="module" src="/script/Dashboard.js" defer></script>
+  </body>
+</html>

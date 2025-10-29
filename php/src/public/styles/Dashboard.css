@@ -1,0 +1,373 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    background-color: #f9fafb;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+.dashboard-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Loading State */
+#loadingState {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1.125rem;
+    color: #6b7280;
+}
+
+/* Store Header */
+.store-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.store-logo-container {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.store-logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 3px solid #e5e7eb;
+}
+
+.btn-icon {
+    position: absolute;
+    bottom: -8px;
+    right: -8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #10b981;
+    color: white;
+    border: 3px solid white;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-icon:hover {
+    background-color: #059669;
+    transform: scale(1.1);
+}
+
+.store-info {
+    flex: 1;
+}
+
+.store-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.store-name {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.store-description {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Edit Store Form */
+.edit-store-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.edit-store-form h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+/* Quick Stats Cards */
+.quick-stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.stat-card:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #10b981;
+}
+
+.stat-card h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-card p {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+}
+
+/* Quick Actions Buttons */
+.quick-action-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background-color: #10b981;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #4b5563;
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+    transform: scale(0.98);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    background-color: #10b981;
+    color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    max-width: 400px;
+}
+
+.toast.error {
+    background-color: #ef4444;
+}
+
+.toast.info {
+    background-color: #10b981;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .dashboard-page {
+        padding: 1.5rem;
+    }
+
+    .store-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .store-header-row {
+        flex-direction: column;
+    }
+
+    .quick-stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .stat-card p {
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .dashboard-page {
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+
+    .store-header {
+        padding: 1.5rem;
+    }
+
+    .store-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .store-name {
+        font-size: 1.5rem;
+    }
+
+    .quick-stats-cards {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .stat-card {
+        padding: 1.25rem;
+    }
+
+    .stat-card h3 {
+        font-size: 0.75rem;
+    }
+
+    .stat-card p {
+        font-size: 1.5rem;
+    }
+
+    .quick-action-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        min-width: 100%;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9375rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .toast {
+        top: 1rem;
+        right: 1rem;
+        left: 1rem;
+        max-width: calc(100% - 2rem);
+    }
+}

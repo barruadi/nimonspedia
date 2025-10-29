@@ -30,8 +30,6 @@ class DashboardController
                 store_name, 
                 description, 
                 logo_path,
-                address,
-                phone_number,
                 created_at,
                 updated_at
             FROM stores 
@@ -48,10 +46,9 @@ class DashboardController
 
         $storeId = $store['store_id'];
 
-        
         // Quick Stats
 
-        // 1. Total Unique Products (not quantity)
+        // Total Unique Products (not quantity)
         $stmt = $db->prepare("
             SELECT COUNT(*) as total
             FROM products
@@ -61,19 +58,19 @@ class DashboardController
         $stmt->execute(['store_id' => $storeId]);
         $totalProducts = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // 2. Pending Orders
+        // Pending Orders
         $stmt = $db->prepare("
             SELECT COUNT(DISTINCT o.order_id) as total
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN products p ON oi.product_id = p.product_id
             WHERE p.store_id = :store_id
-            AND o.order_status IN ('pending', 'processing')
+            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
         ");
         $stmt->execute(['store_id' => $storeId]);
         $pendingOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // 3. Low Stock Products (< 10)
+        // Low Stock Products (< 10)
         $stmt = $db->prepare("
             SELECT COUNT(*) as total
             FROM products
@@ -85,60 +82,17 @@ class DashboardController
         $stmt->execute(['store_id' => $storeId]);
         $lowStockProducts = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // 4. Total Revenue (completed orders only)
+        // Total Revenue (completed orders only)
         $stmt = $db->prepare("
-            SELECT COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue
+            SELECT COALESCE(SUM(oi.qty * oi.price_at), 0) as total_revenue
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN products p ON oi.product_id = p.product_id
             WHERE p.store_id = :store_id
-            AND o.order_status = 'delivered'
+            AND o.status = 'received'
         ");
         $stmt->execute(['store_id' => $storeId]);
         $totalRevenue = (float)$stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
-
-
-        // Recent activities
-
-        // Recent orders
-        $stmt = $db->prepare("
-            SELECT 
-                o.order_id,
-                o.order_status,
-                o.total_price,
-                o.created_at,
-                u.full_name as buyer_name,
-                COUNT(oi.order_item_id) as item_count
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            JOIN users u ON o.user_id = u.user_id
-            WHERE p.store_id = :store_id
-            GROUP BY o.order_id, o.order_status, o.total_price, o.created_at, u.full_name
-            ORDER BY o.created_at DESC
-            LIMIT 5
-        ");
-        $stmt->execute(['store_id' => $storeId]);
-        $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Low stock products detail
-        $stmt = $db->prepare("
-            SELECT 
-                product_id,
-                name,
-                stock,
-                price,
-                image_path
-            FROM products
-            WHERE store_id = :store_id
-            AND stock < 10
-            AND stock > 0
-            AND deleted_at IS NULL
-            ORDER BY stock ASC
-            LIMIT 5
-        ");
-        $stmt->execute(['store_id' => $storeId]);
-        $lowStockItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         http_response_code(200);
         return [
@@ -149,8 +103,6 @@ class DashboardController
                     'store_name' => $store['store_name'],
                     'description' => $store['description'],
                     'logo_path' => $store['logo_path'],
-                    'address' => $store['address'],
-                    'phone_number' => $store['phone_number'],
                     'created_at' => $store['created_at'],
                     'updated_at' => $store['updated_at'],
                 ],
@@ -160,8 +112,6 @@ class DashboardController
                     'low_stock_products' => $lowStockProducts,
                     'total_revenue' => $totalRevenue,
                 ],
-                'recent_orders' => $recentOrders,
-                'low_stock_items' => $lowStockItems,
             ]
         ];
     }
@@ -200,8 +150,6 @@ class DashboardController
         // Get request data
         $storeName = $req['body']['store_name'] ?? null;
         $description = $req['body']['description'] ?? '';
-        $address = $req['body']['address'] ?? '';
-        $phoneNumber = $req['body']['phone_number'] ?? '';
 
         // Validation
         if (!$storeName || strlen($storeName) > 100) {
@@ -214,21 +162,14 @@ class DashboardController
             return ['ok' => false, 'error' => 'Description max 500 chars'];
         }
 
-        if ($phoneNumber && !preg_match('/^[0-9]{10,15}$/', $phoneNumber)) {
-            http_response_code(400);
-            return ['ok' => false, 'error' => 'Invalid phone number format (10-15 digits)'];
-        }
-
         // Prepare update data
         $updateData = [
             'store_name' => $storeName,
             'description' => $description,
-            'address' => $address,
-            'phone_number' => $phoneNumber,
             'store_id' => $store['store_id'],
         ];
 
-        // Handle logo upload (optional)
+        // Handle logo upload
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
             $uploadResult = self::handleLogoUpload($_FILES['logo']);
             
@@ -252,8 +193,6 @@ class DashboardController
                 SET 
                     store_name = :store_name,
                     description = :description,
-                    address = :address,
-                    phone_number = :phone_number,
                     updated_at = NOW()
             ";
 
