@@ -1,17 +1,17 @@
 <?php
 
 use App\Core;
-
 use App\Core\Application;
 use App\Models\Categories;
-use App\Middlewares\AuthMiddleware;
+use App\Middlewares\{AuthMiddleware, RoleMiddleware};
 use App\Controllers\Seller\{DashboardController, ProductManagementController};
 
 $auth = AuthMiddleware::requireAuth();
+$roleSeller = RoleMiddleware::allow(['seller']);
 
 $router->group([
     'prefix'      => '/api/seller',
-    'middleware'  => [$auth],
+    'middleware'  => [$auth, $roleSeller],
 ], function($r) {
     $r->get('/dashboard',                   fn($req) => DashboardController::showDashboard());
     $r->put('/store',                       fn($req) => DashboardController::updateStoreInfo($req));
