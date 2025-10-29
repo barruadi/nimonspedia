@@ -22,6 +22,10 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
+  '/dashboard': {
+    page: '/pages/DashboardPage.html',
+    script: '/script/Dashboard.js',
+  },
   '/products': {
     page: '/pages/ProductManagementPage.html',
     script: '/script/ProductManagement.js',
@@ -30,7 +34,6 @@ const routes = {
     page: '/pages/AddProductPage.html',
     script: '/script/AddProduct.js',
   },
-  // Dynamic route for edit product
   '/products/edit/:id': {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
