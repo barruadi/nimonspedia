@@ -30,10 +30,8 @@ function initProductManagementPage() {
         try {
             // Show loading state
             showLoading();
-
             console.log('Fetching products info...');
             const result = await api.get('/seller/products');
-
             console.log('Store products info response:', result);
 
             if (!result || !result.ok) {
@@ -45,12 +43,10 @@ function initProductManagementPage() {
                 // Save store and products data
                 store = result.data.store;
                 products = result.data.products;
-                
                 console.log('Products loaded:', products.length);
                 
                 // Load categories for filter
                 await loadCategoriesFilter();
-                
                 renderProducts();
             }
 
@@ -178,19 +174,15 @@ function initProductManagementPage() {
         // Hide loading and empty states
         hideLoading();
         hideEmptyState();
-        
         // Show products table
         productTableContainer.style.display = 'block';
-
         // Clear existing table rows
         productTableBody.innerHTML = '';
-
         // Loop through every product and render each product
         filteredProducts.forEach(product => {
             const row = createProductRow(product);
             productTableBody.appendChild(row);
         });
-        
         console.log(`Rendered ${filteredProducts.length} products`);
     }
 
@@ -254,15 +246,13 @@ function initProductManagementPage() {
         const editBtn = tr.querySelector('.btn-edit');
         const deleteBtn = tr.querySelector('.btn-delete');
 
-        // pass deleteBtn to handler so it can be disabled during request
+        // Pass deleteBtn to handler so it can be disabled during request
         editBtn.addEventListener('click', () => handleEdit(product.product_id));
         deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name, deleteBtn));
-
         return tr;
     }
 
     // Helper functions
-
     function showLoading() {
         loadingState.style.display = 'block';
         emptyState.style.display = 'none';
@@ -340,7 +330,6 @@ function initProductManagementPage() {
      }
 
     // Event Listeners
-
     if (addProductBtn) {
         addProductBtn.addEventListener('click', () => {
             window.location.href = '/products/add';
@@ -368,7 +357,7 @@ function initProductManagementPage() {
         });
     }
 
-    // NEW: Search listener (debounced)
+    // Search listener
     if (searchInput) {
         const onSearch = debounce((ev) => {
             searchTerm = ev.target.value || '';
