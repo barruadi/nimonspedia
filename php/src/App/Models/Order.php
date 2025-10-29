@@ -81,7 +81,7 @@ class Order
         return $result ?: null;
     }
 
-    //  Update order status to approved
+    // Update order status to approved
     public static function approve(int $orderId): bool
     {
         $db = self::getDB();
@@ -98,7 +98,7 @@ class Order
         ]);
     }
 
-    //  Set delivery time and update status to on_delivery
+    // Set delivery time and update status to on_delivery
     public static function setDeliveryTime(int $orderId, string $deliveryTime): bool
     {
         $db = self::getDB();
@@ -117,7 +117,7 @@ class Order
         ]);
     }
 
-    //  Verify if order can be approved
+    // Verify if order can be approved
     public static function canBeApproved(array $order): bool
     {
         return $order['status'] === self::STATUS_WAITING_APPROVAL;
@@ -167,7 +167,7 @@ class Order
         return $order;
     }
 
-    //  Reject order
+    // Reject order
     public static function reject(int $orderId): bool
     {
         $db = self::getDB();
@@ -184,26 +184,21 @@ class Order
         ]);
     }
 
-    //  Get order statistics for a store
+    // Get order statistics for a store
     public static function getStoreStats(int $storeId): array
     {
         $db = self::getDB();
         
-        // Pending orders count
+        // Pending orders count - FIXED: Use OR instead of IN
         $stmt = $db->prepare("
             SELECT COUNT(DISTINCT o.order_id) as total
             FROM orders o
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN products p ON oi.product_id = p.product_id
             WHERE p.store_id = :store_id
-            AND o.status IN (:waiting, :approved, :on_delivery)
+            AND (o.status = 'waiting_approval' OR o.status = 'approved' OR o.status = 'on_delivery')
         ");
-        $stmt->execute([
-            'store_id' => $storeId,
-            'waiting' => self::STATUS_WAITING_APPROVAL,
-            'approved' => self::STATUS_APPROVED,
-            'on_delivery' => self::STATUS_ON_DELIVERY
-        ]);
+        $stmt->execute(['store_id' => $storeId]);
         $pendingOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
         // Total revenue from completed orders
@@ -213,12 +208,9 @@ class Order
             JOIN order_items oi ON o.order_id = oi.order_id
             JOIN products p ON oi.product_id = p.product_id
             WHERE p.store_id = :store_id
-            AND o.status = :status
+            AND o.status = 'received'
         ");
-        $stmt->execute([
-            'store_id' => $storeId,
-            'status' => self::STATUS_RECEIVED
-        ]);
+        $stmt->execute(['store_id' => $storeId]);
         $totalRevenue = (float)$stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
 
         return [
