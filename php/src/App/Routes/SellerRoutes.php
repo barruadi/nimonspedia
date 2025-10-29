@@ -4,7 +4,7 @@ use App\Core;
 use App\Core\Application;
 use App\Models\Categories;
 use App\Middlewares\{AuthMiddleware, RoleMiddleware};
-use App\Controllers\Seller\{DashboardController, ProductManagementController};
+use App\Controllers\Seller\{DashboardController, ProductManagementController, OrderManagementController};
 
 $auth = AuthMiddleware::requireAuth();
 $roleSeller = RoleMiddleware::allow(['seller']);
@@ -21,6 +21,9 @@ $router->group([
     $r->get('/products/edit/{id}',          fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
     $r->put('/products/edit/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
     $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
+    $r->get('/orders',                      fn($req) => OrderManagementController::getStoreOrders());
+    $r->put('/orders/approve/{id}',         fn($req, $id) => OrderManagementController::approveOrder($id));
+    $r->put('/orders/delivery-time{id}/',   fn($req, $id) => OrderManagementController::setDeliveryTime($id, $req['body']['delivery_time'] ?? ''));
 }); 
 
 // Public Endpoints (can be called from non-sellers)
