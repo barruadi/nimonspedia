@@ -46,4 +46,41 @@ class Store
             return null;
         }
     }
+
+    // Get store stats (for dashboard)
+    public static function getStats(int $storeId): array
+    {
+        $db = self::getDB();
+        
+        // Total unique products
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as total
+            FROM products
+            WHERE store_id = :store_id
+            AND deleted_at IS NULL
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        $totalProducts = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        // Low stock products
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as total
+            FROM products
+            WHERE store_id = :store_id
+            AND stock < 10
+            AND stock > 0
+            AND deleted_at IS NULL
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        $lowStockProducts = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        $orderStats = Order::getStoreStats($storeId);
+
+        return [
+            'total_products' => $totalProducts,
+            'pending_orders' => $orderStats['pending_orders'],
+            'low_stock_products' => $lowStockProducts,
+            'total_revenue' => $orderStats['total_revenue'],
+        ];
+    }
 }
