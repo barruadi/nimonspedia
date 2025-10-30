@@ -103,19 +103,19 @@ function initDashboardPage() {
     function initButtons() {
         if (productManagementBtn) {
             productManagementBtn.addEventListener('click', () => {
-                window.location.href = 'products';
+                window.location.href = '/seller/products';
             });
         }
 
         if (orderManagementBtn) {
             orderManagementBtn.addEventListener('click', () => {
-                window.location.href = 'orders';
+                window.location.href = '/seller/orders';
             });
         }
 
         if (addProductBtn) {
             addProductBtn.addEventListener('click', () => {
-                window.location.href = 'products/add';
+                window.location.href = '/seller/products/add';
             });
         }
     }

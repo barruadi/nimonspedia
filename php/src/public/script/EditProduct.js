@@ -10,7 +10,7 @@ function initEditProductPage() {
     
     if (!productId) {
         showToast('Product ID tidak ditemukan!', 'Kembali ke halaman produk...', 'error');
-        setTimeout(() => window.location.href = '/products', 1500);
+        setTimeout(() => window.location.href = '/seller/products', 1500);
         return;
     }
 
@@ -155,7 +155,7 @@ function initEditProductPage() {
         } catch (error) {
             console.error('Error loading product:', error);
             showToast('Gagal memuat data produk!', error.message, 'error');
-            setTimeout(() => window.location.href = '/products', 2000);
+            setTimeout(() => window.location.href = '/seller/products', 2000);
         }
     }
 
@@ -261,7 +261,7 @@ function initEditProductPage() {
             if (result && result.ok) {
                 showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
                 setTimeout(() => {
-                    window.location.href = '/products';
+                    window.location.href = '/seller/products';
                 }, 1500);
             } else {
                 throw new Error(result?.error || 'Gagal memperbarui produk');
@@ -334,7 +334,7 @@ function initEditProductPage() {
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
             console.log('Cancel button clicked, going back to products');
-            window.location.href = '/products';
+            window.location.href = '/seller/products';
         });
     }
 

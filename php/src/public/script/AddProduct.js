@@ -247,7 +247,7 @@ function initAddProductPage() {
                 if (result && result.ok) {
                     showToast('Produk berhasil ditambahkan!', 'Yuk kembali ke toko!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/products';
+                        window.location.href = '/seller/products';
                     }, 1500);
                 } else {
                     throw new Error(result?.error || 'Gagal menambahkan produk');
@@ -290,7 +290,7 @@ function initAddProductPage() {
             // "Batal" button - go back to products page
             newCancelConfirmBtn.addEventListener('click', () => {
                 hideCancelModal();
-                window.location.href = '/products';
+                window.location.href = '/seller/products';
             });
         });
     }
