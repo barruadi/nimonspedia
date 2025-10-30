@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Management - Nimonspedia</title>
+    <link rel="stylesheet" href="/styles/ProductManagement.css">
+  </head>
+  <body>
+    <div class="product-management-page">
+        <!-- Temporary HTML structure (Figma design in development) -->
+        <div>
+            <!-- Header with Actions -->
+            <div class="header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="filter-section">
+                    <label for="categoryFilter">Filter Kategori:</label>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">Semua Kategori</option>
+                        <!-- Categories will be populated here -->
+                    </select>
+
+                    <!-- Search input -->
+                    <label for="searchInput" style="margin-left: 12px;">Cari:</label>
+                    <input id="searchInput" type="search" placeholder="Cari produk..." class="filter-input" style="margin-left:8px; padding:6px;">
+
+                    <label for="sortOrder" style="margin-left: 20px;">Urutkan:</label>
+                    <select id="sortOrder" class="filter-select">
+                        <option value="name-asc">Nama (A-Z)</option>
+                        <option value="name-desc">Nama (Z-A)</option>
+                        <option value="price-asc">Harga (Rendah-Tinggi)</option>
+                        <option value="price-desc">Harga (Tinggi-Rendah)</option>
+                        <option value="stock-asc">Stok (Rendah-Tinggi)</option>
+                        <option value="stock-desc">Stok (Tinggi-Rendah)</option>
+                        <option value="category-asc">Kategori (A-Z)</option>
+                        <option value="category-desc">Kategori (Z-A)</option>
+                    </select>
+                </div>
+                
+                <button type="button" id="addProductBtn" class="btn btn-primary">
+                    Tambah Produk Baru
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" style="display: none;">
+                <p>Memuat produk...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" style="display: none;">
+                <p>Belum ada produk pada toko Anda</p>
+                <button type="button" id="addFirstProductBtn" class="btn" hidden>
+                    Tambah Produk Pertama
+                </button>
+            </div>
+
+            <!-- Product Table -->
+            <div id="productTableContainer" style="display: none;">
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>Gambar</th>
+                            <th>Nama Produk</th>
+                            <th>Kategori</th>
+                            <th>Harga</th>
+                            <th>Stok</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        <!-- Data produk akan di-render di sini -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" style="display: none;"></div>
+
+    <script type="module" src="/script/ProductManagement.js" defer></script>
+  </body>
+</html>

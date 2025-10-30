@@ -17,7 +17,7 @@ services:
     image: postgres:16
     container_name: tubes-wbd-db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     env_file:
       - ./.env
     volumes:
