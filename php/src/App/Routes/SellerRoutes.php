@@ -23,6 +23,7 @@ $router->group([
     $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
     $r->get('/orders',                      fn($req) => OrderManagementController::getStoreOrders());
     $r->put('/orders/approve/{id}',         fn($req, $id) => OrderManagementController::approveOrder($id));
+    $r->put('/orders/reject/{id}',          fn($req, $id) => OrderManagementController::rejectOrder($id));
     $r->put('/orders/delivery-time{id}/',   fn($req, $id) => OrderManagementController::setDeliveryTime($id, $req['body']['delivery_time'] ?? ''));
 }); 
 
