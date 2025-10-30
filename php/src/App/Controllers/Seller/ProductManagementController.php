@@ -651,7 +651,7 @@ class ProductManagementController
         }
     }
 
-    // Handles selected product soft delection (sets is_deleted to TRUE)
+    // Handles selected product soft deletion (sets is_deleted to TRUE)
     public static function deleteProduct(int $productId): array
     {
         // Start session
@@ -687,13 +687,13 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
         }
 
-        // Check if product has pending orders (cascade validation)
+        // Check if product has pending orders (waiting_approval, approved, on_delivery)
         $stmt = $db->prepare("
             SELECT COUNT(*) as count
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
             WHERE oi.product_id = :product_id
-            AND o.order_status IN ('pending', 'processing', 'shipped')
+            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
         ");
         $stmt->execute(['product_id' => $productId]);
         $pendingOrders = (int)$stmt->fetch(\PDO::FETCH_ASSOC)['count'];
@@ -708,9 +708,12 @@ class ProductManagementController
 
         // Soft delete
         try {
+            // Set is_deleted = TRUE dan deleted_at
             $stmt = $db->prepare("
                 UPDATE products 
-                SET deleted_at = NOW() 
+                SET is_deleted = TRUE,
+                    deleted_at = NOW(),
+                    updated_at = NOW()
                 WHERE product_id = :product_id
             ");
             $stmt->execute(['product_id' => $productId]);
@@ -727,8 +730,9 @@ class ProductManagementController
             return ['ok' => true, 'message' => 'Product deleted successfully'];
 
         } catch (\Exception $e) {
+            error_log("Delete product error: " . $e->getMessage());
             http_response_code(500);
-            return ['ok' => false, 'error' => 'Failed to delete product'];
+            return ['ok' => false, 'error' => 'Failed to delete product: ' . $e->getMessage()];
         }
     }
 }
