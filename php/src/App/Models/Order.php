@@ -29,6 +29,7 @@ class Order
             SELECT 
                 o.order_id,
                 o.buyer_id,
+                o.store_id,
                 o.total_amount,
                 o.status,
                 o.delivery_time,
@@ -42,7 +43,7 @@ class Order
             JOIN users u ON o.buyer_id = u.user_id
             LEFT JOIN order_items oi ON o.order_id = oi.order_id
             WHERE o.store_id = :store_id
-            GROUP BY o.order_id, o.buyer_id, o.total_amount, o.status, o.delivery_time, o.reject_reason, o.created_at, o.updated_at, u.full_name, u.email
+            GROUP BY o.order_id, o.buyer_id, o.store_id, o.total_amount, o.status, o.delivery_time, o.reject_reason, o.created_at, o.updated_at, u.full_name, u.email
             ORDER BY 
                 CASE o.status
                     WHEN 'waiting_approval' THEN 1
@@ -64,7 +65,16 @@ class Order
         $db = self::getDB();
         
         $stmt = $db->prepare("
-            SELECT o.order_id, o.status, o.delivery_time, o.buyer_id, o.total_amount, o.reject_reason
+            SELECT 
+                o.order_id, 
+                o.buyer_id,
+                o.store_id,
+                o.status, 
+                o.delivery_time, 
+                o.total_amount, 
+                o.reject_reason,
+                o.created_at,
+                o.updated_at
             FROM orders o
             JOIN stores s ON o.store_id = s.store_id
             WHERE o.order_id = :order_id
@@ -88,15 +98,13 @@ class Order
         
         $stmt = $db->prepare("
             UPDATE orders 
-            SET status = :status,
+            SET status = 'approved',
                 updated_at = NOW()
             WHERE order_id = :order_id
+            AND status = 'waiting_approval'
         ");
         
-        return $stmt->execute([
-            'status' => self::STATUS_APPROVED,
-            'order_id' => $orderId
-        ]);
+        return $stmt->execute(['order_id' => $orderId]);
     }
 
     // Set delivery time and update status to on_delivery
@@ -107,14 +115,14 @@ class Order
         $stmt = $db->prepare("
             UPDATE orders 
             SET delivery_time = :delivery_time,
-                status = :status,
+                status = 'on_delivery',
                 updated_at = NOW()
             WHERE order_id = :order_id
+            AND status = 'approved'
         ");
         
         return $stmt->execute([
             'delivery_time' => $deliveryTime,
-            'status' => self::STATUS_ON_DELIVERY,
             'order_id' => $orderId
         ]);
     }
@@ -139,7 +147,15 @@ class Order
         // Get order info
         $stmt = $db->prepare("
             SELECT 
-                o.*,
+                o.order_id,
+                o.buyer_id,
+                o.store_id,
+                o.status,
+                o.total_amount,
+                o.delivery_time,
+                o.reject_reason,
+                o.created_at,
+                o.updated_at,
                 u.full_name as buyer_name,
                 u.email as buyer_email
             FROM orders o
@@ -204,17 +220,22 @@ class Order
         try {
             $db->beginTransaction();
 
-            // 1. Get order details
+            // 1. Get order details with lock
             $stmt = $db->prepare("
                 SELECT buyer_id, total_amount, status 
                 FROM orders 
                 WHERE order_id = :order_id
+                FOR UPDATE
             ");
             $stmt->execute(['order_id' => $orderId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$order || $order['status'] !== 'waiting_approval') {
-                throw new Exception('Order cannot be rejected');
+            if (!$order) {
+                throw new Exception('Order not found');
+            }
+
+            if ($order['status'] !== 'waiting_approval') {
+                throw new Exception('Order cannot be rejected. Current status: ' . $order['status']);
             }
 
             // 2. Refund buyer balance
@@ -224,10 +245,14 @@ class Order
                     updated_at = NOW()
                 WHERE user_id = :buyer_id
             ");
-            $refundStmt->execute([
+            $refundResult = $refundStmt->execute([
                 'amount' => $order['total_amount'],
                 'buyer_id' => $order['buyer_id']
             ]);
+
+            if (!$refundResult) {
+                throw new Exception('Failed to refund buyer balance');
+            }
 
             // 3. Update order status to rejected
             $updateStmt = $db->prepare("
@@ -236,11 +261,16 @@ class Order
                     reject_reason = :reason,
                     updated_at = NOW()
                 WHERE order_id = :order_id
+                AND status = 'waiting_approval'
             ");
-            $updateStmt->execute([
+            $updateResult = $updateStmt->execute([
                 'reason' => $rejectReason,
                 'order_id' => $orderId
             ]);
+
+            if (!$updateResult || $updateStmt->rowCount() === 0) {
+                throw new Exception('Failed to update order status');
+            }
 
             $db->commit();
             return true;
@@ -248,7 +278,7 @@ class Order
         } catch (Exception $e) {
             $db->rollBack();
             error_log("Reject order failed: " . $e->getMessage());
-            return false;
+            throw $e; // Re-throw untuk ditangkap di controller
         }
     }
 
@@ -261,6 +291,7 @@ class Order
             SELECT 
                 o.order_id,
                 o.buyer_id,
+                o.store_id,
                 o.status,
                 o.total_amount,
                 o.delivery_time,
@@ -297,6 +328,7 @@ class Order
             SELECT 
                 o.order_id,
                 o.buyer_id,
+                o.store_id,
                 o.status,
                 o.total_amount,
                 o.delivery_time,

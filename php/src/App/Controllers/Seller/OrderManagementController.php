@@ -4,6 +4,7 @@ namespace App\Controllers\Seller;
 
 use App\Models\Store;
 use App\Models\Order;
+use Exception;
 
 class OrderManagementController
 {
@@ -152,18 +153,19 @@ class OrderManagementController
         }
 
         // Reject order with refund
-        $success = Order::rejectWithRefund($orderId, $rejectReason);
+        try {
+            $success = Order::rejectWithRefund($orderId, $rejectReason);
 
-        if (!$success) {
+            http_response_code(200);
+            return [
+                'ok' => true,
+                'message' => 'Order rejected and buyer refunded successfully'
+            ];
+        } catch (Exception $e) {
+            error_log("Reject order controller error: " . $e->getMessage());
             http_response_code(500);
-            return ['ok' => false, 'error' => 'Failed to reject order'];
+            return ['ok' => false, 'error' => 'Failed to reject order: ' . $e->getMessage()];
         }
-
-        http_response_code(200);
-        return [
-            'ok' => true,
-            'message' => 'Order rejected and buyer refunded successfully'
-        ];
     }
 
     // Updates order delivery time
@@ -195,11 +197,11 @@ class OrderManagementController
 
         if (!Order::canSetDeliveryTime($order)) {
             http_response_code(400);
-            return ['ok' => false, 'error' => 'Delivery time can only be set for approved orders'];
+            return ['ok' => false, 'error' => 'Delivery time can only be set for approved orders. Current status: ' . $order['status']];
         }
 
-        // Calculate delivery time (NOW + days)
-        $deliveryTime = date('Y-m-d H:i:s', strtotime("+{$deliveryDays} days"));
+        // Calculate delivery time (NOW + days) in PostgreSQL TIMESTAMPTZ format
+        $deliveryTime = date('Y-m-d H:i:sP', strtotime("+{$deliveryDays} days"));
         
         $success = Order::setDeliveryTime($orderId, $deliveryTime);
 
