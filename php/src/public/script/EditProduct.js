@@ -279,6 +279,7 @@ function initEditProductPage() {
     // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
+        const backdrop = document.getElementById('toastBackdrop');
         const primaryEl = document.getElementById('toastPrimaryMessage');
         const secondaryEl = document.getElementById('toastSecondaryMessage');
         const closeBtn = document.getElementById('toastCloseBtn');
@@ -288,33 +289,36 @@ function initEditProductPage() {
             return;
         }
         
-        // Set messages
+        // Set messages and type
         primaryEl.textContent = primaryMessage;
         secondaryEl.textContent = secondaryMessage;
-        
-        // Set type (success/error)
         toast.className = 'toast ' + type;
         
-        // Set close button color based on type
-        if (type === 'error') {
-            closeBtn.style.backgroundColor = '#ef4444';
-        } else {
-            closeBtn.style.backgroundColor = '#10b981';
-        }
-        
-        // Show toast
+        // Show backdrop + toast
+        if (backdrop) backdrop.style.display = 'block';
         toast.style.display = 'flex';
         
-        // Auto hide after 5 seconds
-        const autoHideTimer = setTimeout(() => {
-            toast.style.display = 'none';
-        }, 5000);
+        // Auto hide after 5s
+        let autoHideTimer = setTimeout(hideToast, 5000);
         
-        // Close button handler
-        closeBtn.onclick = () => {
-            clearTimeout(autoHideTimer);
-            toast.style.display = 'none';
-        };
+        // Close handlers (button and backdrop click)
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+        if (backdrop) {
+            backdrop.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+
+        function hideToast() {
+            if (toast) toast.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
+        }
     }
 
     console.log('Initializing EditProduct page...');

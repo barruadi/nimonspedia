@@ -345,6 +345,16 @@
     background-color: #dc2626;
 }
 
+/* Toast Backdrop (covers screen while toast visible) */
+.toast-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35); 
+    backdrop-filter: blur(1px); 
+    z-index: 9980; 
+    display: none;
+}
+
 @keyframes slideDown {
     from {
         transform: translate(-50%, -100%);

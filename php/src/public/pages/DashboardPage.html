@@ -129,6 +129,9 @@
         </div>
     </div>
 
+    <!-- Backdrop for toast (will block interaction) -->
+    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast" style="display: none;">
       <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
@@ -136,9 +139,7 @@
         <div id="toastPrimaryMessage"></div>
         <div id="toastSecondaryMessage"></div>
       </div>
-      <button type="button" id="toastCloseBtn" class="toast-close-btn">
-        Tutup
-      </button>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
     </div>
 
     <script type="module" src="/script/Dashboard.js" defer></script>

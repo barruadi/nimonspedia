@@ -262,28 +262,48 @@ function initAddProductPage() {
         });
     }
 
-    // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
+        const backdrop = document.getElementById('toastBackdrop');
         const primaryEl = document.getElementById('toastPrimaryMessage');
         const secondaryEl = document.getElementById('toastSecondaryMessage');
+        const closeBtn = document.getElementById('toastCloseBtn');
         
-        primaryEl.textContent = primaryMessage;
-        secondaryEl.textContent = secondaryMessage;
-        
-        // Add error class if needed
-        if (type === 'error') {
-            toast.classList.add('error');
-        } else {
-            toast.classList.remove('error');
+        if (!toast || !primaryEl || !secondaryEl) {
+            console.error('Toast elements not found!');
+            return;
         }
         
+        // Set messages and type
+        primaryEl.textContent = primaryMessage;
+        secondaryEl.textContent = secondaryMessage;
+        toast.className = 'toast ' + type;
+        
+        // Show backdrop + toast
+        if (backdrop) backdrop.style.display = 'block';
         toast.style.display = 'flex';
         
-        // Auto hide after 5 seconds
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 5000);
+        // Auto hide after 5s
+        let autoHideTimer = setTimeout(hideToast, 5000);
+        
+        // Close handlers (button and backdrop click)
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+        if (backdrop) {
+            backdrop.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+
+        function hideToast() {
+            if (toast) toast.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
+        }
     }
 
     console.log('Initializing AddProduct page...');

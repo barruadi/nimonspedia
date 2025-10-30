@@ -236,9 +236,9 @@ function initDashboardPage() {
         }
     }
 
-    // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
+        const backdrop = document.getElementById('toastBackdrop');
         const primaryEl = document.getElementById('toastPrimaryMessage');
         const secondaryEl = document.getElementById('toastSecondaryMessage');
         const closeBtn = document.getElementById('toastCloseBtn');
@@ -248,20 +248,35 @@ function initDashboardPage() {
             return;
         }
         
+        // Set messages and type
         primaryEl.textContent = primaryMessage;
         secondaryEl.textContent = secondaryMessage;
         toast.className = 'toast ' + type;
+        
+        // Show backdrop + toast
+        if (backdrop) backdrop.style.display = 'block';
         toast.style.display = 'flex';
         
-        const autoHideTimer = setTimeout(() => {
-            toast.style.display = 'none';
-        }, 5000);
+        // Auto hide after 5s
+        let autoHideTimer = setTimeout(hideToast, 5000);
         
+        // Close handlers (button and backdrop click)
         if (closeBtn) {
             closeBtn.onclick = () => {
                 clearTimeout(autoHideTimer);
-                toast.style.display = 'none';
+                hideToast();
             };
+        }
+        if (backdrop) {
+            backdrop.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+
+        function hideToast() {
+            if (toast) toast.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
         }
     }
 
