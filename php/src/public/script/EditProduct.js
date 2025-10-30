@@ -9,7 +9,7 @@ function initEditProductPage() {
     const productId = window.routeParams?.id;
     
     if (!productId) {
-        showToast('Product ID tidak ditemukan', 'error');
+        showToast('Product ID tidak ditemukan!', 'Kembali ke halaman produk...', 'error');
         setTimeout(() => window.location.href = '/products', 1500);
         return;
     }
@@ -48,7 +48,7 @@ function initEditProductPage() {
         // Validate file type
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!validTypes.includes(file.type)) {
-            showToast('Format file harus JPG, PNG, atau WEBP', 'error');
+            showToast('Format file tidak valid!', 'Gunakan JPG, PNG, atau WEBP', 'error');
             e.target.value = '';
             return;
         }
@@ -56,7 +56,7 @@ function initEditProductPage() {
         // Validate file size (max 2MB)
         const maxSize = 2 * 1024 * 1024;
         if (file.size > maxSize) {
-            showToast('Ukuran file maksimal 2MB', 'error');
+            showToast('Ukuran file terlalu besar!', 'Maksimal 2MB', 'error');
             e.target.value = '';
             return;
         }
@@ -73,8 +73,7 @@ function initEditProductPage() {
         reader.readAsDataURL(file);
     });
 
-    // Fetch GCategories
-
+    // Fetch Categories
     async function fetchCategories() {
         try {
             console.log('Fetching categories...');
@@ -157,7 +156,7 @@ function initEditProductPage() {
 
         } catch (error) {
             console.error('Error loading product:', error);
-            showToast(error.message, 'error');
+            showToast('Gagal memuat data produk!', error.message, 'error');
             setTimeout(() => window.location.href = '/products', 2000);
         }
     }
@@ -247,7 +246,7 @@ function initEditProductPage() {
                 const result = await api.put(`/seller/products/edit/${productId}`, formData);
                 
                 if (result && result.ok) {
-                    showToast('Produk berhasil diperbarui!', 'success');
+                    showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
                     setTimeout(() => {
                         window.location.href = '/products';
                     }, 1500);
@@ -257,7 +256,7 @@ function initEditProductPage() {
                 
             } catch (error) {
                 console.error('Error submitting form:', error);
-                showToast(error.message, 'error');
+                showToast('Gagal memperbarui produk!', error.message, 'error');
                 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Simpan Perubahan';
@@ -278,21 +277,44 @@ function initEditProductPage() {
     }
 
     // Toast Notification
-
-    function showToast(message, type = 'success') {
+    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
-        if (!toast) {
-            console.error('Toast element not found!');
+        const primaryEl = document.getElementById('toastPrimaryMessage');
+        const secondaryEl = document.getElementById('toastSecondaryMessage');
+        const closeBtn = document.getElementById('toastCloseBtn');
+        
+        if (!toast || !primaryEl || !secondaryEl) {
+            console.error('Toast elements not found!');
             return;
         }
         
-        toast.textContent = message;
-        toast.className = `toast ${type}`;
-        toast.style.display = 'block';
+        // Set messages
+        primaryEl.textContent = primaryMessage;
+        secondaryEl.textContent = secondaryMessage;
         
-        setTimeout(() => {
+        // Set type (success/error)
+        toast.className = 'toast ' + type;
+        
+        // Set close button color based on type
+        if (type === 'error') {
+            closeBtn.style.backgroundColor = '#ef4444';
+        } else {
+            closeBtn.style.backgroundColor = '#10b981';
+        }
+        
+        // Show toast
+        toast.style.display = 'flex';
+        
+        // Auto hide after 5 seconds
+        const autoHideTimer = setTimeout(() => {
             toast.style.display = 'none';
-        }, 3000);
+        }, 5000);
+        
+        // Close button handler
+        closeBtn.onclick = () => {
+            clearTimeout(autoHideTimer);
+            toast.style.display = 'none';
+        };
     }
 
     console.log('Initializing EditProduct page...');

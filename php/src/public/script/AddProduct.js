@@ -39,7 +39,7 @@ function initAddProductPage() {
         // Validate file type
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!validTypes.includes(file.type)) {
-            showToast('Format file harus JPG, PNG, atau WEBP', 'error');
+            showToast('Format file harus JPG, PNG, atau WEBP!', 'error');
             e.target.value = '';
             return;
         }
@@ -47,7 +47,7 @@ function initAddProductPage() {
         // Validate file size (max 2MB)
         const maxSize = 2 * 1024 * 1024;
         if (file.size > maxSize) {
-            showToast('Ukuran file maksimal 2MB', 'error');
+            showToast('Ukuran file maksimal 2MB!', 'error');
             e.target.value = '';
             return;
         }
@@ -64,7 +64,6 @@ function initAddProductPage() {
     });
 
     // Fetch Categories (using api/categories)
-
     async function fetchCategories() {
         try {
             console.log('Fetching categories...');
@@ -110,7 +109,6 @@ function initAddProductPage() {
     }
 
     // Init Form
-
     async function initForm() {
         try {
             console.log('Fetching store info...');
@@ -121,7 +119,7 @@ function initAddProductPage() {
             if (!result || !result.ok) {
                 console.warn('Store info request failed:', result);
                 // Don't block category fetch if store info fails
-                showToast('Unauthorized - Please login as seller', 'error');
+                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
                 setTimeout(() => window.location.href = '/login', 1500);
                 return;
             } else {
@@ -140,7 +138,7 @@ function initAddProductPage() {
             
         } catch (error) {
             console.error('Error in initForm:', error);
-            showToast('Gagal memuat informasi toko', 'error');
+            showToast('Gagal memuat informasi toko!', 'Tolong kembali sesaat lagi...', 'error');
         }
     }
 
@@ -196,7 +194,7 @@ function initAddProductPage() {
         // Image
         const image = formData.get('image');
         if (!image || image.size === 0) {
-            showToast('Foto produk wajib diunggah', 'error');
+            showToast('Foto produk wajib diunggah!', 'Supaya pembeli tertarik dengan produkmu!', 'error');
             isValid = false;
         }
         
@@ -234,7 +232,7 @@ function initAddProductPage() {
                 const result = await api.post('/seller/products/add', formData);
                 
                 if (result && result.ok) {
-                    showToast('Produk berhasil ditambahkan!', 'success');
+                    showToast('Produk berhasil ditambahkan!', 'Yuk kembali ke toko!', 'success');
                     setTimeout(() => {
                         window.location.href = '/products';
                     }, 1500);
@@ -244,7 +242,7 @@ function initAddProductPage() {
                 
             } catch (error) {
                 console.error('Error submitting form:', error);
-                showToast(error.message, 'error');
+                showToast(error.message, 'Terjadi kegagalan!', 'error');
                 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Simpan';
@@ -265,20 +263,27 @@ function initAddProductPage() {
     }
 
     // Toast Notification
-    function showToast(message, type = 'success') {
+    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
-        if (!toast) {
-            console.error('Toast element not found!');
-            return;
+        const primaryEl = document.getElementById('toastPrimaryMessage');
+        const secondaryEl = document.getElementById('toastSecondaryMessage');
+        
+        primaryEl.textContent = primaryMessage;
+        secondaryEl.textContent = secondaryMessage;
+        
+        // Add error class if needed
+        if (type === 'error') {
+            toast.classList.add('error');
+        } else {
+            toast.classList.remove('error');
         }
         
-        toast.textContent = message;
-        toast.className = `toast ${type === 'error' ? 'error' : ''}`;
-        toast.style.display = 'block';
+        toast.style.display = 'flex';
         
+        // Auto hide after 5 seconds
         setTimeout(() => {
             toast.style.display = 'none';
-        }, 3000);
+        }, 5000);
     }
 
     console.log('Initializing AddProduct page...');
