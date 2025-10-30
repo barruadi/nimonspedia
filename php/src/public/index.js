@@ -22,6 +22,10 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
+  '/card': {
+    page: '/pages/CartPage.html',
+    script: '/script/Cart.js',
+  },
 };
 
 const app = document.getElementById('app');
