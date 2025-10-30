@@ -21,7 +21,6 @@ function initOrderManagementPage() {
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
     const pageNumbersContainer = document.getElementById('pageNumbers');
-    const btnAddProduct = document.getElementById('btnAddProduct');
 
     // Modals
     const detailModal = document.getElementById('detailModal');
@@ -286,6 +285,9 @@ function initOrderManagementPage() {
             const order = result.data.order;
             const detailContent = document.getElementById('detailContent');
             
+            // Generate status history based on current status
+            const statusHistory = getStatusHistory(order.status);
+            
             detailContent.innerHTML = `
                 <div class="detail-section">
                     <div class="detail-section-title">Informasi Order</div>
@@ -303,6 +305,14 @@ function initOrderManagementPage() {
                             <span class="order-status-badge status-${order.status}">${getStatusText(order.status)}</span>
                         </span>
                     </div>
+                    ${statusHistory ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Status History</span>
+                            <span class="detail-value" style="text-align: right;">
+                                ${statusHistory}
+                            </span>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="detail-section">
@@ -314,6 +324,10 @@ function initOrderManagementPage() {
                     <div class="detail-row">
                         <span class="detail-label">Email</span>
                         <span class="detail-value">${escapeHtml(order.buyer_email)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Alamat</span>
+                        <span class="detail-value">${escapeHtml(order.shipping_address || order.buyer_address || 'Alamat tidak tersedia')}</span>
                     </div>
                 </div>
 
@@ -343,6 +357,16 @@ function initOrderManagementPage() {
                         <p style="color: #6b7280; font-size: 0.9375rem;">${escapeHtml(order.reject_reason)}</p>
                     </div>
                 ` : ''}
+
+                ${order.delivery_time ? `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Informasi Pengiriman</div>
+                        <div class="detail-row">
+                            <span class="detail-label">Estimasi Pengiriman</span>
+                            <span class="detail-value">${formatDate(order.delivery_time)}</span>
+                        </div>
+                    </div>
+                ` : ''}
             `;
 
             detailModal.style.display = 'flex';
@@ -352,16 +376,39 @@ function initOrderManagementPage() {
         }
     }
 
-    function showRejectModal(orderId) {
-        selectedOrderId = orderId;
-        rejectReason.value = '';
-        rejectModal.style.display = 'flex';
-    }
+    // Generate status history based on current status
+    function getStatusHistory(currentStatus) {
+        const statusFlows = {
+            'waiting_approval': null, // No history yet
+            'approved': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-approved" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Approved</span>
+            `,
+            'on_delivery': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-approved" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Approved</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-on_delivery" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">On Delivery</span>
+            `,
+            'received': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-approved" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Approved</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-on_delivery" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">On Delivery</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-received" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Received</span>
+            `,
+            'rejected': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-rejected" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Rejected</span>
+            `
+        };
 
-    function showDeliveryModal(orderId) {
-        selectedOrderId = orderId;
-        deliveryDays.value = '';
-        deliveryModal.style.display = 'flex';
+        return statusFlows[currentStatus] || null;
     }
 
     // Close modals
@@ -414,7 +461,7 @@ function initOrderManagementPage() {
             return;
         }
 
-        // ✅ Disable button saat loading
+        // Disable button saat loading
         confirmReject.disabled = true;
         confirmReject.textContent = 'Memproses...';
 
@@ -492,11 +539,6 @@ function initOrderManagementPage() {
             confirmDelivery.disabled = false;
             confirmDelivery.textContent = 'Kirim Barang';
         }
-    });
-
-    // Add Product button redirect
-    btnAddProduct.addEventListener('click', () => {
-        window.location.href = '/seller/products';
     });
 
     // Helper functions
