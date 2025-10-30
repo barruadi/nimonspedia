@@ -233,48 +233,89 @@ class ProductManagementController
     // Utility function: Handles image upload and validation
     private static function handleImageUpload(array $file): array
     {
-        // Validate file type
+        // Check if file was uploaded
+        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            error_log("❌ Upload failed: No file uploaded or invalid upload");
+            return ['ok' => false, 'error' => 'No file uploaded'];
+        }
+
+        error_log("File uploaded: " . $file['name'] . " (" . $file['size'] . " bytes)");
+
+        // Validate file type using MIME
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         
+        error_log("MIME type detected: $mimeType");
+        
         if (!in_array($mimeType, $allowedTypes)) {
+            error_log("Invalid MIME type: $mimeType");
             return ['ok' => false, 'error' => 'Invalid file type. Only JPG, PNG, WEBP allowed'];
         }
 
         // Validate file size (max 2MB)
         $maxSize = 2 * 1024 * 1024;
         if ($file['size'] > $maxSize) {
+            error_log("File too large: " . $file['size'] . " bytes (max: $maxSize bytes)");
             return ['ok' => false, 'error' => 'File size must be less than 2MB'];
         }
 
         // Create upload directory
         $uploadDir = __DIR__ . '/../../../public/uploads/products/';
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+            error_log("Creating upload directory: $uploadDir");
+            if (!mkdir($uploadDir, 0755, true)) {
+                error_log("Failed to create upload directory: $uploadDir");
+                return ['ok' => false, 'error' => 'Failed to create upload directory'];
+            }
+        }
+
+        // Check if directory is writable
+        if (!is_writable($uploadDir)) {
+            error_log("Upload directory not writable: $uploadDir");
+            return ['ok' => false, 'error' => 'Upload directory not writable'];
         }
 
         // Generate unique filename
         $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        if (!$extension) {
+            // Fallback to MIME type
+            $extension = match($mimeType) {
+                'image/jpeg', 'image/jpg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                default => 'jpg'
+            };
+        }
+        
         $filename = uniqid('product_', true) . '.' . $extension;
         $filepath = $uploadDir . $filename;
 
-        // Move uploaded file to temp location first
+        error_log("Attempting to save to: $filepath");
+
+        // Move uploaded file (DIRECT UPLOAD - NO OPTIMIZATION)
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            error_log("Failed to move uploaded file from " . $file['tmp_name'] . " to $filepath");
             return ['ok' => false, 'error' => 'Failed to upload file'];
         }
 
-        // Optimize image (resize & compress)
+        error_log("File uploaded successfully: $filepath");
+
+        // OPTIMIZATION DISABLED FOR TESTING
+        // Uncomment below to enable image optimization
+        /*
         try {
             self::optimizeImage($filepath, $mimeType);
+            error_log("Image optimized successfully");
         } catch (\Exception $e) {
-            // If optimization fails, delete file and return error
-            if (file_exists($filepath)) {
-                unlink($filepath);
-            }
-            return ['ok' => false, 'error' => 'Failed to optimize image: ' . $e->getMessage()];
+            // Log warning but DON'T delete file - continue with original
+            error_log("Image optimization failed (using original): " . $e->getMessage());
         }
+        */
+
+        $finalSize = filesize($filepath);
+        error_log("Final file size: " . ($finalSize / 1024) . " KB");
 
         return [
             'ok' => true,
@@ -282,13 +323,26 @@ class ProductManagementController
         ];
     }
 
+    /*
+    // ========================================
+    // IMAGE OPTIMIZATION - CURRENTLY DISABLED
+    // ========================================
+    // Uncomment this function to enable image optimization
+    // 
     // Optimize image: resize to max 800x800 and compress quality to 85%
     private static function optimizeImage(string $filepath, string $mimeType): void
     {
         // Check if GD library is available
         if (!extension_loaded('gd')) {
-            throw new \Exception('GD library is not available');
+            throw new \Exception('GD library not available');
         }
+
+        // Verify file exists
+        if (!file_exists($filepath)) {
+            throw new \Exception('File does not exist: ' . $filepath);
+        }
+
+        error_log("Optimizing image: $filepath (type: $mimeType)");
 
         // Load image based on type
         $sourceImage = null;
@@ -301,19 +355,25 @@ class ProductManagementController
                 $sourceImage = @imagecreatefrompng($filepath);
                 break;
             case 'image/webp':
-                $sourceImage = @imagecreatefromwebp($filepath);
+                if (function_exists('imagecreatefromwebp')) {
+                    $sourceImage = @imagecreatefromwebp($filepath);
+                } else {
+                    throw new \Exception('WebP not supported by GD library');
+                }
                 break;
             default:
-                throw new \Exception('Unsupported image type');
+                throw new \Exception('Unsupported image type: ' . $mimeType);
         }
 
         if (!$sourceImage) {
-            throw new \Exception('Failed to load image');
+            throw new \Exception('Failed to load image (corrupted or invalid format)');
         }
 
         // Get original dimensions
         $originalWidth = imagesx($sourceImage);
         $originalHeight = imagesy($sourceImage);
+
+        error_log("Original dimensions: {$originalWidth}x{$originalHeight}");
 
         // Calculate new dimensions (max 800x800, maintain aspect ratio)
         $maxDimension = 800;
@@ -333,6 +393,8 @@ class ProductManagementController
                 $newWidth = (int)($maxDimension * $ratio);
             }
         }
+
+        error_log("New dimensions: {$newWidth}x{$newHeight}");
 
         // Create new image with calculated dimensions
         $optimizedImage = imagecreatetruecolor($newWidth, $newHeight);
@@ -379,7 +441,11 @@ class ProductManagementController
                 break;
             case 'image/webp':
                 // Quality: 85% (0-100)
-                $saved = imagewebp($optimizedImage, $filepath, 85);
+                if (function_exists('imagewebp')) {
+                    $saved = imagewebp($optimizedImage, $filepath, 85);
+                } else {
+                    throw new \Exception('WebP save not supported');
+                }
                 break;
         }
 
@@ -392,16 +458,17 @@ class ProductManagementController
         }
 
         // Log optimization result
-        $originalSize = filesize($filepath);
+        $finalSize = filesize($filepath);
         error_log(sprintf(
             "Image optimized: %dx%d -> %dx%d, Size: %.2f KB",
             $originalWidth,
             $originalHeight,
             $newWidth,
             $newHeight,
-            $originalSize / 1024
+            $finalSize / 1024
         ));
     }
+    */
         
     // Returns all the product information needed to show on the edit form
     public static function showEditProductForm(int $productId): array
