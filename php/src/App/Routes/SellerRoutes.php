@@ -27,8 +27,8 @@ $router->group([
 }); 
 
 // Public Endpoints (can be called from non-sellers)
-// GET /api/Category return Category list
-$router->get('/api/Category', function() {
+// GET /api/categories return Category list
+$router->get('/api/categories', function() {
     $Category = Category::getAll();
     
     http_response_code(200);

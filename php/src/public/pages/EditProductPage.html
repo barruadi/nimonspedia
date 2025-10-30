@@ -145,7 +145,30 @@
       </div>
     </div>
 
+     <!-- Backdrop for toast (will block interaction) -->
+    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
+
     <!-- Toast Notification -->
-    <div id="toast" class="toast" style="display: none;"></div>
+    <div id="toast" class="toast" style="display: none;">
+      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
+      <div class="toast-message">
+        <div id="toastPrimaryMessage"></div>
+        <div id="toastSecondaryMessage"></div>
+      </div>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
+    </div>
+
+    <!-- Edit Confirmation Modal -->
+    <div id="modalBackdrop" class="modal-backdrop" style="display:none;">
+      <div id="confirmationModal" class="modal">
+        <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
+        <div class="confirmation-text">Apakah anda yakin ingin mengedit produk?</div>
+        <div class="confirmation-buttons">
+          <button type="button" id="modalCancelBtn" class="btn-modal-cancel">Batal</button>
+          <button type="button" id="modalConfirmBtn" class="btn-modal-confirm">Ubah</button>
+        </div>
+      </div>
+    </div>
+
   </body>
 </html>

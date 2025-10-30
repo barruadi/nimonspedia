@@ -5,7 +5,7 @@ namespace App\Models;
 use App\Core\Database;
 use PDO;
 
-class Categories
+class Category
 {
     // Properties
     public ?int $category_id = null;
