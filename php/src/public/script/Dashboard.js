@@ -194,7 +194,7 @@ function initDashboardPage() {
                 formData.append('logo', logoFile);
             }
 
-            const result = await api.post('/seller/store/update', formData);
+            const result = await api.put('/seller/store/update', formData);
 
             if (result && result.ok) {
                 showToast('Informasi toko berhasil diperbarui', 'Data telah disimpan', 'success');
