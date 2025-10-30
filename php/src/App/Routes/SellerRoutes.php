@@ -22,11 +22,11 @@ $router->group([
     $r->put('/products/edit/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
     $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
     $r->get('/orders',                      fn($req) => OrderManagementController::getStoreOrders());
+    $r->get('/orders/detail/{id}',          fn($req, $id) => OrderManagementController::getOrderDetail($id));
     $r->put('/orders/approve/{id}',         fn($req, $id) => OrderManagementController::approveOrder($id));
     $r->put('/orders/reject/{id}',          fn($req, $id) => OrderManagementController::rejectOrder($id));
     $r->put('/orders/delivery-time{id}/',   fn($req, $id) => OrderManagementController::setDeliveryTime($id, $req['body']['delivery_time'] ?? ''));
 }); 
-
 // Public Endpoints (can be called from non-sellers)
 // GET /api/categories return Category list
 $router->get('/api/categories', function() {
