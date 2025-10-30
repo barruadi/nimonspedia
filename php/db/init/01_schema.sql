@@ -79,7 +79,6 @@ CREATE INDEX IF NOT EXISTS idx_products_price ON products(price);
 CREATE INDEX IF NOT EXISTS idx_products_not_deleted ON products(is_deleted) WHERE is_deleted = FALSE;
 
 
--- ✅ DITAMBAHKAN: CATEGORY_ITEMS (Many-to-Many relation)
 -- Tabel ini memungkinkan 1 produk memiliki multiple categories
 
 CREATE TABLE IF NOT EXISTS category_items (
