@@ -213,6 +213,21 @@ function initEditProductPage() {
         return isValid;
     }
 
+    // Modal Functions
+    function showModal() {
+        const modalBackdrop = document.getElementById('modalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'flex';
+        }
+    }
+
+    function hideModal() {
+        const modalBackdrop = document.getElementById('modalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'none';
+        }
+    }
+
     // Form Submission
 
     const form = document.getElementById('editProductForm');
@@ -224,43 +239,66 @@ function initEditProductPage() {
             
             const formData = new FormData(e.target);
             
-            // Only add image if changed
-            if (imageChanged) {
-                const imageFile = productImageInput?.files[0];
-                if (imageFile) {
-                    formData.set('image', imageFile);
-                }
-            }
-            
-            // Validate
+            // Validate first
             if (!validateForm(formData)) {
                 return;
             }
             
-            // Disable submit button
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Menyimpan...';
+            // Show confirmation modal
+            showModal();
             
-            try {
-                const result = await api.put(`/seller/products/edit/${productId}`, formData);
+            // Wait for user confirmation
+            const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+            const modalCancelBtn = document.getElementById('modalCancelBtn');
+            
+            // Remove old listeners
+            const newConfirmBtn = modalConfirmBtn.cloneNode(true);
+            const newCancelBtn = modalCancelBtn.cloneNode(true);
+            modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, modalConfirmBtn);
+            modalCancelBtn.parentNode.replaceChild(newCancelBtn, modalCancelBtn);
+            
+            // Cancel button
+            newCancelBtn.addEventListener('click', () => {
+                hideModal();
+            });
+            
+            // Confirm button - submit form
+            newConfirmBtn.addEventListener('click', async () => {
+                hideModal();
                 
-                if (result && result.ok) {
-                    showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/products';
-                    }, 1500);
-                } else {
-                    throw new Error(result?.error || 'Gagal memperbarui produk');
+                // Only add image if changed
+                if (imageChanged) {
+                    const imageFile = productImageInput?.files[0];
+                    if (imageFile) {
+                        formData.set('image', imageFile);
+                    }
                 }
                 
-            } catch (error) {
-                console.error('Error submitting form:', error);
-                showToast('Gagal memperbarui produk!', error.message, 'error');
+                // Disable submit button
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Menyimpan...';
                 
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Simpan Perubahan';
-            }
+                try {
+                    const result = await api.put(`/seller/products/edit/${productId}`, formData);
+                    
+                    if (result && result.ok) {
+                        showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/products';
+                        }, 1500);
+                    } else {
+                        throw new Error(result?.error || 'Gagal memperbarui produk');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error submitting form:', error);
+                    showToast('Gagal memperbarui produk!', error.message, 'error');
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Simpan Perubahan';
+                }
+            });
         });
     } else {
         console.error('Form #editProductForm not found!');
