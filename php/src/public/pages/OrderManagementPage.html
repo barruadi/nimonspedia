@@ -26,7 +26,7 @@
             <div class="filter-section">
                 <!-- Status Filter Dropdown -->
                 <select id="statusFilter" class="filter-select">
-                    <option value="">Semua Produk</option>
+                    <option value="">Semua Order</option>
                     <option value="waiting_approval">Waiting Approval</option>
                     <option value="approved">Approved</option>
                     <option value="on_delivery">On Delivery</option>
@@ -61,23 +61,52 @@
                 <p class="empty-state-subtitle">Order yang masuk akan ditampilkan di sini</p>
             </div>
 
-            <!-- Pagination -->
+            <!-- Pagination dengan info dan dropdown -->
             <div id="pagination" class="pagination" style="display: none;">
-                <button id="prevPage" class="pagination-btn" disabled>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
-                </button>
-                
-                <div id="pageNumbers" class="page-numbers">
-                    <!-- Page numbers will be inserted here -->
+                <div class="pagination-info">
+                    <span id="paginationText">Menampilkan 1 sampai 12 dari 118 Order</span>
                 </div>
-                
-                <button id="nextPage" class="pagination-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </button>
+
+                <div class="pagination-controls">
+                    <button id="firstPage" class="pagination-btn pagination-edge" title="Halaman Pertama">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="11 17 6 12 11 7"></polyline>
+                            <polyline points="18 17 13 12 18 7"></polyline>
+                        </svg>
+                    </button>
+                    
+                    <button id="prevPage" class="pagination-btn" title="Halaman Sebelumnya">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    
+                    <div id="pageNumbers" class="page-numbers">
+                        <!-- Page numbers will be inserted here -->
+                    </div>
+                    
+                    <button id="nextPage" class="pagination-btn" title="Halaman Selanjutnya">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+
+                    <button id="lastPage" class="pagination-btn pagination-edge" title="Halaman Terakhir">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="pagination-per-page">
+                    <select id="itemsPerPage" class="items-per-page-select">
+                        <option value="6">6</option>
+                        <option value="12" selected>12</option>
+                        <option value="24">24</option>
+                        <option value="48">48</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>

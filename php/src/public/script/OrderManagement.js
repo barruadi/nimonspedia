@@ -5,7 +5,7 @@ function initOrderManagementPage() {
     let allOrders = [];
     let filteredOrders = [];
     let currentPage = 1;
-    const ordersPerPage = 12;
+    let ordersPerPage = 12;
     let currentFilter = '';
     let searchQuery = '';
     let selectedOrderId = null;
@@ -18,9 +18,13 @@ function initOrderManagementPage() {
     const searchInput = document.getElementById('searchInput');
     const statusFilter = document.getElementById('statusFilter');
     const paginationContainer = document.getElementById('pagination');
+    const paginationText = document.getElementById('paginationText');
+    const firstPageBtn = document.getElementById('firstPage');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
     const pageNumbersContainer = document.getElementById('pageNumbers');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
 
     // Modals
     const detailModal = document.getElementById('detailModal');
@@ -66,7 +70,7 @@ function initOrderManagementPage() {
         // Calculate pagination
         const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
         const startIndex = (currentPage - 1) * ordersPerPage;
-        const endIndex = startIndex + ordersPerPage;
+        const endIndex = Math.min(startIndex + ordersPerPage, filteredOrders.length);
         const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
         // Clear grid
@@ -89,8 +93,18 @@ function initOrderManagementPage() {
             ordersGrid.appendChild(card);
         });
 
+        // Update pagination info text
+        updatePaginationInfo(startIndex + 1, endIndex, filteredOrders.length);
+
         // Render pagination
         renderPagination(totalPages);
+    }
+
+    // Update pagination info text
+    function updatePaginationInfo(start, end, total) {
+        if (paginationText) {
+            paginationText.textContent = `Menampilkan ${start} sampai ${end} dari ${total} Order`;
+        }
     }
 
     function createOrderCard(order) {
@@ -186,7 +200,7 @@ function initOrderManagementPage() {
     }
 
     function renderPagination(totalPages) {
-        if (totalPages <= 1) {
+        if (filteredOrders.length === 0) {
             paginationContainer.style.display = 'none';
             return;
         }
@@ -194,46 +208,165 @@ function initOrderManagementPage() {
         paginationContainer.style.display = 'flex';
         pageNumbersContainer.innerHTML = '';
 
+        // Handle single page case
+        if (totalPages <= 1) {
+            // First page button
+            if (firstPageBtn) {
+                firstPageBtn.disabled = true;
+            }
+
+            // Previous button
+            if (prevPageBtn) {
+                prevPageBtn.disabled = true;
+            }
+
+            // Show single page number
+            const singlePageBtn = createPageButton(1);
+            pageNumbersContainer.appendChild(singlePageBtn);
+
+            // Next button
+            if (nextPageBtn) {
+                nextPageBtn.disabled = true;
+            }
+
+            // Last page button
+            if (lastPageBtn) {
+                lastPageBtn.disabled = true;
+            }
+
+            return;
+        }
+
+        // Multi-page case
+        // First page button
+        if (firstPageBtn) {
+            firstPageBtn.disabled = currentPage === 1;
+        }
+
         // Previous button
-        prevPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) {
+            prevPageBtn.disabled = currentPage === 1;
+        }
+
+        // Page numbers with smart display (max 5 numbers)
+        const maxPageButtons = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+        // Adjust if we're near the end
+        if (endPage - startPage < maxPageButtons - 1) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        // Add first page if not visible
+        if (startPage > 1) {
+            const firstBtn = createPageButton(1);
+            pageNumbersContainer.appendChild(firstBtn);
+            
+            if (startPage > 2) {
+                const dots = document.createElement('span');
+                dots.className = 'page-dots';
+                dots.textContent = '...';
+                dots.style.cssText = 'padding: 0 0.5rem; color: #9ca3af; font-size: 0.875rem;';
+                pageNumbersContainer.appendChild(dots);
+            }
+        }
 
         // Page numbers
-        for (let i = 1; i <= totalPages; i++) {
-            const pageBtn = document.createElement('button');
-            pageBtn.className = 'page-number';
-            if (i === currentPage) {
-                pageBtn.classList.add('active');
-            }
-            pageBtn.textContent = i;
-            pageBtn.addEventListener('click', () => {
-                currentPage = i;
-                renderOrders();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = createPageButton(i);
             pageNumbersContainer.appendChild(pageBtn);
         }
 
+        // Add last page if not visible
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const dots = document.createElement('span');
+                dots.className = 'page-dots';
+                dots.textContent = '...';
+                dots.style.cssText = 'padding: 0 0.5rem; color: #9ca3af; font-size: 0.875rem;';
+                pageNumbersContainer.appendChild(dots);
+            }
+            
+            const lastBtn = createPageButton(totalPages);
+            pageNumbersContainer.appendChild(lastBtn);
+        }
+
         // Next button
-        nextPageBtn.disabled = currentPage === totalPages;
+        if (nextPageBtn) {
+            nextPageBtn.disabled = currentPage === totalPages;
+        }
+
+        // Last page button
+        if (lastPageBtn) {
+            lastPageBtn.disabled = currentPage === totalPages;
+        }
     }
 
-    // Event listeners for pagination
-    prevPageBtn.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
+    // Create page button
+    function createPageButton(pageNum) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = 'page-number';
+        if (pageNum === currentPage) {
+            pageBtn.classList.add('active');
+        }
+        pageBtn.textContent = pageNum;
+        pageBtn.addEventListener('click', () => {
+            currentPage = pageNum;
             renderOrders();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    });
+        });
+        return pageBtn;
+    }
 
-    nextPageBtn.addEventListener('click', () => {
-        const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-        if (currentPage < totalPages) {
-            currentPage++;
+    // Event listeners for pagination buttons
+    if (firstPageBtn) {
+        firstPageBtn.addEventListener('click', () => {
+            currentPage = 1;
             renderOrders();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    });
+        });
+    }
+
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderOrders();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderOrders();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+
+    if (lastPageBtn) {
+        lastPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+            currentPage = totalPages;
+            renderOrders();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // Items per page change
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            ordersPerPage = parseInt(e.target.value);
+            currentPage = 1; // Reset to first page
+            renderOrders();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
 
     // Search functionality with debounce
     let searchTimeout;
