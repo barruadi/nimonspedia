@@ -20,7 +20,7 @@ body {
     padding: 2rem;
 }
 
-/* Loading State - UPDATED */
+/* Loading State */
 .loading-state {
     display: flex;
     flex-direction: column;
@@ -317,7 +317,7 @@ body {
     height: 16px;
 }
 
-/* Stats Grid - UPDATED */
+/* Stats Grid */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
