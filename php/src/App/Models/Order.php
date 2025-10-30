@@ -32,18 +32,22 @@ class Order
                 o.store_id,
                 o.total_amount,
                 o.status,
+                o.shipping_address,       
                 o.delivery_time,
                 o.reject_reason,
+                o.confirmed_at,            
+                o.received_at,            
                 o.created_at,
                 o.updated_at,
                 u.full_name as buyer_name,
                 u.email as buyer_email,
+                u.address as buyer_address,
                 COUNT(oi.order_item_id) as item_count
             FROM orders o
             JOIN users u ON o.buyer_id = u.user_id
             LEFT JOIN order_items oi ON o.order_id = oi.order_id
             WHERE o.store_id = :store_id
-            GROUP BY o.order_id, o.buyer_id, o.store_id, o.total_amount, o.status, o.delivery_time, o.reject_reason, o.created_at, o.updated_at, u.full_name, u.email
+            GROUP BY o.order_id, u.user_id  -- Simplified GROUP BY using user_id
             ORDER BY 
                 CASE o.status
                     WHEN 'waiting_approval' THEN 1
@@ -99,6 +103,7 @@ class Order
         $stmt = $db->prepare("
             UPDATE orders 
             SET status = 'approved',
+                confirmed_at = NOW(),
                 updated_at = NOW()
             WHERE order_id = :order_id
             AND status = 'waiting_approval'
@@ -116,6 +121,7 @@ class Order
             UPDATE orders 
             SET delivery_time = :delivery_time,
                 status = 'on_delivery',
+                confirmed_at = COALESCE(confirmed_at, NOW()),
                 updated_at = NOW()
             WHERE order_id = :order_id
             AND status = 'approved'
@@ -144,7 +150,7 @@ class Order
     {
         $db = self::getDB();
         
-        // Get order info
+        // Get order info with all new columns
         $stmt = $db->prepare("
             SELECT 
                 o.order_id,
@@ -152,12 +158,16 @@ class Order
                 o.store_id,
                 o.status,
                 o.total_amount,
+                o.shipping_address,      
                 o.delivery_time,
                 o.reject_reason,
+                o.confirmed_at,           
+                o.received_at,          
                 o.created_at,
                 o.updated_at,
                 u.full_name as buyer_name,
-                u.email as buyer_email
+                u.email as buyer_email,
+                u.address as buyer_address 
             FROM orders o
             JOIN users u ON o.buyer_id = u.user_id
             WHERE o.order_id = :order_id
@@ -259,6 +269,7 @@ class Order
                 UPDATE orders 
                 SET status = 'rejected',
                     reject_reason = :reason,
+                    confirmed_at = NOW(),
                     updated_at = NOW()
                 WHERE order_id = :order_id
                 AND status = 'waiting_approval'
@@ -278,7 +289,7 @@ class Order
         } catch (Exception $e) {
             $db->rollBack();
             error_log("Reject order failed: " . $e->getMessage());
-            throw $e; // Re-throw untuk ditangkap di controller
+            throw $e;
         }
     }
 

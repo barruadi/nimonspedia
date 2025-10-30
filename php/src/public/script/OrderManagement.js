@@ -5,7 +5,7 @@ function initOrderManagementPage() {
     let allOrders = [];
     let filteredOrders = [];
     let currentPage = 1;
-    const ordersPerPage = 12;
+    let ordersPerPage = 12;
     let currentFilter = '';
     let searchQuery = '';
     let selectedOrderId = null;
@@ -18,10 +18,13 @@ function initOrderManagementPage() {
     const searchInput = document.getElementById('searchInput');
     const statusFilter = document.getElementById('statusFilter');
     const paginationContainer = document.getElementById('pagination');
+    const paginationText = document.getElementById('paginationText');
+    const firstPageBtn = document.getElementById('firstPage');
     const prevPageBtn = document.getElementById('prevPage');
     const nextPageBtn = document.getElementById('nextPage');
+    const lastPageBtn = document.getElementById('lastPage');
     const pageNumbersContainer = document.getElementById('pageNumbers');
-    const btnAddProduct = document.getElementById('btnAddProduct');
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
 
     // Modals
     const detailModal = document.getElementById('detailModal');
@@ -67,7 +70,7 @@ function initOrderManagementPage() {
         // Calculate pagination
         const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
         const startIndex = (currentPage - 1) * ordersPerPage;
-        const endIndex = startIndex + ordersPerPage;
+        const endIndex = Math.min(startIndex + ordersPerPage, filteredOrders.length);
         const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
         // Clear grid
@@ -90,8 +93,18 @@ function initOrderManagementPage() {
             ordersGrid.appendChild(card);
         });
 
+        // Update pagination info text
+        updatePaginationInfo(startIndex + 1, endIndex, filteredOrders.length);
+
         // Render pagination
         renderPagination(totalPages);
+    }
+
+    // Update pagination info text
+    function updatePaginationInfo(start, end, total) {
+        if (paginationText) {
+            paginationText.textContent = `Menampilkan ${start} sampai ${end} dari ${total} Order`;
+        }
     }
 
     function createOrderCard(order) {
@@ -166,11 +179,11 @@ function initOrderManagementPage() {
     function getActionButtons(order) {
         if (order.status === 'waiting_approval') {
             return `
-                <button class="btn-order-action btn-approve">Approve</button>
-                <button class="btn-order-action btn-reject">Reject</button>
+                <button class="btn-order-action btn-approve" data-order-id="${order.order_id}">Approve</button>
+                <button class="btn-order-action btn-reject" data-order-id="${order.order_id}">Reject</button>
             `;
         } else if (order.status === 'approved') {
-            return `<button class="btn-order-action btn-delivery">Kirim Barang</button>`;
+            return `<button class="btn-order-action btn-delivery" data-order-id="${order.order_id}">Kirim Barang</button>`;
         }
         return '';
     }
@@ -187,7 +200,7 @@ function initOrderManagementPage() {
     }
 
     function renderPagination(totalPages) {
-        if (totalPages <= 1) {
+        if (filteredOrders.length === 0) {
             paginationContainer.style.display = 'none';
             return;
         }
@@ -195,46 +208,165 @@ function initOrderManagementPage() {
         paginationContainer.style.display = 'flex';
         pageNumbersContainer.innerHTML = '';
 
+        // Handle single page case
+        if (totalPages <= 1) {
+            // First page button
+            if (firstPageBtn) {
+                firstPageBtn.disabled = true;
+            }
+
+            // Previous button
+            if (prevPageBtn) {
+                prevPageBtn.disabled = true;
+            }
+
+            // Show single page number
+            const singlePageBtn = createPageButton(1);
+            pageNumbersContainer.appendChild(singlePageBtn);
+
+            // Next button
+            if (nextPageBtn) {
+                nextPageBtn.disabled = true;
+            }
+
+            // Last page button
+            if (lastPageBtn) {
+                lastPageBtn.disabled = true;
+            }
+
+            return;
+        }
+
+        // Multi-page case
+        // First page button
+        if (firstPageBtn) {
+            firstPageBtn.disabled = currentPage === 1;
+        }
+
         // Previous button
-        prevPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) {
+            prevPageBtn.disabled = currentPage === 1;
+        }
+
+        // Page numbers with smart display (max 5 numbers)
+        const maxPageButtons = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+
+        // Adjust if we're near the end
+        if (endPage - startPage < maxPageButtons - 1) {
+            startPage = Math.max(1, endPage - maxPageButtons + 1);
+        }
+
+        // Add first page if not visible
+        if (startPage > 1) {
+            const firstBtn = createPageButton(1);
+            pageNumbersContainer.appendChild(firstBtn);
+            
+            if (startPage > 2) {
+                const dots = document.createElement('span');
+                dots.className = 'page-dots';
+                dots.textContent = '...';
+                dots.style.cssText = 'padding: 0 0.5rem; color: #9ca3af; font-size: 0.875rem;';
+                pageNumbersContainer.appendChild(dots);
+            }
+        }
 
         // Page numbers
-        for (let i = 1; i <= totalPages; i++) {
-            const pageBtn = document.createElement('button');
-            pageBtn.className = 'page-number';
-            if (i === currentPage) {
-                pageBtn.classList.add('active');
-            }
-            pageBtn.textContent = i;
-            pageBtn.addEventListener('click', () => {
-                currentPage = i;
-                renderOrders();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = createPageButton(i);
             pageNumbersContainer.appendChild(pageBtn);
         }
 
+        // Add last page if not visible
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const dots = document.createElement('span');
+                dots.className = 'page-dots';
+                dots.textContent = '...';
+                dots.style.cssText = 'padding: 0 0.5rem; color: #9ca3af; font-size: 0.875rem;';
+                pageNumbersContainer.appendChild(dots);
+            }
+            
+            const lastBtn = createPageButton(totalPages);
+            pageNumbersContainer.appendChild(lastBtn);
+        }
+
         // Next button
-        nextPageBtn.disabled = currentPage === totalPages;
+        if (nextPageBtn) {
+            nextPageBtn.disabled = currentPage === totalPages;
+        }
+
+        // Last page button
+        if (lastPageBtn) {
+            lastPageBtn.disabled = currentPage === totalPages;
+        }
     }
 
-    // Event listeners for pagination
-    prevPageBtn.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
+    // Create page button
+    function createPageButton(pageNum) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = 'page-number';
+        if (pageNum === currentPage) {
+            pageBtn.classList.add('active');
+        }
+        pageBtn.textContent = pageNum;
+        pageBtn.addEventListener('click', () => {
+            currentPage = pageNum;
             renderOrders();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    });
+        });
+        return pageBtn;
+    }
 
-    nextPageBtn.addEventListener('click', () => {
-        const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-        if (currentPage < totalPages) {
-            currentPage++;
+    // Event listeners for pagination buttons
+    if (firstPageBtn) {
+        firstPageBtn.addEventListener('click', () => {
+            currentPage = 1;
             renderOrders();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    });
+        });
+    }
+
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderOrders();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderOrders();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+
+    if (lastPageBtn) {
+        lastPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+            currentPage = totalPages;
+            renderOrders();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    // Items per page change
+    if (itemsPerPageSelect) {
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            ordersPerPage = parseInt(e.target.value);
+            currentPage = 1; // Reset to first page
+            renderOrders();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
 
     // Search functionality with debounce
     let searchTimeout;
@@ -275,6 +407,18 @@ function initOrderManagementPage() {
     }
 
     // Modal functions
+    function showRejectModal(orderId) {
+        selectedOrderId = orderId;
+        rejectReason.value = '';
+        rejectModal.style.display = 'flex';
+    }
+
+    function showDeliveryModal(orderId) {
+        selectedOrderId = orderId;
+        deliveryDays.value = '';
+        deliveryModal.style.display = 'flex';
+    }
+
     async function showDetailModal(orderId) {
         try {
             const result = await api.get(`/seller/orders/detail/${orderId}`);
@@ -285,6 +429,9 @@ function initOrderManagementPage() {
 
             const order = result.data.order;
             const detailContent = document.getElementById('detailContent');
+            
+            // Generate status history based on current status
+            const statusHistory = getStatusHistory(order.status);
             
             detailContent.innerHTML = `
                 <div class="detail-section">
@@ -303,6 +450,14 @@ function initOrderManagementPage() {
                             <span class="order-status-badge status-${order.status}">${getStatusText(order.status)}</span>
                         </span>
                     </div>
+                    ${statusHistory ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Status History</span>
+                            <span class="detail-value" style="text-align: right;">
+                                ${statusHistory}
+                            </span>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="detail-section">
@@ -314,6 +469,10 @@ function initOrderManagementPage() {
                     <div class="detail-row">
                         <span class="detail-label">Email</span>
                         <span class="detail-value">${escapeHtml(order.buyer_email)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Alamat</span>
+                        <span class="detail-value">${escapeHtml(order.shipping_address || order.buyer_address || 'Alamat tidak tersedia')}</span>
                     </div>
                 </div>
 
@@ -343,6 +502,16 @@ function initOrderManagementPage() {
                         <p style="color: #6b7280; font-size: 0.9375rem;">${escapeHtml(order.reject_reason)}</p>
                     </div>
                 ` : ''}
+
+                ${order.delivery_time ? `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Informasi Pengiriman</div>
+                        <div class="detail-row">
+                            <span class="detail-label">Estimasi Pengiriman</span>
+                            <span class="detail-value">${formatDate(order.delivery_time)}</span>
+                        </div>
+                    </div>
+                ` : ''}
             `;
 
             detailModal.style.display = 'flex';
@@ -352,16 +521,39 @@ function initOrderManagementPage() {
         }
     }
 
-    function showRejectModal(orderId) {
-        selectedOrderId = orderId;
-        rejectReason.value = '';
-        rejectModal.style.display = 'flex';
-    }
+    // Generate status history based on current status
+    function getStatusHistory(currentStatus) {
+        const statusFlows = {
+            'waiting_approval': null, // No history yet
+            'approved': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-approved" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Approved</span>
+            `,
+            'on_delivery': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-approved" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Approved</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-on_delivery" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">On Delivery</span>
+            `,
+            'received': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-approved" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Approved</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-on_delivery" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">On Delivery</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-received" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Received</span>
+            `,
+            'rejected': `
+                <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
+                <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
+                <span class="order-status-badge status-rejected" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Rejected</span>
+            `
+        };
 
-    function showDeliveryModal(orderId) {
-        selectedOrderId = orderId;
-        deliveryDays.value = '';
-        deliveryModal.style.display = 'flex';
+        return statusFlows[currentStatus] || null;
     }
 
     // Close modals
@@ -414,7 +606,7 @@ function initOrderManagementPage() {
             return;
         }
 
-        // ✅ Disable button saat loading
+        // Disable button saat loading
         confirmReject.disabled = true;
         confirmReject.textContent = 'Memproses...';
 
@@ -492,11 +684,6 @@ function initOrderManagementPage() {
             confirmDelivery.disabled = false;
             confirmDelivery.textContent = 'Kirim Barang';
         }
-    });
-
-    // Add Product button redirect
-    btnAddProduct.addEventListener('click', () => {
-        window.location.href = '/seller/products';
     });
 
     // Helper functions

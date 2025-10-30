@@ -254,7 +254,7 @@ function initEditProductPage() {
                 }
             }
             
-            const result = await api.put(`/seller/products/edit/${productId}`, formData);
+            const result = await api.post(`/seller/products/edit/${productId}`, formData);
             
             console.log('API response:', result);
             
