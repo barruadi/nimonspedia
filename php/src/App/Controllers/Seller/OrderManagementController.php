@@ -41,7 +41,7 @@ class OrderManagementController
                     'logo_path' => $store['logo_path'] ?? null,
                 ],
                 'orders' => $orders,
-            ]
+            ] 
         ];
     }
 
@@ -82,6 +82,53 @@ class OrderManagementController
         return [
             'ok' => true,
             'message' => 'Order approved successfully'
+        ];
+    }
+
+    // Updates order status to rejected and refund buyer funds
+    public static function rejectOrder(int $orderId, string $rejectReason): array
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
+        }
+
+        // Validate reject reason
+        if (empty(trim($rejectReason))) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Reject reason is required'];
+        }
+
+        $order = Order::findByIdAndOwner($orderId, $user['user_id']);
+
+        if (!$order) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Order not found or unauthorized'];
+        }
+
+        if (!Order::canBeRejected($order)) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Order cannot be rejected. Current status: ' . $order['status']];
+        }
+
+        // Reject order with refund
+        $success = Order::rejectWithRefund($orderId, $rejectReason);
+
+        if (!$success) {
+            http_response_code(500);
+            return ['ok' => false, 'error' => 'Failed to reject order'];
+        }
+
+        http_response_code(200);
+        return [
+            'ok' => true,
+            'message' => 'Order rejected and buyer refunded successfully'
         ];
     }
 
