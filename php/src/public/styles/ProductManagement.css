@@ -152,14 +152,14 @@ body {
     border-color: #10b981;
 }
 
-/* Product Grid */
+/* Product Grid - 2 Equal Width Columns */
 .product-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
 }
 
-/* Product Card - Horizontal Layout as per Image */
+/* Product Card - Horizontal Layout */
 .product-card {
     display: flex;
     flex-direction: row;
@@ -171,6 +171,7 @@ body {
     padding: 1rem;
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    min-width: 0;
 }
 
 .product-card:hover {
@@ -235,7 +236,7 @@ body {
     margin: 0;
 }
 
-/* Row 3: Meta Info + Actions */
+/* Row 3: Meta Info + Actions (All Aligned) */
 .product-card-meta {
     display: flex;
     flex-direction: row;
@@ -249,6 +250,7 @@ body {
 .product-card-stock {
     margin: 0;
     color: #9ca3af;
+    white-space: nowrap;
 }
 
 .product-card-status {
@@ -257,6 +259,7 @@ body {
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .status-active {
@@ -269,18 +272,19 @@ body {
     color: #991b1b;
 }
 
-/* Product Actions - Inline in Row 3 */
+/* Product Actions - Inline in Row 3, Aligned with Text */
 .product-card-actions {
     display: flex;
     flex-direction: row;
     gap: 0.5rem;
     margin-left: auto;
+    flex-shrink: 0;
 }
 
 .btn-card-edit,
 .btn-card-delete {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -289,6 +293,7 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     background-color: transparent;
+    flex-shrink: 0;
 }
 
 .btn-card-edit {
@@ -325,6 +330,7 @@ body {
     text-align: center;
     padding: 4rem 2rem;
     min-height: 50vh;
+    grid-column: 1 / -1;
 }
 
 .empty-state-icon {
@@ -557,6 +563,12 @@ body {
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .product-management-page {
         padding: 1rem;
@@ -575,6 +587,10 @@ body {
 
     .search-container {
         max-width: 100%;
+    }
+
+    .product-grid {
+        grid-template-columns: 1fr;
     }
 
     .product-card {
@@ -669,13 +685,13 @@ body {
 
     .btn-card-edit,
     .btn-card-delete {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
     }
 
     .btn-card-edit svg,
     .btn-card-delete svg {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
     }
 }
