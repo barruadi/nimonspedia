@@ -15,7 +15,6 @@
 }
 
 /* Left Side - Image Upload */
-
 .product-image-section {
     flex: 0 0 380px;
     display: flex;
@@ -103,7 +102,6 @@
 }
 
 /* Right Side - Form */
-
 .product-details-section {
     flex: 1;
     max-width: 8100px;

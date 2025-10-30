@@ -281,24 +281,23 @@ body {
     height: 16px;
 }
 
-/* Stats Grid */
+/* Stats Grid - UPDATED */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 .stat-card {
-    background: white;
     padding: 1.5rem;
-    border-radius: 12px;
-    border: 2px solid #f3f4f6;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .stat-card:hover {
-    border-color: #10b981;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+    background-color: #f9fafb;
 }
 
 .stat-label {
@@ -383,7 +382,6 @@ body {
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 
                 0 4px 6px rgba(0, 0, 0, 0.1);
-    border: 2px solid #10b981;
     font-size: 0.875rem;
     font-weight: 500;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
@@ -436,10 +434,6 @@ body {
     background-color: #059669;
 }
 
-.toast.error {
-    border-color: #ef4444;
-}
-
 .toast.error .toast-close-btn {
     background-color: #ef4444;
 }
@@ -487,7 +481,6 @@ body {
 
     .stats-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
     }
 
     .stat-value {
