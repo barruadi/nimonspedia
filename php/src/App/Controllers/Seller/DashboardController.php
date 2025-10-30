@@ -116,6 +116,51 @@ class DashboardController
         ];
     }
 
+    // Get seller balance
+    public static function getBalance(): array
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized'];
+        }
+
+        $db = Database::getInstance();
+
+        try {
+            $stmt = $db->prepare("
+                SELECT balance 
+                FROM stores 
+                WHERE owner_id = :owner_id
+            ");
+            $stmt->execute(['owner_id' => $user['user_id']]);
+            $store = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$store) {
+                http_response_code(404);
+                return ['ok' => false, 'error' => 'Store not found'];
+            }
+
+            http_response_code(200);
+            return [
+                'ok' => true,
+                'data' => [
+                    'balance' => (float)$store['balance']
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            error_log("Get balance error: " . $e->getMessage());
+            http_response_code(500);
+            return ['ok' => false, 'error' => 'Failed to fetch balance'];
+        }
+    }
+
     // Update store information (edit in place)
     public static function updateStoreInfo(array $req): array
     {
@@ -134,7 +179,7 @@ class DashboardController
 
         // Get seller's store
         $stmt = $db->prepare("
-            SELECT store_id 
+            SELECT store_id, logo_path
             FROM stores 
             WHERE owner_id = :owner_id 
             LIMIT 1
@@ -148,8 +193,9 @@ class DashboardController
         }
 
         // Get request data
-        $storeName = $req['body']['store_name'] ?? null;
-        $description = $req['body']['description'] ?? '';
+        $body = $req['body'] ?? $_POST ?? [];
+        $storeName = $body['store_name'] ?? null;
+        $description = $body['description'] ?? '';
 
         // Validation
         if (!$storeName || strlen($storeName) > 100) {
@@ -169,6 +215,8 @@ class DashboardController
             'store_id' => $store['store_id'],
         ];
 
+        $oldLogoPath = null;
+
         // Handle logo upload
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
             $uploadResult = self::handleLogoUpload($_FILES['logo']);
@@ -179,11 +227,7 @@ class DashboardController
             }
             
             $updateData['logo_path'] = $uploadResult['path'];
-
-            // Get old logo for deletion
-            $stmt = $db->prepare("SELECT logo_path FROM stores WHERE store_id = :store_id");
-            $stmt->execute(['store_id' => $store['store_id']]);
-            $oldLogo = $stmt->fetch(PDO::FETCH_ASSOC)['logo_path'];
+            $oldLogoPath = $store['logo_path'];
         }
 
         // Update store
@@ -203,20 +247,27 @@ class DashboardController
             $sql .= " WHERE store_id = :store_id";
 
             $stmt = $db->prepare($sql);
-            $stmt->execute($updateData);
+            $success = $stmt->execute($updateData);
+
+            if (!$success) {
+                throw new \Exception('Database update failed');
+            }
 
             // Delete old logo if new one uploaded
-            if (isset($oldLogo) && $oldLogo) {
-                $oldLogoPath = __DIR__ . '/../../../public' . $oldLogo;
-                if (file_exists($oldLogoPath)) {
-                    unlink($oldLogoPath);
+            if ($oldLogoPath) {
+                $oldLogoFullPath = __DIR__ . '/../../../public' . $oldLogoPath;
+                if (file_exists($oldLogoFullPath)) {
+                    unlink($oldLogoFullPath);
                 }
             }
 
             http_response_code(200);
             return [
                 'ok' => true,
-                'message' => 'Store information updated successfully'
+                'message' => 'Store information updated successfully',
+                'data' => [
+                    'logo_path' => $updateData['logo_path'] ?? $store['logo_path']
+                ]
             ];
 
         } catch (\Exception $e) {
@@ -229,7 +280,7 @@ class DashboardController
             }
 
             http_response_code(500);
-            return ['ok' => false, 'error' => 'Failed to update store information'];
+            return ['ok' => false, 'error' => 'Failed to update store information: ' . $e->getMessage()];
         }
     }
 
@@ -238,11 +289,13 @@ class DashboardController
     {
         // Validate file type
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
         finfo_close($finfo);
         
-        if (!in_array($mimeType, $allowedTypes)) {
+        if (!in_array($mimeType, $allowedMimes)) {
             return ['ok' => false, 'error' => 'Invalid file type. Only JPG, PNG, WEBP allowed'];
         }
 
@@ -260,6 +313,16 @@ class DashboardController
 
         // Generate unique filename
         $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        if (!$extension) {
+            // Fallback to mime type
+            $mimeToExt = [
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/webp' => 'webp'
+            ];
+            $extension = $mimeToExt[$mimeType] ?? 'jpg';
+        }
+        
         $filename = uniqid('store_logo_', true) . '.' . $extension;
         $filepath = $uploadDir . $filename;
 

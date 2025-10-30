@@ -14,7 +14,7 @@ $router->group([
     'middleware'  => [$auth, $roleSeller],
 ], function($r) {
     $r->get('/dashboard',                   fn($req) => DashboardController::showDashboard());
-    $r->put('/store/update',                fn($req) => DashboardController::updateStoreInfo($req));
+    $r->post('/store/update',               fn($req) => DashboardController::updateStoreInfo($req));
     $r->get('/products',                    fn($req) => ProductManagementController::getStoreProducts());
     $r->get('/products/add',                fn($req) => ProductManagementController::showAddProductForm());
     $r->post('/products/add',               fn($req) => ProductManagementController::handleAddProduct($req));

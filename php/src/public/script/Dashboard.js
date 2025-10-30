@@ -191,9 +191,17 @@ function initDashboardPage() {
             const logoFile = logoInput.files[0];
             if (logoFile) {
                 formData.append('logo', logoFile);
+                console.log('Logo file added:', logoFile.name, logoFile.size, 'bytes');
             }
 
-            const result = await api.put('/seller/store/update', formData);
+            console.log('Submitting store update...');
+            console.log('Store name:', formData.get('store_name'));
+            console.log('Description:', formData.get('description'));
+            console.log('Has logo:', !!logoFile);
+
+            const result = await api.post('/seller/store/update', formData);
+
+            console.log('Update result:', result);
 
             if (result && result.ok) {
                 showToast('Informasi toko berhasil diperbarui', 'Data telah disimpan', 'success');
@@ -206,13 +214,15 @@ function initDashboardPage() {
                 bannerStoreName.textContent = store.store_name;
                 bannerStoreDescription.textContent = store.description || 'Belum ada deskripsi';
                 
+                // If logo changed, update preview
+                if (result.data && result.data.logo_path) {
+                    store.logo_path = result.data.logo_path;
+                    storeLogo.src = result.data.logo_path;
+                }
+                
                 // Hide form, show banner
                 hideEditForm();
                 
-                // If logo changed, reload to get new path
-                if (logoFile) {
-                    setTimeout(() => window.location.reload(), 1500);
-                }
             } else {
                 throw new Error(result?.error || 'Gagal memperbarui informasi toko');
             }
