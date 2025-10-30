@@ -218,4 +218,160 @@ class Order
             'total_revenue' => $totalRevenue,
         ];
     }
+
+    // Check if order can be rejected (only waiting_approval)
+    public static function canBeRejected(array $order): bool
+    {
+        return $order['status'] === 'waiting_approval';
+    }
+
+    // Reject order and refund buyer balance
+    public static function rejectWithRefund(int $orderId, string $rejectReason): bool
+    {
+        $db = Database::getInstance()->getConnection();
+        
+        try {
+            // Uses transaction to ensure atomicity
+            $db->beginTransaction();
+
+            // 1. Get order details
+            $stmt = $db->prepare("
+                SELECT buyer_id, total_amount, status 
+                FROM orders 
+                WHERE order_id = :order_id
+            ");
+            $stmt->execute(['order_id' => $orderId]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$order || $order['status'] !== 'waiting_approval') {
+                throw new Exception('Order cannot be rejected');
+            }
+
+            // 2. Refund buyer balance
+            $refundStmt = $db->prepare("
+                UPDATE users 
+                SET balance = balance + :amount,
+                    updated_at = NOW()
+                WHERE user_id = :buyer_id
+            ");
+            $refundStmt->execute([
+                'amount' => $order['total_amount'],
+                'buyer_id' => $order['buyer_id']
+            ]);
+
+            // 3. Update order status to rejected
+            $updateStmt = $db->prepare("
+                UPDATE orders 
+                SET status = 'rejected',
+                    reject_reason = :reason,
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+            ");
+            $updateStmt->execute([
+                'reason' => $rejectReason,
+                'order_id' => $orderId
+            ]);
+
+            $db->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            error_log("Reject order failed: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Search orders by order ID or buyer name
+    public static function searchByStoreId(int $storeId, string $query): array
+    {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.status,
+                o.total_amount,
+                o.delivery_time,
+                o.reject_reason,
+                o.created_at,
+                o.updated_at,
+                u.full_name AS buyer_name,
+                u.email AS buyer_email
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.user_id
+            WHERE o.store_id = :store_id
+            AND (
+                CAST(o.order_id AS TEXT) ILIKE :query
+                OR u.full_name ILIKE :query
+            )
+            ORDER BY o.created_at DESC
+        ");
+        
+        $searchQuery = '%' . $query . '%';
+        $stmt->execute([
+            'store_id' => $storeId,
+            'query' => $searchQuery
+        ]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get orders by store and status (for filtering/tabs)
+    public static function findByStoreIdAndStatus(int $storeId, string $status): array
+    {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.status,
+                o.total_amount,
+                o.delivery_time,
+                o.reject_reason,
+                o.created_at,
+                o.updated_at,
+                u.full_name AS buyer_name,
+                u.email AS buyer_email
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.user_id
+            WHERE o.store_id = :store_id
+            AND o.status = :status
+            ORDER BY o.created_at DESC
+        ");
+        
+        $stmt->execute([
+            'store_id' => $storeId,
+            'status' => $status
+        ]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get order items with product details
+    public static function getOrderItems(int $orderId): array
+    {
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                oi.order_item_id,
+                oi.product_id,
+                oi.price_at,
+                oi.qty,
+                oi.subtotal,
+                p.name AS product_name,
+                p.image_path,
+                p.description
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE oi.order_id = :order_id
+            ORDER BY oi.order_item_id ASC
+        ");
+        
+        $stmt->execute(['order_id' => $orderId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
