@@ -165,11 +165,11 @@ function initOrderManagementPage() {
     function getActionButtons(order) {
         if (order.status === 'waiting_approval') {
             return `
-                <button class="btn-order-action btn-approve">Approve</button>
-                <button class="btn-order-action btn-reject">Reject</button>
+                <button class="btn-order-action btn-approve" data-order-id="${order.order_id}">Approve</button>
+                <button class="btn-order-action btn-reject" data-order-id="${order.order_id}">Reject</button>
             `;
         } else if (order.status === 'approved') {
-            return `<button class="btn-order-action btn-delivery">Kirim Barang</button>`;
+            return `<button class="btn-order-action btn-delivery" data-order-id="${order.order_id}">Kirim Barang</button>`;
         }
         return '';
     }
@@ -274,6 +274,18 @@ function initOrderManagementPage() {
     }
 
     // Modal functions
+    function showRejectModal(orderId) {
+        selectedOrderId = orderId;
+        rejectReason.value = '';
+        rejectModal.style.display = 'flex';
+    }
+
+    function showDeliveryModal(orderId) {
+        selectedOrderId = orderId;
+        deliveryDays.value = '';
+        deliveryModal.style.display = 'flex';
+    }
+
     async function showDetailModal(orderId) {
         try {
             const result = await api.get(`/seller/orders/detail/${orderId}`);
