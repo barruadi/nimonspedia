@@ -17,7 +17,6 @@ function initEditProductPage() {
     console.log('Product ID:', productId);
 
     // Image Upload
-
     const uploadBtn = document.getElementById('uploadBtn');
     const productImageInput = document.getElementById('productImage');
     const imagePlaceholder = document.getElementById('imagePlaceholder');
@@ -118,7 +117,6 @@ function initEditProductPage() {
     }
 
     // Load Product Data
-
     async function loadProductData() {
         try {
             console.log('Loading product data...');
@@ -162,7 +160,6 @@ function initEditProductPage() {
     }
 
     // Form Validation
-
     function validateForm(formData) {
         let isValid = true;
         
@@ -213,23 +210,37 @@ function initEditProductPage() {
         return isValid;
     }
 
-    // Modal Functions
-    function showModal() {
-        const modalBackdrop = document.getElementById('modalBackdrop');
+    // Modal Functions - EDIT MODAL
+    function showEditModal() {
+        const modalBackdrop = document.getElementById('editModalBackdrop');
         if (modalBackdrop) {
             modalBackdrop.style.display = 'flex';
         }
     }
 
-    function hideModal() {
-        const modalBackdrop = document.getElementById('modalBackdrop');
+    function hideEditModal() {
+        const modalBackdrop = document.getElementById('editModalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'none';
+        }
+    }
+
+    // Modal Functions - CANCEL MODAL
+    function showCancelModal() {
+        const modalBackdrop = document.getElementById('cancelModalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'flex';
+        }
+    }
+
+    function hideCancelModal() {
+        const modalBackdrop = document.getElementById('cancelModalBackdrop');
         if (modalBackdrop) {
             modalBackdrop.style.display = 'none';
         }
     }
 
     // Form Submission
-
     const form = document.getElementById('editProductForm');
     if (form) {
         console.log('Form found, attaching submit handler');
@@ -244,27 +255,27 @@ function initEditProductPage() {
                 return;
             }
             
-            // Show confirmation modal
-            showModal();
+            // Show EDIT confirmation modal
+            showEditModal();
             
-            // Wait for user confirmation
-            const modalConfirmBtn = document.getElementById('modalConfirmBtn');
-            const modalCancelBtn = document.getElementById('modalCancelBtn');
+            // Get edit modal buttons
+            const editModalConfirmBtn = document.getElementById('editModalConfirmBtn');
+            const editModalCancelBtn = document.getElementById('editModalCancelBtn');
             
-            // Remove old listeners
-            const newConfirmBtn = modalConfirmBtn.cloneNode(true);
-            const newCancelBtn = modalCancelBtn.cloneNode(true);
-            modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, modalConfirmBtn);
-            modalCancelBtn.parentNode.replaceChild(newCancelBtn, modalCancelBtn);
+            // Remove old listeners by cloning
+            const newEditConfirmBtn = editModalConfirmBtn.cloneNode(true);
+            const newEditCancelBtn = editModalCancelBtn.cloneNode(true);
+            editModalConfirmBtn.parentNode.replaceChild(newEditConfirmBtn, editModalConfirmBtn);
+            editModalCancelBtn.parentNode.replaceChild(newEditCancelBtn, editModalCancelBtn);
             
-            // Cancel button
-            newCancelBtn.addEventListener('click', () => {
-                hideModal();
+            // Cancel button - close modal
+            newEditCancelBtn.addEventListener('click', () => {
+                hideEditModal();
             });
             
             // Confirm button - submit form
-            newConfirmBtn.addEventListener('click', async () => {
-                hideModal();
+            newEditConfirmBtn.addEventListener('click', async () => {
+                hideEditModal();
                 
                 // Only add image if changed
                 if (imageChanged) {
@@ -304,13 +315,33 @@ function initEditProductPage() {
         console.error('Form #editProductForm not found!');
     }
 
-    // Cancel button
+    // Cancel button - Show CANCEL modal
     const cancelBtn = document.getElementById('cancelBtn');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
-            if (confirm('Batal mengedit produk? Perubahan tidak akan disimpan.')) {
+            // Show CANCEL confirmation modal
+            showCancelModal();
+            
+            // Get cancel modal buttons
+            const cancelModalConfirmBtn = document.getElementById('cancelModalConfirmBtn');
+            const cancelModalCancelBtn = document.getElementById('cancelModalCancelBtn');
+            
+            // Remove old listeners by cloning
+            const newCancelConfirmBtn = cancelModalConfirmBtn.cloneNode(true);
+            const newCancelCancelBtn = cancelModalCancelBtn.cloneNode(true);
+            cancelModalConfirmBtn.parentNode.replaceChild(newCancelConfirmBtn, cancelModalConfirmBtn);
+            cancelModalCancelBtn.parentNode.replaceChild(newCancelCancelBtn, cancelModalCancelBtn);
+            
+            // "Lanjut" button - close modal, continue editing
+            newCancelCancelBtn.addEventListener('click', () => {
+                hideCancelModal();
+            });
+            
+            // "Batal" button - go back to products page
+            newCancelConfirmBtn.addEventListener('click', () => {
+                hideCancelModal();
                 window.location.href = '/products';
-            }
+            });
         });
     }
 

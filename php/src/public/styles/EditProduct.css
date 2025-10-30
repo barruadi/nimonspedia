@@ -406,7 +406,9 @@
 }
 
 .btn-modal-cancel,
-.btn-modal-confirm {
+.btn-modal-cancel-edit,
+.btn-modal-confirm,
+.btn-modal-continue {
     flex: 1;
     padding: 0.75rem 1.5rem;
     font-size: 0.9375rem;
@@ -423,21 +425,26 @@
     background-color: #8e8e8e;
 }
 
-.btn-modal-cancel:hover {
+.btn-modal-cancel:hover,
+.btn-modal-cancel-edit:hover {
     background-color: #d1d5db;
 }
 
-.btn-modal-confirm {
+.btn-modal-confirm,
+.btn-modal-continue {
     background-color: #10b981;
     color: white;
 }
 
-.btn-modal-confirm:hover {
+.btn-modal-confirm:hover,
+.btn-modal-continue:hover {
     background-color: #059669;
 }
 
 .btn-modal-cancel:active,
-.btn-modal-confirm:active {
+.btn-modal-cancel-edit:active,
+.btn-modal-confirm:active,
+.btn-modal-continue:active {
     transform: scale(0.98);
 }
 
@@ -535,7 +542,9 @@
     }
 
     .btn-modal-cancel,
-    .btn-modal-confirm {
+    .btn-modal-cancel-edit,
+    .btn-modal-confirm,
+    .btn-modal-continue {
         width: 100%;
     }
 

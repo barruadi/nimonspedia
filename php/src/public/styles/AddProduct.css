@@ -354,6 +354,92 @@
     display: none;
 }
 
+/* Modal Confirmation */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 350px;
+    width: 90%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    animation: modalSlideIn 0.3s ease;
+    z-index: 10001;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+.modal-icon {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.confirmation-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 200px;
+}
+
+.confirmation-buttons {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+}
+
+.btn-modal-cancel,
+.btn-modal-confirm {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-modal-cancel {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.btn-modal-cancel:hover {
+    background-color: #d1d5db;
+}
+
+.btn-modal-confirm {
+    background-color: #10b981;
+    color: white;
+}
+
+.btn-modal-confirm:hover {
+    background-color: #059669;
+}
+
+.btn-modal-cancel:active,
+.btn-modal-confirm:active {
+    transform: scale(0.98);
+}
+
 @keyframes slideDown {
     from {
         transform: translate(-50%, -100%);
@@ -361,6 +447,17 @@
     }
     to {
         transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
         opacity: 1;
     }
 }
@@ -416,6 +513,29 @@
     .toast-close-btn {
         padding: 0.375rem 0.75rem;
         font-size: 0.75rem;
+    }
+
+    .modal {
+        padding: 1.5rem;
+        max-width: 90%;
+    }
+
+    .modal-icon {
+        width: 64px;
+        height: 64px;
+    }
+
+    .confirmation-text {
+        font-size: 0.9375rem;
+    }
+
+    .confirmation-buttons {
+        flex-direction: column;
+    }
+
+    .btn-modal-cancel,
+    .btn-modal-confirm {
+        width: 100%;
     }
 
     @keyframes slideDown {
