@@ -22,21 +22,25 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
-  '/dashboard': {
+  '/seller/dashboard': {
     page: '/pages/DashboardPage.html',
     script: '/script/Dashboard.js',
   },
-  '/products': {
+  '/seller/products': {
     page: '/pages/ProductManagementPage.html',
     script: '/script/ProductManagement.js',
   },
-  '/products/add': {
+  '/seller/products/add': {
     page: '/pages/AddProductPage.html',
     script: '/script/AddProduct.js',
   },
-  '/products/edit/:id': {
+  '/seller/products/edit/:id': {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
+  },
+  '/seller/orders': {
+    page: '/pages/OrderManagementPage.html',
+    script: '/script/OrderManagement.js',
   }
 };
 
