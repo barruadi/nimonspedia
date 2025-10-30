@@ -145,7 +145,7 @@
       </div>
     </div>
 
-     <!-- Backdrop for toast (will block interaction) -->
+    <!-- Backdrop for toast -->
     <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
 
     <!-- Toast Notification -->
@@ -159,25 +159,13 @@
     </div>
 
     <!-- Edit Confirmation Modal -->
-    <div id="modalBackdrop" class="modal-backdrop" style="display:none;">
-      <div id="confirmationModal" class="modal">
+    <div id="editModalBackdrop" class="modal-backdrop" style="display:none;">
+      <div id="editConfirmationModal" class="modal">
         <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
         <div class="confirmation-text">Apakah anda yakin ingin mengedit produk?</div>
         <div class="confirmation-buttons">
-          <button type="button" id="modalCancelBtn" class="btn-modal-cancel">Batal</button>
-          <button type="button" id="modalConfirmBtn" class="btn-modal-confirm">Ubah</button>
-        </div>
-      </div>
-    </div>
-
-     <!-- Cancel Confirmation Modal -->
-    <div id="cancelModalBackdrop" class="modal-backdrop" style="display:none;">
-      <div id="cancelConfirmationModal" class="modal">
-        <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
-        <div class="confirmation-text">Batal mengedit produk? Perubahan tidak akan tersimpan.</div>
-        <div class="confirmation-buttons">
-          <button type="button" id="cancelModalCancelBtn" class="btn-modal-cancel">Lanjut</button>
-          <button type="button" id="cancelModalConfirmBtn" class="btn-modal-confirm">Batal</button>
+          <button type="button" id="editModalCancelBtn" class="btn-modal-cancel">Batal</button>
+          <button type="button" id="editModalConfirmBtn" class="btn-modal-confirm">Ubah</button>
         </div>
       </div>
     </div>

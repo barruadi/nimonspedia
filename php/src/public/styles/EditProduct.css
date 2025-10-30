@@ -314,6 +314,7 @@
 
 .toast-close-btn {
     padding: 0.5rem 1rem;
+    background-color: #10b981;
     color: white;
     border: none;
     border-radius: 6px;
@@ -333,8 +334,12 @@
     transform: scale(0.95);
 }
 
-.toast.error {
-    border-color: #ef4444;
+.toast.success .toast-close-btn {
+    background-color: #10b981;
+}
+
+.toast.success .toast-close-btn:hover {
+    background-color: #059669;
 }
 
 .toast.error .toast-close-btn {
@@ -406,9 +411,7 @@
 }
 
 .btn-modal-cancel,
-.btn-modal-cancel-edit,
-.btn-modal-confirm,
-.btn-modal-continue {
+.btn-modal-confirm {
     flex: 1;
     padding: 0.75rem 1.5rem;
     font-size: 0.9375rem;
@@ -425,26 +428,21 @@
     background-color: #8e8e8e;
 }
 
-.btn-modal-cancel:hover,
-.btn-modal-cancel-edit:hover {
-    background-color: #d1d5db;
+.btn-modal-cancel:hover {
+    background-color: #6b7280;
 }
 
-.btn-modal-confirm,
-.btn-modal-continue {
+.btn-modal-confirm {
     background-color: #10b981;
     color: white;
 }
 
-.btn-modal-confirm:hover,
-.btn-modal-continue:hover {
+.btn-modal-confirm:hover {
     background-color: #059669;
 }
 
 .btn-modal-cancel:active,
-.btn-modal-cancel-edit:active,
-.btn-modal-confirm:active,
-.btn-modal-continue:active {
+.btn-modal-confirm:active {
     transform: scale(0.98);
 }
 
@@ -542,9 +540,7 @@
     }
 
     .btn-modal-cancel,
-    .btn-modal-cancel-edit,
-    .btn-modal-confirm,
-    .btn-modal-continue {
+    .btn-modal-confirm {
         width: 100%;
     }
 

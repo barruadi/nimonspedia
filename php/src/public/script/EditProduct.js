@@ -210,11 +210,14 @@ function initEditProductPage() {
         return isValid;
     }
 
-    // Modal Functions - EDIT MODAL
+    // Modal Functions
     function showEditModal() {
         const modalBackdrop = document.getElementById('editModalBackdrop');
         if (modalBackdrop) {
             modalBackdrop.style.display = 'flex';
+            console.log('Edit modal shown');
+        } else {
+            console.error('Edit modal backdrop not found!');
         }
     }
 
@@ -225,123 +228,113 @@ function initEditProductPage() {
         }
     }
 
-    // Modal Functions - CANCEL MODAL
-    function showCancelModal() {
-        const modalBackdrop = document.getElementById('cancelModalBackdrop');
-        if (modalBackdrop) {
-            modalBackdrop.style.display = 'flex';
+    // Handle form submission
+    async function submitProductUpdate(formData) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Menyimpan...';
+        
+        console.log('Submitting to API...');
+        console.log('Image changed:', imageChanged);
+        
+        try {
+            // Only add image if changed
+            if (imageChanged && productImageInput?.files[0]) {
+                formData.set('image', productImageInput.files[0]);
+                console.log('Image file added:', productImageInput.files[0].name);
+            }
+            
+            // Log FormData contents
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
+                } else {
+                    console.log(`${key}: ${value}`);
+                }
+            }
+            
+            const result = await api.put(`/seller/products/edit/${productId}`, formData);
+            
+            console.log('API response:', result);
+            
+            if (result && result.ok) {
+                showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/products';
+                }, 1500);
+            } else {
+                throw new Error(result?.error || 'Gagal memperbarui produk');
+            }
+            
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            showToast('Gagal memperbarui produk!', error.message, 'error');
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Simpan Perubahan';
         }
     }
 
-    function hideCancelModal() {
-        const modalBackdrop = document.getElementById('cancelModalBackdrop');
-        if (modalBackdrop) {
-            modalBackdrop.style.display = 'none';
-        }
-    }
-
-    // Form Submission
+    // Form submit handler
     const form = document.getElementById('editProductForm');
     if (form) {
         console.log('Form found, attaching submit handler');
         
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
+            console.log('Form submitted');
             
             const formData = new FormData(e.target);
             
             // Validate first
             if (!validateForm(formData)) {
+                console.log('Validation failed');
                 return;
             }
             
-            // Show EDIT confirmation modal
+            console.log('Validation passed, showing modal');
+            
+            // Show confirmation modal
             showEditModal();
             
-            // Get edit modal buttons
-            const editModalConfirmBtn = document.getElementById('editModalConfirmBtn');
-            const editModalCancelBtn = document.getElementById('editModalCancelBtn');
+            // Set up modal confirm button
+            const confirmBtn = document.getElementById('editModalConfirmBtn');
+            const cancelBtn = document.getElementById('editModalCancelBtn');
             
-            // Remove old listeners by cloning
-            const newEditConfirmBtn = editModalConfirmBtn.cloneNode(true);
-            const newEditCancelBtn = editModalCancelBtn.cloneNode(true);
-            editModalConfirmBtn.parentNode.replaceChild(newEditConfirmBtn, editModalConfirmBtn);
-            editModalCancelBtn.parentNode.replaceChild(newEditCancelBtn, editModalCancelBtn);
+            if (!confirmBtn || !cancelBtn) {
+                console.error('Modal buttons not found!');
+                return;
+            }
             
-            // Cancel button - close modal
-            newEditCancelBtn.addEventListener('click', () => {
+            // Clone buttons to remove old listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            
+            // Add new listeners
+            newCancelBtn.addEventListener('click', () => {
+                console.log('Modal cancel clicked');
                 hideEditModal();
             });
             
-            // Confirm button - submit form
-            newEditConfirmBtn.addEventListener('click', async () => {
+            newConfirmBtn.addEventListener('click', () => {
+                console.log('Modal confirm clicked');
                 hideEditModal();
-                
-                // Only add image if changed
-                if (imageChanged) {
-                    const imageFile = productImageInput?.files[0];
-                    if (imageFile) {
-                        formData.set('image', imageFile);
-                    }
-                }
-                
-                // Disable submit button
-                const submitBtn = document.getElementById('submitBtn');
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Menyimpan...';
-                
-                try {
-                    const result = await api.put(`/seller/products/edit/${productId}`, formData);
-                    
-                    if (result && result.ok) {
-                        showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/products';
-                        }, 1500);
-                    } else {
-                        throw new Error(result?.error || 'Gagal memperbarui produk');
-                    }
-                    
-                } catch (error) {
-                    console.error('Error submitting form:', error);
-                    showToast('Gagal memperbarui produk!', error.message, 'error');
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Simpan Perubahan';
-                }
+                submitProductUpdate(formData);
             });
         });
     } else {
-        console.error('Form #editProductForm not found!');
+        console.error('Form editProductForm not found!');
     }
 
-    // Cancel button - Show CANCEL modal
+    // Cancel button - Go back to products page directly
     const cancelBtn = document.getElementById('cancelBtn');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
-            // Show CANCEL confirmation modal
-            showCancelModal();
-            
-            // Get cancel modal buttons
-            const cancelModalConfirmBtn = document.getElementById('cancelModalConfirmBtn');
-            const cancelModalCancelBtn = document.getElementById('cancelModalCancelBtn');
-            
-            // Remove old listeners by cloning
-            const newCancelConfirmBtn = cancelModalConfirmBtn.cloneNode(true);
-            const newCancelCancelBtn = cancelModalCancelBtn.cloneNode(true);
-            cancelModalConfirmBtn.parentNode.replaceChild(newCancelConfirmBtn, cancelModalConfirmBtn);
-            cancelModalCancelBtn.parentNode.replaceChild(newCancelCancelBtn, cancelModalCancelBtn);
-            
-            // "Lanjut" button - close modal, continue editing
-            newCancelCancelBtn.addEventListener('click', () => {
-                hideCancelModal();
-            });
-            
-            // "Batal" button - go back to products page
-            newCancelConfirmBtn.addEventListener('click', () => {
-                hideCancelModal();
-                window.location.href = '/products';
-            });
+            console.log('Cancel button clicked, going back to products');
+            window.location.href = '/products';
         });
     }
 
@@ -358,19 +351,15 @@ function initEditProductPage() {
             return;
         }
         
-        // Set messages and type
         primaryEl.textContent = primaryMessage;
         secondaryEl.textContent = secondaryMessage;
         toast.className = 'toast ' + type;
         
-        // Show backdrop + toast
         if (backdrop) backdrop.style.display = 'block';
         toast.style.display = 'flex';
         
-        // Auto hide after 5s
         let autoHideTimer = setTimeout(hideToast, 5000);
         
-        // Close handlers (button and backdrop click)
         if (closeBtn) {
             closeBtn.onclick = () => {
                 clearTimeout(autoHideTimer);
@@ -393,7 +382,6 @@ function initEditProductPage() {
     console.log('Initializing EditProduct page...');
     loadProductData();
 }
-
 
 if (document.readyState === 'loading') {
     console.log('DOM still loading, waiting...');
