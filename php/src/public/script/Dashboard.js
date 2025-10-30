@@ -7,6 +7,7 @@ function initDashboardPage() {
 
     // DOM Elements
     const loadingState = document.getElementById('loadingState');
+    const mainContent = document.getElementById('mainContent');
     const storeInfoBanner = document.getElementById('storeInfoBanner');
     const bannerStoreName = document.getElementById('bannerStoreName');
     const bannerStoreDescription = document.getElementById('bannerStoreDescription');
@@ -61,6 +62,10 @@ function initDashboardPage() {
             initButtons();
             initEditForm();
 
+            // Show main content after everything is loaded
+            hideLoading();
+            showMainContent();
+
         } catch (error) {
             console.error('Error initializing Dashboard Page:', error);
             showToast('Gagal memuat data dashboard', error.message, 'error');
@@ -79,15 +84,11 @@ function initDashboardPage() {
         if (store.logo_path) {
             storeLogo.src = store.logo_path;
         }
-
-        // Show banner
-        storeInfoBanner.style.display = 'flex';
     }
 
     function initStatCards() {
         if (!stats) {
             console.error('Stats is null/undefined');
-            hideLoading();
             return;
         }
 
@@ -97,8 +98,6 @@ function initDashboardPage() {
         
         const revenue = stats.total_revenue || 0;
         totalRevenueCard.textContent = `Rp ${revenue.toLocaleString('id-ID')}`;
-        
-        hideLoading();
     }
 
     function initButtons() {
@@ -226,13 +225,22 @@ function initDashboardPage() {
     // Helper functions
     function showLoading() {
         if (loadingState) {
-            loadingState.style.display = 'block';
+            loadingState.style.display = 'flex';
+        }
+        if (mainContent) {
+            mainContent.style.display = 'none';
         }
     }
 
     function hideLoading() {
         if (loadingState) {
             loadingState.style.display = 'none';
+        }
+    }
+
+    function showMainContent() {
+        if (mainContent) {
+            mainContent.style.display = 'block';
         }
     }
 
