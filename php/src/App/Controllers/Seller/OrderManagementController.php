@@ -82,6 +82,43 @@ class OrderManagementController
         ];
     }
 
+    // Get detailed information about a specific order
+    public static function getOrderDetail(int $orderId): array
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
+        }
+
+        // Verify order belongs to seller's store
+        $order = Order::findByIdAndOwner($orderId, $user['user_id']);
+
+        if (!$order) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Order not found or unauthorized'];
+        }
+
+        // Get full order details with items
+        $orderDetail = Order::findByIdWithItems($orderId);
+
+        if (!$orderDetail) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Order details not found'];
+        }
+
+        http_response_code(200);
+        return [
+            'ok' => true,
+            'data' => ['order' => $orderDetail]
+        ];
+    }
+
     // Updates order status to rejected and refund buyer funds
     public static function rejectOrder(int $orderId, string $rejectReason): array
     {
@@ -130,7 +167,7 @@ class OrderManagementController
     }
 
     // Updates order delivery time
-    public static function setDeliveryTime(int $orderId, string $deliveryTime): array
+    public static function setDeliveryTime(int $orderId, int $deliveryDays): array
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -143,10 +180,10 @@ class OrderManagementController
             return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
         }
 
-        // Validate delivery time
-        if (empty($deliveryTime)) {
+        // Validate delivery days
+        if ($deliveryDays < 1 || $deliveryDays > 30) {
             http_response_code(400);
-            return ['ok' => false, 'error' => 'Delivery time is required'];
+            return ['ok' => false, 'error' => 'Delivery days must be between 1 and 30'];
         }
 
         $order = Order::findByIdAndOwner($orderId, $user['user_id']);
@@ -161,6 +198,9 @@ class OrderManagementController
             return ['ok' => false, 'error' => 'Delivery time can only be set for approved orders'];
         }
 
+        // Calculate delivery time (NOW + days)
+        $deliveryTime = date('Y-m-d H:i:s', strtotime("+{$deliveryDays} days"));
+        
         $success = Order::setDeliveryTime($orderId, $deliveryTime);
 
         if (!$success) {
@@ -171,7 +211,11 @@ class OrderManagementController
         http_response_code(200);
         return [
             'ok' => true,
-            'message' => 'Delivery time set successfully'
+            'message' => 'Delivery time set successfully',
+            'data' => [
+                'delivery_time' => $deliveryTime,
+                'delivery_days' => $deliveryDays
+            ]
         ];
     }
 }
