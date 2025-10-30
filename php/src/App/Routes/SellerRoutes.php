@@ -19,7 +19,7 @@ $router->group([
     $r->get('/products/add',                fn($req) => ProductManagementController::showAddProductForm());
     $r->post('/products/add',               fn($req) => ProductManagementController::handleAddProduct($req));
     $r->get('/products/edit/{id}',          fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
-    $r->put('/products/edit/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
+    $r->post('/products/edit/{id}',         fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
     $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
     $r->get('/orders',                      fn($req) => OrderManagementController::getStoreOrders());
     $r->get('/orders/detail/{id}',          fn($req, $id) => OrderManagementController::getOrderDetail($id));
