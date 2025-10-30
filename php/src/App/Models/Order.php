@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Core\Database;
 use PDO;
+use Exception;
 
 class Order
 {
@@ -31,16 +32,17 @@ class Order
                 o.total_amount,
                 o.status,
                 o.delivery_time,
+                o.reject_reason,
                 o.created_at,
+                o.updated_at,
                 u.full_name as buyer_name,
                 u.email as buyer_email,
                 COUNT(oi.order_item_id) as item_count
             FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
             JOIN users u ON o.buyer_id = u.user_id
-            WHERE p.store_id = :store_id
-            GROUP BY o.order_id, o.buyer_id, o.total_amount, o.status, o.delivery_time, o.created_at, u.full_name, u.email
+            LEFT JOIN order_items oi ON o.order_id = oi.order_id
+            WHERE o.store_id = :store_id
+            GROUP BY o.order_id, o.buyer_id, o.total_amount, o.status, o.delivery_time, o.reject_reason, o.created_at, o.updated_at, u.full_name, u.email
             ORDER BY 
                 CASE o.status
                     WHEN 'waiting_approval' THEN 1
@@ -62,11 +64,9 @@ class Order
         $db = self::getDB();
         
         $stmt = $db->prepare("
-            SELECT o.order_id, o.status, o.delivery_time
+            SELECT o.order_id, o.status, o.delivery_time, o.buyer_id, o.total_amount, o.reject_reason
             FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            JOIN stores s ON p.store_id = s.store_id
+            JOIN stores s ON o.store_id = s.store_id
             WHERE o.order_id = :order_id
             AND s.owner_id = :owner_id
             LIMIT 1
@@ -88,7 +88,8 @@ class Order
         
         $stmt = $db->prepare("
             UPDATE orders 
-            SET status = :status
+            SET status = :status,
+                updated_at = NOW()
             WHERE order_id = :order_id
         ");
         
@@ -106,7 +107,8 @@ class Order
         $stmt = $db->prepare("
             UPDATE orders 
             SET delivery_time = :delivery_time,
-                status = :status
+                status = :status,
+                updated_at = NOW()
             WHERE order_id = :order_id
         ");
         
@@ -151,37 +153,10 @@ class Order
             return null;
         }
         
-        // Get order items
-        $stmt = $db->prepare("
-            SELECT 
-                oi.*,
-                p.name as product_name,
-                p.image_path
-            FROM order_items oi
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE oi.order_id = :order_id
-        ");
-        $stmt->execute(['order_id' => $orderId]);
-        $order['items'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Get order items with product details
+        $order['items'] = self::getOrderItems($orderId);
         
         return $order;
-    }
-
-    // Reject order
-    public static function reject(int $orderId): bool
-    {
-        $db = self::getDB();
-        
-        $stmt = $db->prepare("
-            UPDATE orders 
-            SET status = :status
-            WHERE order_id = :order_id
-        ");
-        
-        return $stmt->execute([
-            'status' => self::STATUS_REJECTED,
-            'order_id' => $orderId
-        ]);
     }
 
     // Get order statistics for a store
@@ -189,26 +164,22 @@ class Order
     {
         $db = self::getDB();
         
-        // Pending orders count - FIXED: Use OR instead of IN
+        // Pending orders count (waiting_approval, approved, on_delivery)
         $stmt = $db->prepare("
-            SELECT COUNT(DISTINCT o.order_id) as total
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE p.store_id = :store_id
-            AND (o.status = 'waiting_approval' OR o.status = 'approved' OR o.status = 'on_delivery')
+            SELECT COUNT(*) as total
+            FROM orders
+            WHERE store_id = :store_id
+            AND status IN ('waiting_approval', 'approved', 'on_delivery')
         ");
         $stmt->execute(['store_id' => $storeId]);
         $pendingOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // Total revenue from completed orders
+        // Total revenue from completed orders (received)
         $stmt = $db->prepare("
-            SELECT COALESCE(SUM(oi.qty * oi.price_at), 0) as total_revenue
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE p.store_id = :store_id
-            AND o.status = 'received'
+            SELECT COALESCE(SUM(total_amount), 0) as total_revenue
+            FROM orders
+            WHERE store_id = :store_id
+            AND status = 'received'
         ");
         $stmt->execute(['store_id' => $storeId]);
         $totalRevenue = (float)$stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
@@ -228,10 +199,9 @@ class Order
     // Reject order and refund buyer balance
     public static function rejectWithRefund(int $orderId, string $rejectReason): bool
     {
-        $db = Database::getInstance()->getConnection();
+        $db = self::getDB();
         
         try {
-            // Uses transaction to ensure atomicity
             $db->beginTransaction();
 
             // 1. Get order details
@@ -285,7 +255,7 @@ class Order
     // Search orders by order ID or buyer name
     public static function searchByStoreId(int $storeId, string $query): array
     {
-        $db = Database::getInstance()->getConnection();
+        $db = self::getDB();
         
         $stmt = $db->prepare("
             SELECT 
@@ -321,7 +291,7 @@ class Order
     // Get orders by store and status (for filtering/tabs)
     public static function findByStoreIdAndStatus(int $storeId, string $status): array
     {
-        $db = Database::getInstance()->getConnection();
+        $db = self::getDB();
         
         $stmt = $db->prepare("
             SELECT 
@@ -353,7 +323,7 @@ class Order
     // Get order items with product details
     public static function getOrderItems(int $orderId): array
     {
-        $db = Database::getInstance()->getConnection();
+        $db = self::getDB();
         
         $stmt = $db->prepare("
             SELECT 

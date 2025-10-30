@@ -29,19 +29,16 @@ class OrderManagementController
         }
 
         $orders = Order::findByStoreId($store['store_id']);
+        
+        // Fetch items for each order
+        foreach ($orders as &$order) {
+            $order['items'] = Order::getOrderItems($order['order_id']);
+        }
 
         http_response_code(200);
         return [
             'ok' => true,
-            'data' => [
-                'store' => [
-                    'store_id' => $store['store_id'],
-                    'store_name' => $store['store_name'],
-                    'description' => $store['description'] ?? null,
-                    'logo_path' => $store['logo_path'] ?? null,
-                ],
-                'orders' => $orders,
-            ] 
+            'data' => ['orders' => $orders]
         ];
     }
 
