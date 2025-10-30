@@ -39,7 +39,7 @@ function initDashboardPage() {
 
             if (!result || !result.ok) {
                 console.warn('Dashboard request failed:', result);
-                showToast('Unauthorized - Please login as seller', 'Silakan login sebagai seller', 'error');
+                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
                 setTimeout(() => window.location.href = '/login', 1500);
                 return;
             }
