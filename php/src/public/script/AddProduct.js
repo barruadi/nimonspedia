@@ -39,7 +39,7 @@ function initAddProductPage() {
         // Validate file type
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!validTypes.includes(file.type)) {
-            showToast('Format file harus JPG, PNG, atau WEBP', 'error');
+            showToast('Format file tidak valid!', 'Gunakan JPG, PNG, atau WEBP', 'error');
             e.target.value = '';
             return;
         }
@@ -47,7 +47,7 @@ function initAddProductPage() {
         // Validate file size (max 2MB)
         const maxSize = 2 * 1024 * 1024;
         if (file.size > maxSize) {
-            showToast('Ukuran file maksimal 2MB', 'error');
+            showToast('Ukuran file terlalu besar!', 'Maksimal 2MB', 'error');
             e.target.value = '';
             return;
         }
@@ -64,7 +64,6 @@ function initAddProductPage() {
     });
 
     // Fetch Categories (using api/categories)
-
     async function fetchCategories() {
         try {
             console.log('Fetching categories...');
@@ -110,7 +109,6 @@ function initAddProductPage() {
     }
 
     // Init Form
-
     async function initForm() {
         try {
             console.log('Fetching store info...');
@@ -121,7 +119,7 @@ function initAddProductPage() {
             if (!result || !result.ok) {
                 console.warn('Store info request failed:', result);
                 // Don't block category fetch if store info fails
-                showToast('Unauthorized - Please login as seller', 'error');
+                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
                 setTimeout(() => window.location.href = '/login', 1500);
                 return;
             } else {
@@ -140,12 +138,11 @@ function initAddProductPage() {
             
         } catch (error) {
             console.error('Error in initForm:', error);
-            showToast('Gagal memuat informasi toko', 'error');
+            showToast('Gagal memuat informasi toko!', 'Tolong kembali sesaat lagi...', 'error');
         }
     }
 
     // Form Validation
-
     function validateForm(formData) {
         let isValid = true;
         
@@ -196,15 +193,29 @@ function initAddProductPage() {
         // Image
         const image = formData.get('image');
         if (!image || image.size === 0) {
-            showToast('Foto produk wajib diunggah', 'error');
+            showToast('Foto produk wajib diunggah!', 'Supaya pembeli tertarik dengan produkmu!', 'error');
             isValid = false;
         }
         
         return isValid;
     }
 
-    // Form Submission
+    // Modal Functions - CANCEL MODAL
+    function showCancelModal() {
+        const modalBackdrop = document.getElementById('cancelModalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'flex';
+        }
+    }
 
+    function hideCancelModal() {
+        const modalBackdrop = document.getElementById('cancelModalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'none';
+        }
+    }
+
+    // Form Submission
     const form = document.getElementById('addProductForm');
     if (form) {
         console.log('Form found, attaching submit handler');
@@ -234,9 +245,9 @@ function initAddProductPage() {
                 const result = await api.post('/seller/products/add', formData);
                 
                 if (result && result.ok) {
-                    showToast('Produk berhasil ditambahkan!', 'success');
+                    showToast('Produk berhasil ditambahkan!', 'Yuk kembali ke toko!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/products';
+                        window.location.href = '/seller/products';
                     }, 1500);
                 } else {
                     throw new Error(result?.error || 'Gagal menambahkan produk');
@@ -244,7 +255,7 @@ function initAddProductPage() {
                 
             } catch (error) {
                 console.error('Error submitting form:', error);
-                showToast(error.message, 'error');
+                showToast('Gagal menambahkan produk!', error.message, 'error');
                 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Simpan';
@@ -254,31 +265,79 @@ function initAddProductPage() {
         console.error('Form #addProductForm not found!');
     }
 
-    // Cancel button
+    // Cancel button - Show CANCEL modal
     const cancelBtn = document.getElementById('cancelBtn');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
-            if (confirm('Batal menambahkan produk? Perubahan tidak akan disimpan.')) {
-                window.location.href = '/products';
-            }
+            // Show CANCEL confirmation modal
+            showCancelModal();
+            
+            // Get cancel modal buttons
+            const cancelModalConfirmBtn = document.getElementById('cancelModalConfirmBtn');
+            const cancelModalCancelBtn = document.getElementById('cancelModalCancelBtn');
+            
+            // Remove old listeners by cloning
+            const newCancelConfirmBtn = cancelModalConfirmBtn.cloneNode(true);
+            const newCancelCancelBtn = cancelModalCancelBtn.cloneNode(true);
+            cancelModalConfirmBtn.parentNode.replaceChild(newCancelConfirmBtn, cancelModalConfirmBtn);
+            cancelModalCancelBtn.parentNode.replaceChild(newCancelCancelBtn, cancelModalCancelBtn);
+            
+            // "Lanjut" button - close modal, continue adding
+            newCancelCancelBtn.addEventListener('click', () => {
+                hideCancelModal();
+            });
+            
+            // "Batal" button - go back to products page
+            newCancelConfirmBtn.addEventListener('click', () => {
+                hideCancelModal();
+                window.location.href = '/seller/products';
+            });
         });
     }
 
     // Toast Notification
-    function showToast(message, type = 'success') {
+    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
-        if (!toast) {
-            console.error('Toast element not found!');
+        const backdrop = document.getElementById('toastBackdrop');
+        const primaryEl = document.getElementById('toastPrimaryMessage');
+        const secondaryEl = document.getElementById('toastSecondaryMessage');
+        const closeBtn = document.getElementById('toastCloseBtn');
+        
+        if (!toast || !primaryEl || !secondaryEl) {
+            console.error('Toast elements not found!');
             return;
         }
         
-        toast.textContent = message;
-        toast.className = `toast ${type === 'error' ? 'error' : ''}`;
-        toast.style.display = 'block';
+        // Set messages and type
+        primaryEl.textContent = primaryMessage;
+        secondaryEl.textContent = secondaryMessage;
+        toast.className = 'toast ' + type;
         
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 3000);
+        // Show backdrop + toast
+        if (backdrop) backdrop.style.display = 'block';
+        toast.style.display = 'flex';
+        
+        // Auto hide after 5s
+        let autoHideTimer = setTimeout(hideToast, 5000);
+        
+        // Close handlers (button and backdrop click)
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+        if (backdrop) {
+            backdrop.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+
+        function hideToast() {
+            if (toast) toast.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
+        }
     }
 
     console.log('Initializing AddProduct page...');

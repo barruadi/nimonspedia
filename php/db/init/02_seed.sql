@@ -22,7 +22,7 @@ DECLARE
 BEGIN
   FOR t IN
     SELECT unnest(ARRAY[
-      'order_items','orders','cart_items','carts','products','categories','stores','users'
+      'order_items','orders','cart_items','carts','category_items','products','categories','stores','users'
     ]) AS t
   LOOP
     IF EXISTS (
@@ -35,26 +35,26 @@ BEGIN
 END$$;
 
 -- USERS
-INSERT INTO users (email, password_hash, full_name, role, balance)
+INSERT INTO users (email, password_hash, full_name, role, address, balance)
 VALUES
-  ('owner@gadgethub.example',  '$2b$12$placeholderhashseller1', 'Rina Pratama', 'seller', 2500.00),
-  ('owner@freshmart.example', '$2b$12$placeholderhashseller2', 'Budi Santoso', 'seller', 1750.00),
-  ('alice@example.com',        '$2b$12$placeholderhashbuyer1',  'Alice Wardhani', 'buyer', 500.00),
-  ('bob@example.com',          '$2b$12$placeholderhashbuyer2',  'Bob Saputra',    'buyer', 1200.00)
+  ('owner@gadgethub.example',  '$2b$12$placeholderhashseller1', 'Rina Pratama', 'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 2500.00),
+  ('owner@freshmart.example', '$2b$12$placeholderhashseller2', 'Budi Santoso', 'seller', 'Jl. Gatot Subroto No. 45, Bandung', 1750.00),
+  ('alice@example.com',        '$2b$12$placeholderhashbuyer1',  'Alice Wardhani', 'buyer', 'Jl. Merdeka No. 67, Surabaya', 500.00),
+  ('bob@example.com',          '$2b$12$placeholderhashbuyer2',  'Bob Saputra',    'buyer', 'Jl. Diponegoro No. 89, Yogyakarta', 1200.00)
 ON CONFLICT (email) DO NOTHING;
 
--- STORES (needs users)
-INSERT INTO stores (owner_id, store_name, description, logo_path)
-SELECT u.user_id, s.store_name, s.description, s.logo
+-- STORES
+INSERT INTO stores (owner_id, store_name, description, logo_path, balance)
+SELECT u.user_id, s.store_name, s.description, s.logo, s.balance
 FROM (
   VALUES
-   ('owner@gadgethub.example','Gadget Hub','Electronics and accessories','/logos/gadgethub.png'),
-   ('owner@freshmart.example','FreshMart','Daily groceries and fresh produce','/logos/freshmart.png')
-) AS s(owner_email, store_name, description, logo)
+   ('owner@gadgethub.example','Gadget Hub','Electronics and accessories','/logos/gadgethub.png', 15000.00),
+   ('owner@freshmart.example','FreshMart','Daily groceries and fresh produce','/logos/freshmart.png', 8500.00)
+) AS s(owner_email, store_name, description, logo, balance)
 JOIN users u ON u.email = s.owner_email
 ON CONFLICT (store_name) DO NOTHING;
 
--- CATEGORIES (NEW)
+-- CATEGORIES
 INSERT INTO categories (name, description)
 VALUES
   ('Electronics', 'Electronic devices and accessories'),
@@ -117,6 +117,68 @@ JOIN (
 ) p ON p.store_name = s.store_name AND p.category_name = c.category_name
 ON CONFLICT ON CONSTRAINT uq_products_store_name DO NOTHING;
 
+WITH
+electronics AS (SELECT category_id FROM categories WHERE name = 'Electronics'),
+computers AS (SELECT category_id FROM categories WHERE name = 'Computers & Laptops'),
+audio AS (SELECT category_id FROM categories WHERE name = 'Audio & Video'),
+food AS (SELECT category_id FROM categories WHERE name = 'Food & Beverages'),
+dairy AS (SELECT category_id FROM categories WHERE name = 'Dairy Products'),
+beverages AS (SELECT category_id FROM categories WHERE name = 'Beverages'),
+produce AS (SELECT category_id FROM categories WHERE name = 'Fresh Produce'),
+mouse_p AS (SELECT product_id FROM products WHERE name = 'Wireless Mouse'),
+charger_p AS (SELECT product_id FROM products WHERE name = 'USB-C Charger 65W'),
+keyboard_p AS (SELECT product_id FROM products WHERE name = 'Mechanical Keyboard'),
+headphones_p AS (SELECT product_id FROM products WHERE name = 'Noise-Canceling Headphones'),
+apples_p AS (SELECT product_id FROM products WHERE name = 'Organic Apples (1kg)'),
+eggs_p AS (SELECT product_id FROM products WHERE name = 'Free-Range Eggs (10)'),
+milk_p AS (SELECT product_id FROM products WHERE name = 'Whole Milk (1L)'),
+coffee_p AS (SELECT product_id FROM products WHERE name = 'Arabica Coffee Beans (500g)')
+INSERT INTO category_items (category_id, product_id)
+SELECT * FROM (
+  -- Wireless Mouse: Electronics + Computers
+  SELECT (SELECT category_id FROM electronics), (SELECT product_id FROM mouse_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM computers), (SELECT product_id FROM mouse_p)
+  UNION ALL
+  -- USB-C Charger: Electronics + Computers
+  SELECT (SELECT category_id FROM electronics), (SELECT product_id FROM charger_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM computers), (SELECT product_id FROM charger_p)
+  UNION ALL
+  -- Mechanical Keyboard: Electronics + Computers
+  SELECT (SELECT category_id FROM electronics), (SELECT product_id FROM keyboard_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM computers), (SELECT product_id FROM keyboard_p)
+  UNION ALL
+  -- Noise-Canceling Headphones: Electronics + Audio & Video
+  SELECT (SELECT category_id FROM electronics), (SELECT product_id FROM headphones_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM audio), (SELECT product_id FROM headphones_p)
+  UNION ALL
+  -- Organic Apples: Fresh Produce + Food & Beverages
+  SELECT (SELECT category_id FROM produce), (SELECT product_id FROM apples_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM food), (SELECT product_id FROM apples_p)
+  UNION ALL
+  -- Free-Range Eggs: Dairy Products + Food & Beverages
+  SELECT (SELECT category_id FROM dairy), (SELECT product_id FROM eggs_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM food), (SELECT product_id FROM eggs_p)
+  UNION ALL
+  -- Whole Milk: Dairy Products + Food & Beverages + Beverages
+  SELECT (SELECT category_id FROM dairy), (SELECT product_id FROM milk_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM food), (SELECT product_id FROM milk_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM beverages), (SELECT product_id FROM milk_p)
+  UNION ALL
+  -- Arabica Coffee: Beverages + Food & Beverages
+  SELECT (SELECT category_id FROM beverages), (SELECT product_id FROM coffee_p)
+  UNION ALL
+  SELECT (SELECT category_id FROM food), (SELECT product_id FROM coffee_p)
+) AS all_category_items
+ON CONFLICT (category_id, product_id) DO NOTHING;
+
 -- CARTS
 INSERT INTO carts (buyer_id)
 SELECT user_id FROM users WHERE role='buyer'
@@ -140,12 +202,12 @@ UNION ALL
 SELECT (SELECT cart_id FROM cb2), (SELECT product_id FROM pk), 2
 ON CONFLICT (cart_id, product_id) DO NOTHING;
 
--- ORDERS + ORDER ITEMS (same as before, products will auto-match)
+
 -- Order A: Alice from Gadget Hub (approved)
 WITH
 o AS (
-  INSERT INTO orders (buyer_id, store_id, status, total_amount, delivery_time)
-  SELECT u.user_id, s.store_id, 'approved', 0.00, NOW() + INTERVAL '2 days'
+  INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at)
+  SELECT u.user_id, s.store_id, 'approved', 0.00, u.address, NOW() + INTERVAL '2 days', NOW() - INTERVAL '6 hours'
   FROM users u CROSS JOIN stores s
   WHERE u.email='alice@example.com' AND s.store_name='Gadget Hub'
   ON CONFLICT DO NOTHING
@@ -162,8 +224,8 @@ ON CONFLICT DO NOTHING;
 -- Order B: Alice from FreshMart (waiting_approval)
 WITH
 o AS (
-  INSERT INTO orders (buyer_id, store_id, status, total_amount)
-  SELECT u.user_id, s.store_id, 'waiting_approval', 0.00
+  INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address)
+  SELECT u.user_id, s.store_id, 'waiting_approval', 0.00, u.address
   FROM users u CROSS JOIN stores s
   WHERE u.email='alice@example.com' AND s.store_name='FreshMart'
   ON CONFLICT DO NOTHING
@@ -180,8 +242,8 @@ ON CONFLICT DO NOTHING;
 -- Order C: Bob from Gadget Hub (on_delivery)
 WITH
 o AS (
-  INSERT INTO orders (buyer_id, store_id, status, total_amount, delivery_time)
-  SELECT u.user_id, s.store_id, 'on_delivery', 0.00, NOW() + INTERVAL '1 day'
+  INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at)
+  SELECT u.user_id, s.store_id, 'on_delivery', 0.00, u.address, NOW() + INTERVAL '1 day', NOW() - INTERVAL '12 hours'
   FROM users u CROSS JOIN stores s
   WHERE u.email='bob@example.com' AND s.store_name='Gadget Hub'
   ON CONFLICT DO NOTHING
@@ -195,8 +257,8 @@ ON CONFLICT DO NOTHING;
 -- Order D: Bob from FreshMart (received)
 WITH
 o AS (
-  INSERT INTO orders (buyer_id, store_id, status, total_amount, delivery_time)
-  SELECT u.user_id, s.store_id, 'received', 0.00, NOW() - INTERVAL '1 day'
+  INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at, received_at)
+  SELECT u.user_id, s.store_id, 'received', 0.00, u.address, NOW() - INTERVAL '3 days', NOW() - INTERVAL '4 days', NOW() - INTERVAL '1 day'
   FROM users u CROSS JOIN stores s
   WHERE u.email='bob@example.com' AND s.store_name='FreshMart'
   ON CONFLICT DO NOTHING
@@ -213,8 +275,8 @@ ON CONFLICT DO NOTHING;
 -- Order E: Alice from FreshMart (rejected)
 WITH
 o AS (
-  INSERT INTO orders (buyer_id, store_id, status, total_amount, reject_reason)
-  SELECT u.user_id, s.store_id, 'rejected', 0.00, 'Payment verification failed'
+  INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, reject_reason, confirmed_at)
+  SELECT u.user_id, s.store_id, 'rejected', 0.00, u.address, 'Payment verification failed', NOW() - INTERVAL '2 days'
   FROM users u CROSS JOIN stores s
   WHERE u.email='alice@example.com' AND s.store_name='FreshMart'
   ON CONFLICT DO NOTHING

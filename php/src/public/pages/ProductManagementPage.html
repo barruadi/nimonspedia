@@ -3,81 +3,101 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Product Management - Nimonspedia</title>
+    <title>Manajemen Produk - Nimonspedia</title>
     <link rel="stylesheet" href="/styles/ProductManagement.css">
   </head>
   <body>
     <div class="product-management-page">
-        <!-- Temporary HTML structure (Figma design in development) -->
-        <div>
-            <!-- Header with Actions -->
-            <div class="header-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div class="filter-section">
-                    <label for="categoryFilter">Filter Kategori:</label>
-                    <select id="categoryFilter" class="filter-select">
-                        <option value="">Semua Kategori</option>
-                        <!-- Categories will be populated here -->
-                    </select>
+      <!-- Loading State -->
+      <div id="loadingState" class="loading-state">
+        <img src="/uploads/loading/loading-icon.svg" alt="Loading Icon" class="loading-icon">
+        <h2 class="loading-title">Memuat . . .</h2>
+        <p class="loading-subtitle">Tunggu sebentar, halaman sedang disiapkan untukmu.</p>
+      </div>
 
-                    <!-- Search input -->
-                    <label for="searchInput" style="margin-left: 12px;">Cari:</label>
-                    <input id="searchInput" type="search" placeholder="Cari produk..." class="filter-input" style="margin-left:8px; padding:6px;">
-
-                    <label for="sortOrder" style="margin-left: 20px;">Urutkan:</label>
-                    <select id="sortOrder" class="filter-select">
-                        <option value="name-asc">Nama (A-Z)</option>
-                        <option value="name-desc">Nama (Z-A)</option>
-                        <option value="price-asc">Harga (Rendah-Tinggi)</option>
-                        <option value="price-desc">Harga (Tinggi-Rendah)</option>
-                        <option value="stock-asc">Stok (Rendah-Tinggi)</option>
-                        <option value="stock-desc">Stok (Tinggi-Rendah)</option>
-                        <option value="category-asc">Kategori (A-Z)</option>
-                        <option value="category-desc">Kategori (Z-A)</option>
-                    </select>
-                </div>
-                
-                <button type="button" id="addProductBtn" class="btn btn-primary">
-                    Tambah Produk Baru
-                </button>
-            </div>
-
-            <!-- Loading State -->
-            <div id="loadingState" style="display: none;">
-                <p>Memuat produk...</p>
-            </div>
-
-            <!-- Empty State -->
-            <div id="emptyState" style="display: none;">
-                <p>Belum ada produk pada toko Anda</p>
-                <button type="button" id="addFirstProductBtn" class="btn" hidden>
-                    Tambah Produk Pertama
-                </button>
-            </div>
-
-            <!-- Product Table -->
-            <div id="productTableContainer" style="display: none;">
-                <table class="product-table">
-                    <thead>
-                        <tr>
-                            <th>Gambar</th>
-                            <th>Nama Produk</th>
-                            <th>Kategori</th>
-                            <th>Harga</th>
-                            <th>Stok</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productTableBody">
-                        <!-- Data produk akan di-render di sini -->
-                    </tbody>
-                </table>
-            </div>
+      <!-- Main Content (HIDDEN during loading) -->
+      <div id="mainContent" style="display: none;">
+        <!-- Header Section -->
+        <div class="page-header">
+          <h1 class="page-title">Manajemen Produk</h1>
+          <button type="button" id="addProductBtn" class="btn-add-product">
+            + Tambah Produk
+          </button>
         </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="filter-section">
+          <!-- Search Input -->
+          <div class="search-container">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input 
+              type="text" 
+              id="searchInput" 
+              class="search-input" 
+              placeholder="Cari produk..."
+            />
+          </div>
+
+          <!-- Category Filter -->
+          <select id="categoryFilter" class="filter-select">
+            <option value="">Semua Produk</option>
+          </select>
+
+          <!-- Sort Order -->
+          <select id="sortOrder" class="filter-select">
+            <option value="name-asc">Sort by Alphabet ↑</option>
+            <option value="name-desc">Sort by Alphabet ↓</option>
+            <option value="price-asc">Sort by Harga ↑</option>
+            <option value="price-desc">Sort by Harga ↓</option>
+            <option value="stock-asc">Sort by Stok ↑</option>
+            <option value="stock-desc">Sort by Stok ↓</option>
+          </select>
+        </div>
+
+        <!-- Products Grid -->
+        <div id="productGridContainer" class="product-grid">
+          <!-- Products will be rendered here -->
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <img src="/uploads/seller/dashboard-logo.svg" alt="Empty State" class="empty-state-icon">
+        <h2 class="empty-state-title">Belum ada produk</h2>
+        <p class="empty-state-subtitle">Yuk, tambahkan produk pertamamu!</p>
+        <button type="button" id="addFirstProductBtn" class="btn-add-first">
+          + Tambah Produk
+        </button>
+      </div>
     </div>
 
+    <!-- Backdrop for toast -->
+    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
+
     <!-- Toast Notification -->
-    <div id="toast" class="toast" style="display: none;"></div>
+    <div id="toast" class="toast" style="display: none;">
+      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
+      <div class="toast-message">
+        <div id="toastPrimaryMessage"></div>
+        <div id="toastSecondaryMessage"></div>
+      </div>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModalBackdrop" class="modal-backdrop" style="display:none;">
+      <div id="deleteConfirmationModal" class="modal">
+        <img src="/uploads/seller/delete-logo.svg" alt="Delete Icon" class="modal-icon" />
+        <div class="confirmation-text" id="deleteConfirmationText">Apakah anda yakin ingin menghapus produk?</div>
+        <div class="confirmation-buttons">
+          <button type="button" id="deleteModalCancelBtn" class="btn-modal-cancel">Batal</button>
+          <button type="button" id="deleteModalConfirmBtn" class="btn-modal-confirm btn-modal-danger">Hapus</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/script/ProductManagement.js" defer></script>
   </body>

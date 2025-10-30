@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Core\Database;
 use PDO;
+use Exception;
 
 class Order
 {
@@ -28,19 +29,21 @@ class Order
             SELECT 
                 o.order_id,
                 o.buyer_id,
+                o.store_id,
                 o.total_amount,
                 o.status,
                 o.delivery_time,
+                o.reject_reason,
                 o.created_at,
+                o.updated_at,
                 u.full_name as buyer_name,
                 u.email as buyer_email,
                 COUNT(oi.order_item_id) as item_count
             FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
             JOIN users u ON o.buyer_id = u.user_id
-            WHERE p.store_id = :store_id
-            GROUP BY o.order_id, o.buyer_id, o.total_amount, o.status, o.delivery_time, o.created_at, u.full_name, u.email
+            LEFT JOIN order_items oi ON o.order_id = oi.order_id
+            WHERE o.store_id = :store_id
+            GROUP BY o.order_id, o.buyer_id, o.store_id, o.total_amount, o.status, o.delivery_time, o.reject_reason, o.created_at, o.updated_at, u.full_name, u.email
             ORDER BY 
                 CASE o.status
                     WHEN 'waiting_approval' THEN 1
@@ -62,11 +65,18 @@ class Order
         $db = self::getDB();
         
         $stmt = $db->prepare("
-            SELECT o.order_id, o.status, o.delivery_time
+            SELECT 
+                o.order_id, 
+                o.buyer_id,
+                o.store_id,
+                o.status, 
+                o.delivery_time, 
+                o.total_amount, 
+                o.reject_reason,
+                o.created_at,
+                o.updated_at
             FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            JOIN stores s ON p.store_id = s.store_id
+            JOIN stores s ON o.store_id = s.store_id
             WHERE o.order_id = :order_id
             AND s.owner_id = :owner_id
             LIMIT 1
@@ -88,14 +98,13 @@ class Order
         
         $stmt = $db->prepare("
             UPDATE orders 
-            SET status = :status
+            SET status = 'approved',
+                updated_at = NOW()
             WHERE order_id = :order_id
+            AND status = 'waiting_approval'
         ");
         
-        return $stmt->execute([
-            'status' => self::STATUS_APPROVED,
-            'order_id' => $orderId
-        ]);
+        return $stmt->execute(['order_id' => $orderId]);
     }
 
     // Set delivery time and update status to on_delivery
@@ -106,13 +115,14 @@ class Order
         $stmt = $db->prepare("
             UPDATE orders 
             SET delivery_time = :delivery_time,
-                status = :status
+                status = 'on_delivery',
+                updated_at = NOW()
             WHERE order_id = :order_id
+            AND status = 'approved'
         ");
         
         return $stmt->execute([
             'delivery_time' => $deliveryTime,
-            'status' => self::STATUS_ON_DELIVERY,
             'order_id' => $orderId
         ]);
     }
@@ -137,7 +147,15 @@ class Order
         // Get order info
         $stmt = $db->prepare("
             SELECT 
-                o.*,
+                o.order_id,
+                o.buyer_id,
+                o.store_id,
+                o.status,
+                o.total_amount,
+                o.delivery_time,
+                o.reject_reason,
+                o.created_at,
+                o.updated_at,
                 u.full_name as buyer_name,
                 u.email as buyer_email
             FROM orders o
@@ -151,37 +169,10 @@ class Order
             return null;
         }
         
-        // Get order items
-        $stmt = $db->prepare("
-            SELECT 
-                oi.*,
-                p.name as product_name,
-                p.image_path
-            FROM order_items oi
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE oi.order_id = :order_id
-        ");
-        $stmt->execute(['order_id' => $orderId]);
-        $order['items'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Get order items with product details
+        $order['items'] = self::getOrderItems($orderId);
         
         return $order;
-    }
-
-    // Reject order
-    public static function reject(int $orderId): bool
-    {
-        $db = self::getDB();
-        
-        $stmt = $db->prepare("
-            UPDATE orders 
-            SET status = :status
-            WHERE order_id = :order_id
-        ");
-        
-        return $stmt->execute([
-            'status' => self::STATUS_REJECTED,
-            'order_id' => $orderId
-        ]);
     }
 
     // Get order statistics for a store
@@ -189,26 +180,22 @@ class Order
     {
         $db = self::getDB();
         
-        // Pending orders count - FIXED: Use OR instead of IN
+        // Pending orders count (waiting_approval, approved, on_delivery)
         $stmt = $db->prepare("
-            SELECT COUNT(DISTINCT o.order_id) as total
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE p.store_id = :store_id
-            AND (o.status = 'waiting_approval' OR o.status = 'approved' OR o.status = 'on_delivery')
+            SELECT COUNT(*) as total
+            FROM orders
+            WHERE store_id = :store_id
+            AND status IN ('waiting_approval', 'approved', 'on_delivery')
         ");
         $stmt->execute(['store_id' => $storeId]);
         $pendingOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-        // Total revenue from completed orders
+        // Total revenue from completed orders (received)
         $stmt = $db->prepare("
-            SELECT COALESCE(SUM(oi.qty * oi.price_at), 0) as total_revenue
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE p.store_id = :store_id
-            AND o.status = 'received'
+            SELECT COALESCE(SUM(total_amount), 0) as total_revenue
+            FROM orders
+            WHERE store_id = :store_id
+            AND status = 'received'
         ");
         $stmt->execute(['store_id' => $storeId]);
         $totalRevenue = (float)$stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
@@ -217,5 +204,176 @@ class Order
             'pending_orders' => $pendingOrders,
             'total_revenue' => $totalRevenue,
         ];
+    }
+
+    // Check if order can be rejected (only waiting_approval)
+    public static function canBeRejected(array $order): bool
+    {
+        return $order['status'] === 'waiting_approval';
+    }
+
+    // Reject order and refund buyer balance
+    public static function rejectWithRefund(int $orderId, string $rejectReason): bool
+    {
+        $db = self::getDB();
+        
+        try {
+            $db->beginTransaction();
+
+            // 1. Get order details with lock
+            $stmt = $db->prepare("
+                SELECT buyer_id, total_amount, status 
+                FROM orders 
+                WHERE order_id = :order_id
+                FOR UPDATE
+            ");
+            $stmt->execute(['order_id' => $orderId]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$order) {
+                throw new Exception('Order not found');
+            }
+
+            if ($order['status'] !== 'waiting_approval') {
+                throw new Exception('Order cannot be rejected. Current status: ' . $order['status']);
+            }
+
+            // 2. Refund buyer balance
+            $refundStmt = $db->prepare("
+                UPDATE users 
+                SET balance = balance + :amount,
+                    updated_at = NOW()
+                WHERE user_id = :buyer_id
+            ");
+            $refundResult = $refundStmt->execute([
+                'amount' => $order['total_amount'],
+                'buyer_id' => $order['buyer_id']
+            ]);
+
+            if (!$refundResult) {
+                throw new Exception('Failed to refund buyer balance');
+            }
+
+            // 3. Update order status to rejected
+            $updateStmt = $db->prepare("
+                UPDATE orders 
+                SET status = 'rejected',
+                    reject_reason = :reason,
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+                AND status = 'waiting_approval'
+            ");
+            $updateResult = $updateStmt->execute([
+                'reason' => $rejectReason,
+                'order_id' => $orderId
+            ]);
+
+            if (!$updateResult || $updateStmt->rowCount() === 0) {
+                throw new Exception('Failed to update order status');
+            }
+
+            $db->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            error_log("Reject order failed: " . $e->getMessage());
+            throw $e; // Re-throw untuk ditangkap di controller
+        }
+    }
+
+    // Search orders by order ID or buyer name
+    public static function searchByStoreId(int $storeId, string $query): array
+    {
+        $db = self::getDB();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.store_id,
+                o.status,
+                o.total_amount,
+                o.delivery_time,
+                o.reject_reason,
+                o.created_at,
+                o.updated_at,
+                u.full_name AS buyer_name,
+                u.email AS buyer_email
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.user_id
+            WHERE o.store_id = :store_id
+            AND (
+                CAST(o.order_id AS TEXT) ILIKE :query
+                OR u.full_name ILIKE :query
+            )
+            ORDER BY o.created_at DESC
+        ");
+        
+        $searchQuery = '%' . $query . '%';
+        $stmt->execute([
+            'store_id' => $storeId,
+            'query' => $searchQuery
+        ]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get orders by store and status (for filtering/tabs)
+    public static function findByStoreIdAndStatus(int $storeId, string $status): array
+    {
+        $db = self::getDB();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.store_id,
+                o.status,
+                o.total_amount,
+                o.delivery_time,
+                o.reject_reason,
+                o.created_at,
+                o.updated_at,
+                u.full_name AS buyer_name,
+                u.email AS buyer_email
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.user_id
+            WHERE o.store_id = :store_id
+            AND o.status = :status
+            ORDER BY o.created_at DESC
+        ");
+        
+        $stmt->execute([
+            'store_id' => $storeId,
+            'status' => $status
+        ]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Get order items with product details
+    public static function getOrderItems(int $orderId): array
+    {
+        $db = self::getDB();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                oi.order_item_id,
+                oi.product_id,
+                oi.price_at,
+                oi.qty,
+                oi.subtotal,
+                p.name AS product_name,
+                p.image_path,
+                p.description
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE oi.order_id = :order_id
+            ORDER BY oi.order_item_id ASC
+        ");
+        
+        $stmt->execute(['order_id' => $orderId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

@@ -8,9 +8,9 @@ function initProductManagementPage() {
 
     // DOM Elements
     const loadingState = document.getElementById('loadingState');
+    const mainContent = document.getElementById('mainContent');
     const emptyState = document.getElementById('emptyState');
-    const productTableContainer = document.getElementById('productTableContainer');
-    const productTableBody = document.getElementById('productTableBody');
+    const productGridContainer = document.getElementById('productGridContainer');
     const addProductBtn = document.getElementById('addProductBtn');
     const addFirstProductBtn = document.getElementById('addFirstProductBtn');
     const categoryFilter = document.getElementById('categoryFilter');
@@ -28,7 +28,6 @@ function initProductManagementPage() {
 
     async function initPage() {
         try {
-            // Show loading state
             showLoading();
             console.log('Fetching products info...');
             const result = await api.get('/seller/products');
@@ -36,29 +35,33 @@ function initProductManagementPage() {
 
             if (!result || !result.ok) {
                 console.warn('Store info request failed:', result);
-                showToast('Unauthorized - Please login as seller', 'error');
+                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
                 setTimeout(() => window.location.href = '/login', 1500);
                 return;
-            } else {
-                // Save store and products data
-                store = result.data.store;
-                products = result.data.products;
-                console.log('Products loaded:', products.length);
-                
-                // Load categories for filter
-                await loadCategoriesFilter();
-                renderProducts();
             }
 
-        }
-        catch (error) {
+            const data = result.data;
+            
+            if (!data) {
+                throw new Error('No data returned from API');
+            }
+
+            // Save dashboard info
+            store = data.store;
+            products = data.products;
+            console.log('Products loaded:', products.length);
+            
+            await loadCategoriesFilter();
+            renderProducts();
+
+        } catch (error) {
             console.error('Error initializing Product Management Page:', error);
-            showToast('Gagal memuat data produk.', 'error');
+            showToast('Gagal memuat data produk', error.message, 'error');
+            hideLoading();
             showEmptyState();
         }
     }
 
-    // Load categories for filter dropdown
     async function loadCategoriesFilter() {
         try {
             const result = await api.get('/categories');
@@ -75,8 +78,7 @@ function initProductManagementPage() {
     function populateCategoryFilter(categories) {
         if (!categoryFilter) return;
         
-        // Keep "Semua Kategori" option
-        categoryFilter.innerHTML = '<option value="">Semua Kategori</option>';
+        categoryFilter.innerHTML = '<option value="">Semua Produk</option>';
         
         categories.forEach(cat => {
             const option = document.createElement('option');
@@ -86,11 +88,9 @@ function initProductManagementPage() {
         });
     }
 
-    // Filter & Sort Logic
     function getFilteredAndSortedProducts() {
         let filtered = [...products];
 
-        // Apply search (case-insensitive substring) - checks name & description
         const q = (searchTerm || '').trim().toLowerCase();
         if (q) {
             filtered = filtered.filter(p => {
@@ -101,176 +101,164 @@ function initProductManagementPage() {
             });
         }
 
-         // Apply category filter
-         const selectedCategory = categoryFilter?.value;
-         if (selectedCategory) {
-             filtered = filtered.filter(p => p.category_id == selectedCategory);
-         }
-         
-         // Apply sorting
-         const sortValue = sortOrder?.value || 'name-asc';
-         const [field, direction] = sortValue.split('-');
-         
-         filtered.sort((a, b) => {
-             let valueA, valueB;
-             
-             switch(field) {
-                 case 'name':
-                     valueA = (a.name || '').toLowerCase();
-                     valueB = (b.name || '').toLowerCase();
-                     break;
-                 case 'price':
-                     valueA = parseFloat(a.price) || 0;
-                     valueB = parseFloat(b.price) || 0;
-                     break;
-                 case 'stock':
-                     valueA = parseInt(a.stock) || 0;
-                     valueB = parseInt(b.stock) || 0;
-                     break;
-                 case 'category':
-                     valueA = (a.category_name || '').toLowerCase();
-                     valueB = (b.category_name || '').toLowerCase();
-                     break;
-                 default:
-                     return 0;
-             }
-             
-             if (direction === 'asc') {
-                 return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
-             } else {
-                 return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
-             }
-         });
-         
-         return filtered;
-     }
+        const selectedCategory = categoryFilter?.value;
+        if (selectedCategory) {
+            filtered = filtered.filter(p => p.category_id == selectedCategory);
+        }
+        
+        const sortValue = sortOrder?.value || 'name-asc';
+        const [field, direction] = sortValue.split('-');
+        
+        filtered.sort((a, b) => {
+            let valueA, valueB;
+            
+            switch(field) {
+                case 'name':
+                    valueA = (a.name || '').toLowerCase();
+                    valueB = (b.name || '').toLowerCase();
+                    break;
+                case 'price':
+                    valueA = parseFloat(a.price) || 0;
+                    valueB = parseFloat(b.price) || 0;
+                    break;
+                case 'stock':
+                    valueA = parseInt(a.stock) || 0;
+                    valueB = parseInt(b.stock) || 0;
+                    break;
+                case 'category':
+                    valueA = (a.category_name || '').toLowerCase();
+                    valueB = (b.category_name || '').toLowerCase();
+                    break;
+                default:
+                    return 0;
+            }
+            
+            if (direction === 'asc') {
+                return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+            } else {
+                return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+            }
+        });
+        
+        return filtered;
+    }
 
     function renderProducts() {
         const filteredProducts = getFilteredAndSortedProducts();
         
         console.log('Rendering products...', filteredProducts);
         
-        // Empty state case
-        if (!filteredProducts || filteredProducts.length == 0) {
+        if (!filteredProducts || filteredProducts.length === 0) {
             if (products.length === 0) {
-                // No products at all
+                // No products at all - show empty state
                 showEmptyState();
             } else {
-                // Products exist but filtered out
-                productTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px;">
-                            Tidak ada produk yang sesuai dengan filter
-                        </td>
-                    </tr>
-                `;
-                productTableContainer.style.display = 'block';
+                // Has products but filtered out - show message in main content
                 hideLoading();
+                showMainContent();
                 hideEmptyState();
+                productGridContainer.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: #6b7280;">
+                        Tidak ada produk yang sesuai dengan filter
+                    </div>
+                `;
             }
             return;
         }
 
-        // Hide loading and empty states
+        // Show products
         hideLoading();
+        showMainContent();
         hideEmptyState();
-        // Show products table
-        productTableContainer.style.display = 'block';
-        // Clear existing table rows
-        productTableBody.innerHTML = '';
-        // Loop through every product and render each product
+        
+        productGridContainer.innerHTML = '';
+        
         filteredProducts.forEach(product => {
-            const row = createProductRow(product);
-            productTableBody.appendChild(row);
+            const card = createProductCard(product);
+            productGridContainer.appendChild(card);
         });
+        
         console.log(`Rendered ${filteredProducts.length} products`);
     }
 
-    // Create row for each product
-    function createProductRow(product) {
-        const tr = document.createElement('tr');
+    function createProductCard(product) {
+    const card = document.createElement('div');
+    card.className = 'product-card';
 
-        const stockStatus = product.stock > 10 
-            ? 'In Stock' 
-            : product.stock > 0 
-            ? 'Low Stock' 
-            : 'Out of Stock';
+    // Determine availability status (Active if stock > 0, Inactive if stock = 0)
+    const availabilityStatus = product.stock > 0
+        ? { text: 'Active', class: 'status-active' }
+        : { text: 'Inactive', class: 'status-inactive' };
 
-        const stockClass = product.stock > 10 
-            ? 'status-in-stock' 
-            : product.stock > 0 
-            ? 'status-low-stock' 
-            : 'status-out-of-stock';
+    const formattedPrice = `Rp ${parseInt(product.price).toLocaleString('id-ID')}`;
 
-        const formattedPrice = new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(product.price);
+    card.innerHTML = `
+        <div class="product-card-image">
+            <img 
+                src="${product.image_path || '/images/placeholder.png'}" 
+                alt="${escapeHtml(product.name)}"
+            >
+        </div>
+        <div class="product-card-content">
+            <h3 class="product-card-title">${escapeHtml(product.name)}</h3>
+            <div class="product-card-price">${formattedPrice}</div>
+            <div class="product-card-meta">
+                <span class="product-card-category">Kategori: ${escapeHtml(product.category_name || 'Tidak ada kategori')}</span>
+                <span class="product-card-stock">Stok: ${product.stock}</span>
+                <span class="product-card-status ${availabilityStatus.class}">${availabilityStatus.text}</span>
+            </div>
+        </div>
+        <div class="product-card-actions">
+            <button class="btn-card-edit" data-product-id="${product.product_id}" title="Edit produk">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </button>
+            <button class="btn-card-delete" data-product-id="${product.product_id}" title="Hapus produk">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+            </button>
+        </div>
+    `;
 
-        tr.innerHTML = `
-            <td>
-                <img 
-                    src="${product.image_path || '/images/placeholder.png'}" 
-                    alt="${product.name}"
-                    width="50"
-                    height="50"
-                    style="object-fit: cover; border-radius: 4px;"
-                >
-            </td>
-            <td>${escapeHtml(product.name)}</td>
-            <td>${escapeHtml(product.category_name || '-')}</td>
-            <td>${formattedPrice}</td>
-            <td>${product.stock}</td>
-            <td>
-                <span class="status-badge ${stockClass}">
-                    ${stockStatus}
-                </span>
-            </td>
-            <td>
-                <button 
-                    class="btn btn-edit" 
-                    data-product-id="${product.product_id}"
-                >
-                    Edit
-                </button>
-                <button 
-                    class="btn btn-delete" 
-                    data-product-id="${product.product_id}"
-                >
-                    Delete
-                </button> 
-            </td>
-        `;
+    const editBtn = card.querySelector('.btn-card-edit');
+    const deleteBtn = card.querySelector('.btn-card-delete');
 
-        const editBtn = tr.querySelector('.btn-edit');
-        const deleteBtn = tr.querySelector('.btn-delete');
+    editBtn.addEventListener('click', () => handleEdit(product.product_id));
+    deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name));
 
-        // Pass deleteBtn to handler so it can be disabled during request
-        editBtn.addEventListener('click', () => handleEdit(product.product_id));
-        deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name, deleteBtn));
-        return tr;
-    }
+    return card;
+}
 
-    // Helper functions
     function showLoading() {
-        loadingState.style.display = 'block';
-        emptyState.style.display = 'none';
-        productTableContainer.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'flex';
+        if (mainContent) mainContent.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
     }
 
     function hideLoading() {
-        loadingState.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'none';
+    }
+
+    function showMainContent() {
+        if (mainContent) mainContent.style.display = 'block';
+    }
+
+    function hideMainContent() {
+        if (mainContent) mainContent.style.display = 'none';
     }
 
     function showEmptyState() {
         hideLoading();
-        emptyState.style.display = 'block';
-        productTableContainer.style.display = 'none';
+        hideMainContent();
+        if (emptyState) emptyState.style.display = 'flex';
     }
 
     function hideEmptyState() {
-        emptyState.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
     }
 
     function escapeHtml(text) {
@@ -282,74 +270,67 @@ function initProductManagementPage() {
 
     function handleEdit(productId) {
         console.log('Edit product:', productId);
-        window.location.href = `/products/edit/${productId}`;
+        window.location.href = `/seller/products/edit/${productId}`;
     }
 
-    async function handleDelete(productId, productName, btnEl) {
-        const confirmed = confirm(
-            `Apakah Anda yakin ingin menghapus produk "${productName}"?\n\n` +
-            `Produk yang dihapus tidak dapat dikembalikan.`
-        );
+    function handleDelete(productId, productName) {
+        const modal = document.getElementById('deleteModalBackdrop');
+        const confirmText = document.getElementById('deleteConfirmationText');
+        const confirmBtn = document.getElementById('deleteModalConfirmBtn');
+        const cancelBtn = document.getElementById('deleteModalCancelBtn');
 
-        if (!confirmed) {
-            return;
-        }
+        confirmText.textContent = `Apakah anda yakin ingin menghapus produk "${productName}"?`;
+        modal.style.display = 'flex';
 
-        try {
-            console.log('Deleting product:', productId);
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
 
-            // Disable button while deleting
-            if (btnEl) {
-                btnEl.disabled = true;
-                const prevText = btnEl.textContent;
-                btnEl.textContent = 'Menghapus...';
-                try {
-                    var result = await api.del(`/seller/products/${productId}`);
-                } finally {
-                    // restore button text/disabled only if still in DOM
-                    if (btnEl) { btnEl.disabled = false; btnEl.textContent = prevText; }
+        newCancelBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        newConfirmBtn.addEventListener('click', async () => {
+            modal.style.display = 'none';
+            
+            try {
+                console.log('Deleting product:', productId);
+                const result = await api.del(`/seller/products/${productId}`);
+
+                if (result && result.ok) {
+                    showToast('Produk berhasil dihapus!', 'Produk telah dihapus dari toko', 'success');
+                    products = products.filter(p => p.product_id !== productId);
+                    renderProducts();
+                } else {
+                    throw new Error(result?.error || 'Gagal menghapus produk');
                 }
-            } else {
-                var result = await api.del(`/seller/products/${productId}`);
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                showToast('Gagal menghapus produk!', error.message, 'error');
             }
+        });
+    }
 
-             if (result && result.ok) {
-                 showToast('Produk berhasil dihapus', 'success');
-                 
-                 products = products.filter(p => p.product_id !== productId);
-                 
-                 renderProducts();
-             } else {
-                 throw new Error(result?.error || 'Gagal menghapus produk');
-             }
-
-         } catch (error) {
-             console.error('Error deleting product:', error);
-             showToast(error.message, 'error');
-         }
-     }
-
-    // Event Listeners
     if (addProductBtn) {
         addProductBtn.addEventListener('click', () => {
-            window.location.href = '/products/add';
-        })
+            window.location.href = '/seller/products/add';
+        });
     }
 
     if (addFirstProductBtn) {
         addFirstProductBtn.addEventListener('click', () => {
-            window.location.href = '/products/add';
+            window.location.href = '/seller/products/add';
         });
     }
 
-    // Filter & Sort change listeners
     if (categoryFilter) {
         categoryFilter.addEventListener('change', () => {
             console.log('Category filter changed:', categoryFilter.value);
             renderProducts();
         });
     }
- 
+
     if (sortOrder) {
         sortOrder.addEventListener('change', () => {
             console.log('Sort order changed:', sortOrder.value);
@@ -357,7 +338,6 @@ function initProductManagementPage() {
         });
     }
 
-    // Search listener
     if (searchInput) {
         const onSearch = debounce((ev) => {
             searchTerm = ev.target.value || '';
@@ -367,26 +347,49 @@ function initProductManagementPage() {
         searchInput.addEventListener('input', onSearch);
     }
 
-    function showToast(message, type = 'success') {
+    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
-        if (!toast) {
-            console.error('Toast element not found!');
+        const backdrop = document.getElementById('toastBackdrop');
+        const primaryEl = document.getElementById('toastPrimaryMessage');
+        const secondaryEl = document.getElementById('toastSecondaryMessage');
+        const closeBtn = document.getElementById('toastCloseBtn');
+        
+        if (!toast || !primaryEl || !secondaryEl) {
+            console.error('Toast elements not found!');
             return;
         }
         
-        toast.textContent = message;
-        toast.className = `toast ${type === 'error' ? 'error' : ''}`;
-        toast.style.display = 'block';
+        primaryEl.textContent = primaryMessage;
+        secondaryEl.textContent = secondaryMessage;
+        toast.className = 'toast ' + type;
         
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 3000);
+        if (backdrop) backdrop.style.display = 'block';
+        toast.style.display = 'flex';
+        
+        let autoHideTimer = setTimeout(hideToast, 5000);
+        
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+        if (backdrop) {
+            backdrop.onclick = () => {
+                clearTimeout(autoHideTimer);
+                hideToast();
+            };
+        }
+
+        function hideToast() {
+            if (toast) toast.style.display = 'none';
+            if (backdrop) backdrop.style.display = 'none';
+        }
     }
 
     console.log('Initializing ProductManagement page...');
     initPage();
 }
-
 
 if (document.readyState === 'loading') {
     console.log('DOM still loading, waiting...');
