@@ -10,12 +10,15 @@
 </head>
 <body>
   <!-- navbar will be injected here -->
-  <header id="navbar-root"></header>
+  <header id="navbar-root">
+    <app-navbar></app-navbar>
+  </header>
 
   <!-- page content (route output) -->
   <main id="app" class="container"></main>
 
   <!-- boot app -->
+  <script type="module" src="/components/Navbar.js"></script>
   <script type="module" src="/index.js"></script>
 </body>
 </html>

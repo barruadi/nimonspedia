@@ -57,6 +57,9 @@ function mountNavbar() {
     navbarRoot.appendChild(navEl);
   }
 }
+function refreshNavbar() {
+  navbarRoot.querySelector('app-navbar')?.refresh?.();
+}
 
 // Match dynamic routes
 function matchRoute(pathname) {
@@ -109,6 +112,9 @@ async function render(pathname) {
       const modulePath = route.script.replace(/^\//, './');
       await import(`${modulePath}?_=${cacheBuster}`);
     }
+    
+    refreshNavbar();
+    
   } catch (e) {
     app.innerHTML = `
       <section style="padding:1rem">
