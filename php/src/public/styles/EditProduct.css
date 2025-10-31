@@ -1,0 +1,557 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.add-product-page {
+    display: flex;
+    flex-direction: row;
+    gap: 4rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+/* Left Side - Image Upload */
+
+.product-image-section {
+    flex: 0 0 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.image-upload-container {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border: 2px dashed #10b981;
+    border-radius: 12px;
+    background-color: #f8fffe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.image-upload-container:hover {
+    background-color: #ecfdf5;
+    border-color: #059669;
+}
+
+.image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.upload-icon {
+    color: #10b981;
+    opacity: 0.6;
+}
+
+.placeholder-text {
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.image-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fff;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.upload-btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    background-color: #fff;
+    border: 2px solid #10b981;
+    border-radius: 8px;
+    color: #10b981;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-btn:hover {
+    background-color: #ecfdf5;
+    border-color: #059669;
+    color: #059669;
+}
+
+.upload-btn:active {
+    transform: scale(0.98);
+}
+
+/* Right Side - Form */
+
+.product-details-section {
+    flex: 1;
+    max-width: 8100px;
+    min-width: 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    padding: 2rem;
+    background-color: #fff;
+}
+
+.form-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2rem;
+}
+
+.product-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Form Groups */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.form-group-half {
+    flex: 1;
+}
+
+/* Labels */
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+}
+
+.required {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+/* Inputs */
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #111827;
+    background-color: #fff;
+    border: 2px solid #10b981;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #9ca3af;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #059669;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Select Dropdown */
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+/* Error Messages */
+
+.error-message {
+    font-size: 0.75rem;
+    color: #ef4444;
+    min-height: 1rem;
+}
+
+/* Form Actions */
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel {
+    background-color: #fff;
+    border: 2px solid #10b981;
+    color: #10b981;
+}
+
+.btn-cancel:hover {
+    background-color: #ecfdf5;
+    border-color: #059669;
+    color: #059669;
+}
+
+.btn-submit {
+    background-color: #10b981;
+    color: #fff;
+}
+
+.btn-submit:hover {
+    background-color: #059669;
+}
+
+.btn-submit:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+/* Toast Notification */
+
+.toast {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1rem 1.5rem;
+    background-color: #ffffff;
+    color: #111827;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 
+                0 4px 6px rgba(0, 0, 0, 0.1);
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    z-index: 9999;
+    max-width: 90%;
+    width: auto;
+    min-width: 320px;
+    animation: slideDown 0.3s ease;
+}
+
+.toast-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.toast-message {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+#toastPrimaryMessage {
+    color: #111827;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+#toastSecondaryMessage {
+    color: #6b7280;
+    font-size: 0.8125rem;
+}
+
+.toast-close-btn {
+    padding: 0.5rem 1rem;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.toast-close-btn:hover {
+    background-color: #059669;
+}
+
+.toast-close-btn:active {
+    transform: scale(0.95);
+}
+
+.toast.success .toast-close-btn {
+    background-color: #10b981;
+}
+
+.toast.success .toast-close-btn:hover {
+    background-color: #059669;
+}
+
+.toast.error .toast-close-btn {
+    background-color: #ef4444;
+}
+
+.toast.error .toast-close-btn:hover {
+    background-color: #dc2626;
+}
+
+/* Toast Backdrop (covers screen while toast visible) */
+.toast-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35); 
+    backdrop-filter: blur(1px); 
+    z-index: 9980; 
+    display: none;
+}
+
+/* Modal Confirmation */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 350px;
+    width: 90%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    animation: modalSlideIn 0.3s ease;
+    z-index: 10001;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+.modal-icon {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.confirmation-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #374151;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 200px;
+}
+
+.confirmation-buttons {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+}
+
+.btn-modal-cancel,
+.btn-modal-confirm {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-modal-cancel {
+    color: #ffffff;
+    background-color: #8e8e8e;
+}
+
+.btn-modal-cancel:hover {
+    background-color: #6b7280;
+}
+
+.btn-modal-confirm {
+    background-color: #10b981;
+    color: white;
+}
+
+.btn-modal-confirm:hover {
+    background-color: #059669;
+}
+
+.btn-modal-cancel:active,
+.btn-modal-confirm:active {
+    transform: scale(0.98);
+}
+
+@keyframes slideDown {
+    from {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+
+@media (max-width: 1024px) {
+    .add-product-page {
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .product-image-section {
+        flex: 0 0 auto;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .add-product-page {
+        padding: 1.5rem 1rem;
+    }
+
+    .form-title {
+        font-size: 1.5rem;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .toast {
+        top: 1rem;
+        left: 1rem;
+        right: 1rem;
+        transform: none;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .toast-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .toast-close-btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .modal {
+        padding: 1.5rem;
+        max-width: 90%;
+    }
+
+    .modal-icon {
+        width: 64px;
+        height: 64px;
+    }
+
+    .confirmation-text {
+        font-size: 0.9375rem;
+    }
+
+    .confirmation-buttons {
+        flex-direction: column;
+    }
+
+    .btn-modal-cancel,
+    .btn-modal-confirm {
+        width: 100%;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}

@@ -10,6 +10,7 @@ class Product
     // Properties
     public ?int $product_id = null;
     public ?int $store_id = null;
+    public ?int $category_id = null;
     public ?string $name = null;
     public ?string $description = null;
     public ?float $price = null;
@@ -21,7 +22,7 @@ class Product
     // Get database connection
     private static function getDB(): PDO
     {
-        return Database::pdo();
+        return Database::getInstance();
     }
 
     // Find product by ID
@@ -30,7 +31,8 @@ class Product
         $db = self::getDB();
         $stmt = $db->prepare("
             SELECT * FROM products 
-            WHERE product_id = :id
+            WHERE product_id = :id 
+            AND is_deleted <> TRUE
         ");
         $stmt->execute(['id' => $productId]);
         
@@ -44,7 +46,7 @@ class Product
         $db = self::getDB();
         $stmt = $db->prepare("
             SELECT * FROM products 
-            WHERE store_id = :store_id 
+            WHERE store_id = :store_id AND is_deleted <> TRUE
             ORDER BY created_at DESC
         ");
         $stmt->execute(['store_id' => $storeId]);
@@ -56,15 +58,16 @@ class Product
     public static function create(array $data): ?int
     {
         $db = self::getDB();
+        
         $stmt = $db->prepare("
-            INSERT INTO products (store_id, name, description, price, stock, image_path)
-            VALUES (:store_id, :name, :description, :price, :stock, :image_path)
+            INSERT INTO products (store_id, category_id, name, description, price, stock, image_path)
+            VALUES (:store_id, :category_id, :name, :description, :price, :stock, :image_path)
             RETURNING product_id
         ");
         
         $stmt->execute([
             'store_id'    => $data['store_id'],
-            'category_id' => $data['category_id'],
+            'category_id' => $data['category_id'] ?? null,
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
             'price'       => $data['price'],
@@ -111,7 +114,7 @@ class Product
         }
         
         // Add updated_at timestamp
-        $fields[] = "updated_at = CURRENT_TIMESTAMP";
+        $fields[] = "updated_at = NOW()";
         
         if (empty($fields)) {
             return false; // nothing to update
@@ -277,4 +280,16 @@ class Product
     }
 
 
+    // Soft delete product (by turning is_deleted to TRUE)
+    public static function softDelete(int $productId): bool
+    {
+        $db = self::getDB();
+        $stmt = $db->prepare("
+            UPDATE products 
+            SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
+            WHERE product_id = :id
+        ");
+        
+        return $stmt->execute(['id' => $productId]);
+    }
 }
