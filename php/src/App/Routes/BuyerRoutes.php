@@ -20,6 +20,7 @@ $router->group([
 ], function ($r) {
     $r->post('/cart/add', fn($req) => (new CartController())->addProduct($req));
     $r->patch('/cart',    fn($req) => (new CartController())->setQuantity($req));
+    $r->get('/cart',    fn($req) => (new CartController())->showCart());
     // delete cart
     // delete product
 });

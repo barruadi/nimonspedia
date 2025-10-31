@@ -10,14 +10,9 @@ class Cart
 {
     private static function db(): PDO
         {
-            // Make sure this matches your Database class method
             return Database::getInstance();
         }
     
-        /**
-         * Return cart lines for a user, joined with product & store info.
-         * Each item: product_id, name, price, stock, image_path, store_id, store_name, qty, line_total
-         */
         public static function getByUserId(int $userId): array
         {
             $cartId = self::getCardByUserId($userId);
@@ -45,10 +40,6 @@ class Cart
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     
-        /**
-         * Return aggregate summary for a user's cart.
-         * You can change shipping logic as needed (e.g., tiered, per store, etc).
-         */
         public static function getSummary(int $userId): array
         {
             $cartId = self::getCardByUserId($userId);
@@ -65,7 +56,6 @@ class Cart
         
             $subtotal = (float)$row['subtotal'];
         
-            // Example shipping rule: flat Rp 20,000 if there are items
             $hasItems = self::countItems($userId) > 0;
             $shipping = $hasItems ? 20000.0 : 0.0;
         
@@ -76,10 +66,6 @@ class Cart
             ];
         }
     
-        /**
-         * Add to cart (increments qty if line exists).
-         * Uses Postgres UPSERT on (user_id, product_id).
-         */
         public static function add(int $userId, int $productId, int $qty = 1): bool
         {
             $cartId = self::getCardByUserId($userId);
@@ -116,9 +102,6 @@ class Cart
             return (int)$id;
         }
     
-        /**
-         * Set exact quantity; if qty <= 0, remove the line.
-         */
         public static function setQuantity(int $userId, int $productId, int $qty): bool
         {
             if ($qty <= 0) {
@@ -133,9 +116,6 @@ class Cart
             return $stmt->execute(['qty' => $qty, 'uid' => $userId, 'pid' => $productId]);
         }
     
-        /**
-         * Remove a single product from cart.
-         */
         public static function remove(int $userId, int $productId): bool
         {
             $stmt = self::db()->prepare("
@@ -186,9 +166,6 @@ class Cart
             return $row ? (int)$row['stock'] : null;
         }
     
-        /**
-         * Clear all items from a user's cart.
-         */
         public static function clear(int $userId): bool
         {
             $cartId = self::getCardByUserId($userId);
@@ -196,9 +173,6 @@ class Cart
             return $stmt->execute(['cid' => $cartId]);
         }
     
-        /**
-         * Count unique items (lines) in cart.
-         */
         public static function countItems(int $userId): int
         {
             $cartId = self::getCardByUserId($userId);
@@ -207,22 +181,12 @@ class Cart
             return (int)$stmt->fetchColumn();
         }
     
-        /**
-         * Ensure cart quantities do not exceed stock.
-         * Clamps any qty > stock to stock, removes lines with stock <= 0.
-         * Returns an array describing adjustments:
-         * [
-         *   'removed'   => [product_id, ...],
-         *   'adjusted'  => [['product_id'=>..., 'old_qty'=>..., 'new_qty'=>...], ...]
-         * ]
-         */
         public static function syncWithStock(int $userId): array
         {
             $db = self::db();
             $removed  = [];
             $adjusted = [];
         
-            // Resolve (or create) the user's cart_id
             $cartId = self::getCardByUserId($userId);
         
             $db->beginTransaction();

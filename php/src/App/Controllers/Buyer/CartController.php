@@ -84,4 +84,15 @@ class CartController
             ]
         ];
     }
+    
+    public function showCart(): array
+    {
+        $user_id = $_SESSION['user']['user_id'];
+        $snap = Cart::getSnapshot($user_id);
+
+        return [
+            'ok' => true,
+            'cart' => $snap
+        ];
+    }
 }

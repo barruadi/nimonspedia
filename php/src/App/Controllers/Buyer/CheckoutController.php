@@ -28,7 +28,7 @@ class CheckoutController
         return;
     }
     
-    public function confirmOrder(): void
+    public function confirmOrder(): array
     {
         if (!isset($_SESSION['user'])) {
             header('Location: /login');
@@ -38,7 +38,16 @@ class CheckoutController
         $userId = $_SESSION['user']['user_id'];
 
         // 1. load cart from DB
-        $cartItems = Cart::getByUserId($userId);
+        $snapshot = Cart::getSnapshot($userId);
+        $items = $snapshot['items'];
+        $total = $snapshot['summary']['total'];
+        
+        if ($_SESSION['user']['balance'] < $total) {
+            return [
+                'ok' => false,
+                'error' => 'balance not enough'
+            ];
+        }
 
         // [TODO]: masukin order ke order history
         
