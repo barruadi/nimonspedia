@@ -79,9 +79,9 @@ class AppNavbar extends HTMLElement {
     } else if (role === 'seller') {
       // --- Seller view (Dashboard, Produk, Orders, Saldo, Logout) ---
       rightHTML = `
-        <a class="nav-link" href="/dashboard" data-nav>Dashboard</a>
-        <a class="nav-link" href="/products" data-nav>Produk</a>
-        <a class="nav-link" href="/orders" data-nav>Orders</a>
+        <a class="nav-link" href="/seller/dashboard" data-nav>Dashboard</a>
+        <a class="nav-link" href="/seller/products" data-nav>Produk</a>
+        <a class="nav-link" href="/seller/orders" data-nav>Orders</a>
         <span class="saldo">Saldo: <span class="val">${balance}</span></span>
         <button id="logout-btn" class="logout-btn" type="button">Logout</button>
       `;
