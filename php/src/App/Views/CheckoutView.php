@@ -141,8 +141,8 @@
 
 <nav class="topnav">
   <a href="/products">Browse</a>
-  <a href="/cart">Cart</a>
-  <a href="/home">Dashboard</a>
+  <a href="/checkout">Cart</a>
+  <a href="/products">Dashboard</a>
   <!-- You can also add logout if you want -->
 </nav>
 

@@ -47,7 +47,7 @@ class AppNavbar extends HTMLElement {
     this.innerHTML = `
       <nav class="app-nav">
         <div class="app-nav-inner">
-          <a class="brand" href="/home" data-nav>
+          <a class="brand" href="/products" data-nav>
             <div class="brand-icon"></div>
             <div class="brand-text">Nimonspedia</div>
           </a>
@@ -71,7 +71,7 @@ class AppNavbar extends HTMLElement {
       <nav class="app-nav">
         <div class="app-nav-inner">
           <!-- LEFT: brand -->
-          <a class="brand" href="/home" data-nav>
+          <a class="brand" href="/products" data-nav>
             <div class="brand-icon"></div>
             <div class="brand-text">Nimonspedia</div>
           </a>
@@ -84,7 +84,7 @@ class AppNavbar extends HTMLElement {
             <span class="nav-spacer"></span>
 
             ${loggedIn ? `
-            <a class="nav-link" href="/cart" data-nav>Keranjang</a>
+            <a class="nav-link" href="/checkout" data-nav>Keranjang</a>
               <a class="nav-link profile-link" href="/profile" data-nav title="${this.escape(displayName)}">
                 <div class="avatar-circle">${initials}</div>
                 <span class="profile-name">${this.escape(displayName)}</span>
