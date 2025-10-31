@@ -59,8 +59,21 @@ class ProfileController
         ];
     }
     
+    // [TODO]
     public function updateUsername($req): array
     {
         return [];
+    }
+    
+    public function setBalance($req): array
+    {
+        $new_balance = $req['body']['balance'];
+        
+        User::setBalance($new_balance);
+
+        return [
+            'ok' => true,
+            'new_balance' => $new_balance
+        ];
     }
 }

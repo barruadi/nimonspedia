@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manajemen Order - Nimonspedia</title>
+    <link rel="stylesheet" href="/styles/OrderManagement.css">
+  </head>
+  <body>
+    <div class="order-management-page">
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+            <img src="/uploads/loading/loading-icon.svg" alt="Loading Icon" class="loading-icon">
+            <h2 class="loading-title">Memuat...</h2>
+            <p class="loading-subtitle">Tunggu sebentar, halaman sedang disiapkan untukmu.</p>
+        </div>
+
+        <!-- Main Content (HIDDEN during loading) -->
+        <div id="mainContent" style="display: none;">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 class="page-title">Manajemen Order</h1>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <!-- Status Filter Dropdown -->
+                <select id="statusFilter" class="filter-select">
+                    <option value="">Semua Order</option>
+                    <option value="waiting_approval">Waiting Approval</option>
+                    <option value="approved">Approved</option>
+                    <option value="on_delivery">On Delivery</option>
+                    <option value="received">Received</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+
+                <!-- Search Container -->
+                <div class="search-container">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        class="search-input" 
+                        placeholder="Cari order ID atau nama buyer..."
+                    >
+                </div>
+            </div>
+
+            <!-- Orders Grid -->
+            <div id="ordersGrid" class="orders-grid">
+                <!-- Orders will be rendered here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <img src="/uploads/seller/dashboard-logo.svg" alt="Empty State" class="empty-state-icon">
+                <h2 class="empty-state-title">Belum ada order</h2>
+                <p class="empty-state-subtitle">Order yang masuk akan ditampilkan di sini</p>
+            </div>
+
+            <!-- Pagination dengan info dan dropdown -->
+            <div id="pagination" class="pagination" style="display: none;">
+                <div class="pagination-info">
+                    <span id="paginationText">Menampilkan 1 sampai 12 dari 118 Order</span>
+                </div>
+
+                <div class="pagination-controls">
+                    <button id="firstPage" class="pagination-btn pagination-edge" title="Halaman Pertama">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="11 17 6 12 11 7"></polyline>
+                            <polyline points="18 17 13 12 18 7"></polyline>
+                        </svg>
+                    </button>
+                    
+                    <button id="prevPage" class="pagination-btn" title="Halaman Sebelumnya">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    
+                    <div id="pageNumbers" class="page-numbers">
+                        <!-- Page numbers will be inserted here -->
+                    </div>
+                    
+                    <button id="nextPage" class="pagination-btn" title="Halaman Selanjutnya">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+
+                    <button id="lastPage" class="pagination-btn pagination-edge" title="Halaman Terakhir">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="pagination-per-page">
+                    <select id="itemsPerPage" class="items-per-page-select">
+                        <option value="6">6</option>
+                        <option value="12" selected>12</option>
+                        <option value="24">24</option>
+                        <option value="48">48</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Order -->
+    <div id="detailModal" class="modal-backdrop" style="display: none;">
+        <div class="modal modal-detail">
+            <button class="modal-close" id="closeDetailModal">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            
+            <h2 class="modal-title">Detail Transaksi</h2>
+            
+            <div id="detailContent" class="detail-content">
+                <!-- Detail will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reject Order -->
+    <div id="rejectModal" class="modal-backdrop" style="display: none;">
+        <div class="modal modal-small">
+            <img src="/uploads/seller/delete-logo.svg" alt="Warning" class="modal-icon">
+            <h3 class="modal-title">Tolak Order</h3>
+            <p class="modal-subtitle">Masukkan alasan penolakan order ini</p>
+            
+            <textarea 
+                id="rejectReason" 
+                class="modal-textarea" 
+                placeholder="Contoh: Stok produk habis, tidak dapat memenuhi pesanan..."
+                rows="4"
+                required
+            ></textarea>
+            
+            <div class="modal-buttons">
+                <button class="btn-modal-cancel" id="cancelReject">Batal</button>
+                <button class="btn-modal-confirm btn-modal-danger" id="confirmReject">Tolak Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Set Delivery -->
+    <div id="deliveryModal" class="modal-backdrop" style="display: none;">
+        <div class="modal modal-small">
+            <img src="/uploads/seller/delivery-logo.svg" alt="Delivery" class="modal-icon">
+            <h3 class="modal-title">Kirim Barang</h3>
+            <p class="modal-subtitle">Atur estimasi waktu pengiriman</p>
+            
+            <label class="modal-label">
+                <span>Estimasi Hari Pengiriman</span>
+                <input 
+                    type="number" 
+                    id="deliveryDays" 
+                    class="modal-input" 
+                    placeholder="Masukkan jumlah hari (contoh: 3)"
+                    min="1"
+                    max="30"
+                    required
+                >
+            </label>
+            
+            <div class="modal-buttons">
+                <button class="btn-modal-cancel" id="cancelDelivery">Batal</button>
+                <button class="btn-modal-confirm" id="confirmDelivery">Kirim Barang</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop for toast -->
+    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" style="display: none;">
+      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
+      <div class="toast-message">
+        <div id="toastPrimaryMessage"></div>
+        <div id="toastSecondaryMessage"></div>
+      </div>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
+    </div>
+
+    <script type="module" src="/script/OrderManagement.js" defer></script>
+  </body>
+</html>

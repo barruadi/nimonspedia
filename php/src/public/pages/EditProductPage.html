@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Product - Nimonspedia</title>
+    <link rel="stylesheet" href="/styles/EditProduct.css">
+  </head>
+  <body>
+    <div class="add-product-page">
+      <!-- Left Side - Product Image Upload -->
+      <div class="product-image-section">
+        <div class="image-upload-container">
+          <input type="file" id="productImage" accept="image/*" hidden />
+          
+          <!-- Preview Container -->
+          <div id="imagePreviewContainer" class="image-preview" style="display: flex;">
+            <img id="imagePreview" src="" alt="Product Preview" />
+          </div>
+          
+          <!-- Placeholder (shown when no image) -->
+          <div id="imagePlaceholder" class="image-placeholder" style="display: none;">
+            <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <p class="placeholder-text">Belum ada foto produk yang diunggah</p>
+          </div>
+        </div>
+        
+        <button type="button" id="uploadBtn" class="upload-btn">
+          Ganti Foto
+        </button>
+        <p style="font-size: 0.75rem; color: #6b7280; text-align: center; margin-top: 0.5rem;">
+          Kosongkan jika tidak ingin mengganti foto
+        </p>
+      </div>
+
+      <!-- Right Side - Product Details Form -->
+      <div class="product-details-section">
+        <h1 class="form-title">Edit Produk</h1>
+
+        <form id="editProductForm" class="product-form">
+          <input type="hidden" id="product_id" name="product_id" />
+          <input type="hidden" id="store_id" name="store_id" />
+
+          <!-- Product Name -->
+          <div class="form-group">
+            <label for="productName" class="form-label">
+              Nama Produk<span class="required">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="productName" 
+              name="name" 
+              class="form-input" 
+              placeholder="Masukkan nama produk (maksimal 200 karakter)"
+              maxlength="200"
+              required 
+            />
+            <span class="error-message" id="nameError"></span>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="productDescription" class="form-label">
+              Deskripsi<span class="required">*</span>
+            </label>
+            <textarea 
+              id="productDescription" 
+              name="description" 
+              class="form-textarea" 
+              placeholder="Masukkan deskripsi produk (maksimal 1000 karakter)"
+              maxlength="1000"
+              rows="4"
+              required
+            ></textarea>
+            <span class="error-message" id="descError"></span>
+          </div>
+
+          <!-- Category & Price Row -->
+          <div class="form-row">
+            <!-- Category -->
+            <div class="form-group form-group-half">
+              <label for="productCategory" class="form-label">
+                Kategori<span class="required">*</span>
+              </label>
+              <select 
+                id="productCategory" 
+                name="category_id" 
+                class="form-select"
+                required
+              >
+                <option value="">Pilih kategori produk</option>
+              </select>
+              <span class="error-message" id="categoryError"></span>
+            </div>
+
+            <!-- Price -->
+            <div class="form-group form-group-half">
+              <label for="productPrice" class="form-label">
+                Harga<span class="required">*</span>
+              </label>
+              <input 
+                type="number" 
+                id="productPrice" 
+                name="price" 
+                class="form-input" 
+                placeholder="Masukkan harga dalam rupiah (minimal 1000)"
+                min="1000"
+                step="1"
+                required 
+              />
+              <span class="error-message" id="priceError"></span>
+            </div>
+          </div>
+
+          <!-- Stock -->
+          <div class="form-group">
+            <label for="productStock" class="form-label">
+              Stok<span class="required">*</span>
+            </label>
+            <input 
+              type="number" 
+              id="productStock" 
+              name="stock" 
+              class="form-input" 
+              placeholder="Masukkan jumlah stok (minimal 0)"
+              min="0"
+              required 
+            />
+            <span class="error-message" id="stockError"></span>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button type="button" id="cancelBtn" class="btn btn-cancel">
+              Batal
+            </button>
+            <button type="submit" id="submitBtn" class="btn btn-submit">
+              Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Backdrop for toast -->
+    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" style="display: none;">
+      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
+      <div class="toast-message">
+        <div id="toastPrimaryMessage"></div>
+        <div id="toastSecondaryMessage"></div>
+      </div>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
+    </div>
+
+    <!-- Edit Confirmation Modal -->
+    <div id="editModalBackdrop" class="modal-backdrop" style="display:none;">
+      <div id="editConfirmationModal" class="modal">
+        <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
+        <div class="confirmation-text">Apakah anda yakin ingin mengedit produk?</div>
+        <div class="confirmation-buttons">
+          <button type="button" id="editModalCancelBtn" class="btn-modal-cancel">Batal</button>
+          <button type="button" id="editModalConfirmBtn" class="btn-modal-confirm">Ubah</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/script/EditProduct.js" defer></script>
+  </body>
+</html>

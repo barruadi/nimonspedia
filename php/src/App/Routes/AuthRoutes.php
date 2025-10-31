@@ -17,6 +17,7 @@ $router->group([
   $r->post('/register', fn($req) => (new RegisterController())->register($req));
 });
 
+$router->post('/api/logout', fn($req) => (new LogoutController())->logout(), [$auth]);
 $router->get('/api/logout', fn($req) => (new LogoutController())->logout(), [$auth]);
 
 // Sanity checks ------------------------

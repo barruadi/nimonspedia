@@ -118,4 +118,43 @@ class User {
         
         return $row_affected === 1;
     }
+    
+    public static function setBalance(
+        int $new_balance,
+        int $user_id
+    ): bool
+    {
+        $query = "
+            UPDATE users
+            SET balance = :balance
+            WHERE user_id = :user_id
+        ";
+            
+        $row_affected = Database::executeQuery($query, [
+            ':balance' => $new_balance,
+            ':user_id' => $user_id
+        ]);
+        
+        if ($row_affected === 1) {
+            $_SESSION['user']['balance'] = $new_balance;
+            return true;
+        }
+        
+        return false;
+    }
+    
+    public static function getBalance(
+        int $user_id
+    ): int
+    {
+        $query = "
+            SELECT balance 
+            FROM users
+            WHERE user_id = :user_id
+        ";
+        
+        $row = Database::fetchOne($query, [':user_id' => $user_id]);
+        
+        return (int) $row['balance'];
+    }
 }

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash  TEXT NOT NULL,
   full_name      TEXT NOT NULL,
   role           user_role NOT NULL,
+  address        TEXT,                                                 
   balance        NUMERIC(12,2) NOT NULL DEFAULT 0.00 CHECK (balance >= 0),
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -37,6 +38,18 @@ CREATE TABLE IF NOT EXISTS stores (
   store_name     TEXT NOT NULL UNIQUE,
   description    TEXT,
   logo_path      TEXT,
+  balance        NUMERIC(12,2) NOT NULL DEFAULT 0.00 CHECK (balance >= 0),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- CATEGORIES
+
+CREATE TABLE IF NOT EXISTS categories (
+  category_id    INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name           TEXT NOT NULL UNIQUE,
+  description    TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -47,6 +60,7 @@ CREATE TABLE IF NOT EXISTS stores (
 CREATE TABLE IF NOT EXISTS products (
   product_id     INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   store_id       INTEGER NOT NULL REFERENCES stores(store_id) ON DELETE CASCADE,
+  category_id    INTEGER REFERENCES categories(category_id) ON DELETE SET NULL,
   name           TEXT NOT NULL,
   description    TEXT,
   price          NUMERIC(12,2) NOT NULL CHECK (price >= 0),
@@ -60,8 +74,22 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_store ON products(store_id);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_price ON products(price);
 CREATE INDEX IF NOT EXISTS idx_products_not_deleted ON products(is_deleted) WHERE is_deleted = FALSE;
+
+
+-- Tabel ini memungkinkan 1 produk memiliki multiple categories
+
+CREATE TABLE IF NOT EXISTS category_items (
+  category_id    INTEGER NOT NULL REFERENCES categories(category_id) ON DELETE CASCADE,
+  product_id     INTEGER NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (category_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_category_items_product ON category_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_category_items_category ON category_items(category_id);
 
 
 -- CARTS
@@ -92,20 +120,24 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_id);
 -- ORDERS
 
 CREATE TABLE IF NOT EXISTS orders (
-  order_id       INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  buyer_id       INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
-  store_id       INTEGER NOT NULL REFERENCES stores(store_id) ON DELETE RESTRICT,
-  status         order_status NOT NULL DEFAULT 'waiting_approval',
-  total_amount   NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
-  delivery_time  TIMESTAMPTZ,
-  reject_reason  TEXT,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  order_id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  buyer_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+  store_id         INTEGER NOT NULL REFERENCES stores(store_id) ON DELETE RESTRICT,
+  status           order_status NOT NULL DEFAULT 'waiting_approval',
+  total_amount     NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
+  shipping_address TEXT,                                                  --
+  delivery_time    TIMESTAMPTZ,
+  reject_reason    TEXT,
+  confirmed_at     TIMESTAMPTZ,                                           --
+  received_at      TIMESTAMPTZ,                                           --
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_buyer_status ON orders(buyer_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_store_status ON orders(store_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_confirmed_at ON orders(confirmed_at); -- 
 
 
 -- ORDER ITEMS

@@ -10,4 +10,7 @@ RewriteRule ^ - [L]
 RewriteRule ^api(?:/|$) index.php [QSA,L]
 
 # [ SPA ]
-RewriteRule ^ index.html [QSA,L]
+RewriteRule ^(home|profile|login|register|seller)(?:/|$) index.html [QSA,L]
+
+# [ Server Render ]
+RewriteRule ^ index.php [QSA,L]
