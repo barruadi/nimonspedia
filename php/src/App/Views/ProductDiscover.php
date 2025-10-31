@@ -13,15 +13,6 @@
     color: #222;
   }
 
-  nav.topnav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 1px solid #ddd;
-    background: #fff;
-  }
-
   main.page {
     max-width: 1200px;
     margin: 1.5rem auto;
@@ -240,16 +231,6 @@
 </style>
 </head>
 <body>
-
-<nav class="topnav">
-  <a href="/products">Browse</a>
-  <a href="/cart">Cart</a>
-  <?php if (!$sessionUser): ?>
-    <a href="/login">Login</a>
-  <?php else: ?>
-    <a href="/home">Dashboard</a>
-  <?php endif; ?>
-</nav>
 
 <main class="page">
 

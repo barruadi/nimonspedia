@@ -65,7 +65,7 @@ import { api } from '/utils/api.js';
     rootLoading.style.display = 'none';
     rootContent.style.display = 'block';
   } catch (err) {
-    rootLoading.textContent = 'Failed to load profile.';
+    rootLoading.textContent = 'Anda belum login.';
     console.error(err);
     return;
   }
