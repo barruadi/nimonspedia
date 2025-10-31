@@ -416,7 +416,11 @@
 
 </main>
 
-<script>
+<script>window.isLoggedIn = <?= $sessionUser ? 'true' : 'false' ?>;</script>
+
+<script type="module">
+
+import { api } from '/utils/api.js'; 
 // ------- helper: debounce -------
 function debounce(fn, delay = 500) {
   let t;
@@ -472,7 +476,7 @@ function renderProducts(json) {
   if (!json.products.length) {
     grid.innerHTML = `
       <div class="empty-state">
-        Tidak ada produk 😔
+        Tidak ada produk 
       </div>
     `;
   } else {
@@ -561,6 +565,39 @@ function renderProducts(json) {
   `;
 }
 
+async function addToCart(productId, qty = 1) {
+  try {
+    const res = await api.post('/cart/add', {
+      product_id: Number(productId),
+      qty: 1
+    });
+
+    // if (!res || res.ok === false) {
+    //   // not logged in
+    //   // window.location.href = '/login';
+    //   return;
+    // }
+
+    console.log(res);
+    if (!res || res.ok === false) {
+      console.log(res);
+      alert("djsiaodjsia");
+      return;
+    }
+
+    // success
+    alert('Added to cart');
+
+    // optional: update a cart badge if you have one
+    // const count = json.items?.length ?? 0;
+    // document.getElementById('cart-count')?.replaceChildren(document.createTextNode(count));
+
+  } catch (e) {
+    console.error(e);
+    alert('Network error. Please try again.');
+  }
+}
+
 // ------- fetch new data with skeleton -------
 async function refetchAndRender(paramsString) {
   const grid = document.getElementById('product-grid');
@@ -594,6 +631,24 @@ document.getElementById('filter-q').addEventListener('input', debouncedFilter);
 document.getElementById('filter-category').addEventListener('change', debouncedFilter);
 document.getElementById('filter-min').addEventListener('input', debouncedFilter);
 document.getElementById('filter-max').addEventListener('input', debouncedFilter);
+
+document.getElementById('product-grid').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-addcart');
+  if (!btn) return;
+  e.preventDefault();
+  const pid = btn.getAttribute('data-product-id');
+  if (!pid) return;
+
+  if (!window.isLoggedIn) {
+    window.location.href = '/login';
+    return;
+  }
+
+  // Optimistic UI (optional): disable briefly to prevent spam clicks
+  btn.disabled = true;
+  console.log(pid);
+  addToCart(pid, 1).finally(() => { btn.disabled = false; });
+});
 
 // OPTIONAL: intercept pagination clicks for SPA-like page changes
 document.getElementById('pagination-bar').addEventListener('click', (e) => {
