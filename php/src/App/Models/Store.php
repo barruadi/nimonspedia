@@ -37,7 +37,21 @@ class Store
         return $result ?: null;
     }
 
-    // Update store information
+    public static function findById(int $storeId): ?array
+    {
+        $db = self::getDB();
+        $stmt = $db->prepare("
+            SELECT store_id, owner_id, store_name, description, logo_path, created_at, updated_at
+            FROM stores 
+            WHERE store_id = :store_id 
+            LIMIT 1
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
     public static function update(int $storeId, array $data): bool
     {
         $db = self::getDB();

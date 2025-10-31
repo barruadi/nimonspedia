@@ -40,7 +40,24 @@ class Product
         return $result ?: null;
     }
 
-    // Get all products by store ID
+    public static function findDetailById(int $productId): ?array
+    {
+        $db = self::getDB();
+        $stmt = $db->prepare("
+            SELECT 
+                p.*, 
+                c.name as category_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.category_id
+            WHERE p.product_id = :id 
+            AND p.is_deleted <> TRUE
+        ");
+        $stmt->execute(['id' => $productId]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ?: null;
+    }
+
     public static function findByStoreId(int $storeId): array
     {
         $db = self::getDB();
