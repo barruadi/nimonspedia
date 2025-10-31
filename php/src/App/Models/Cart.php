@@ -57,7 +57,7 @@ class Cart
             $subtotal = (float)$row['subtotal'];
         
             $hasItems = self::countItems($userId) > 0;
-            $shipping = $hasItems ? 20000.0 : 0.0;
+            $shipping = 0.0;
         
             return [
                 'subtotal' => $subtotal,

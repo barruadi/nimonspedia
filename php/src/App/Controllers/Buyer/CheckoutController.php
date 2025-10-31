@@ -3,7 +3,7 @@
 namespace App\Controllers\Buyer;
 
 use App\Core\View;
-use App\Models\Cart;
+use App\Models\{Cart, User};
 
 class CheckoutController
 {
@@ -41,8 +41,10 @@ class CheckoutController
         $snapshot = Cart::getSnapshot($userId);
         $items = $snapshot['items'];
         $total = $snapshot['summary']['total'];
+
+        $user_balance = User::getBalance($userId);
         
-        if ($_SESSION['user']['balance'] < $total) {
+        if ($user_balance < $total) {
             return [
                 'ok' => false,
                 'error' => 'balance not enough'
@@ -50,10 +52,12 @@ class CheckoutController
         }
 
         // [TODO]: masukin order ke order history
-        
 
         // 3. clear cart
         Cart::clear($userId);
+        
+        // Set the balance
+        User::setBalance((int) floor($user_balance - $total), $userId);
 
         // 4. redirect
         header("Location: /checkout/success?order_id=".$userId);
