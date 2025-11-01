@@ -41,13 +41,14 @@ const routes = {
   '/product/:id': {
     page: '/pages/ProductDetailPage.html',
     script: '/script/ProductDetail.js',
-  '/seller/orders': {
-    page: '/pages/OrderManagementPage.html',
-    script: '/script/OrderManagement.js',
-  },
-  '/store/:id': {
-    page: '/pages/StoreDetailPage.html',
-    script: '/script/StoreDetail.js',
+    '/seller/orders': {
+      page: '/pages/OrderManagementPage.html',
+      script: '/script/OrderManagement.js',
+    },
+    '/store/:id': {
+      page: '/pages/StoreDetailPage.html',
+      script: '/script/StoreDetail.js',
+    }
   }
 };
 
