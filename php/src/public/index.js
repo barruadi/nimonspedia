@@ -38,6 +38,9 @@ const routes = {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
   },
+  '/product/:id': {
+    page: '/pages/ProductDetailPage.html',
+    script: '/script/ProductDetail.js',
   '/seller/orders': {
     page: '/pages/OrderManagementPage.html',
     script: '/script/OrderManagement.js',
