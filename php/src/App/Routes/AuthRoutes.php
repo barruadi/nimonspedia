@@ -26,10 +26,11 @@ $router->get('/api/me', function ($req) {
     return [
         'authenticated' => (bool)$u,
         'user' => $u ? [
-            'id'    => $u['user_id'],
-            'name'  => $u['full_name'],
-            'email' => $u['email'],
-            'role'  => $u['role'],
+            'id'      => $u['user_id'],
+            'name'    => $u['full_name'],
+            'email'   => $u['email'],
+            'role'    => $u['role'],
+            'balance' => $u['balance'],
         ] : null
     ];
 });

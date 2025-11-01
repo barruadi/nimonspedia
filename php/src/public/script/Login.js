@@ -7,6 +7,11 @@ const togglePassword = document.getElementById("togglePassword");
 const loginErrorBox = document.getElementById("loginError");
 const loginSubmitBtn = document.getElementById("loginSubmitBtn");
 
+const ICONS = {
+  show: "/uploads/auth/eye-icon.png",
+  hide: "/uploads/auth/closed-eye-icon.png",
+};
+
 function showError(msg) {
   loginErrorBox.textContent = msg;
   loginErrorBox.style.display = "block";
@@ -20,7 +25,9 @@ function clearError() {
 togglePassword.addEventListener("click", () => {
   const isHidden = loginPassInput.type === "password";
   loginPassInput.type = isHidden ? "text" : "password";
-  togglePassword.textContent = isHidden ? "hide" : "show";
+  eyeIcon.src = isHidden ? ICONS.hide : ICONS.show;
+  togglePassword.setAttribute("aria-pressed", String(isHidden));
+  togglePassword.setAttribute("aria-label", isHidden ? "hide" : "show");
 });
 
 // handle form submit
@@ -36,7 +43,6 @@ loginForm.addEventListener("submit", async (e) => {
     return;
   }
 
-  // optimistic disable button to prevent double submit
   loginSubmitBtn.disabled = true;
 
   try {
@@ -53,8 +59,7 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
-    // login success -> go home (or dashboard)
-    window.location.href = "/home";
+    window.location.href = "/products";
   } catch (err) {
     showError("Terjadi kesalahan jaringan.");
     loginSubmitBtn.disabled = false;

@@ -10,19 +10,22 @@
 
   font-family: system-ui, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
   background: var(--bg-page);
-  min-height: 100dvh;
+  max-height: 100dvh;
   padding: 2rem 2rem 4rem;
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  align-items: center;
   gap: 2rem;
   color: var(--text-main);
+  overflow-x: clip; 
+  max-width: 100vw;
 }
 
 /* LAYOUT: left + right */
 .login-page .login-left {
   flex: 1 1 50%;
-  max-width: 520px;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -49,7 +52,10 @@
   font-weight: 600;
   line-height: 1.4;
   color: #000;
-  margin: 0 0 .75rem;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  display: inline-block;
 }
 .login-page .brand {
   color: var(--green);
@@ -223,4 +229,10 @@
     width: 100%;
     max-width: 400px;
   }
+}
+
+.page-footer {
+  text-align: center;
+  padding: 1rem 2rem 2rem;
+  color: var(--text-dim);
 }
