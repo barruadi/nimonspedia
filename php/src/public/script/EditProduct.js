@@ -23,6 +23,10 @@ function initEditProductPage() {
     const imagePreviewContainer = document.getElementById('imagePreviewContainer');
     const imagePreview = document.getElementById('imagePreview');
 
+    // Quill variables
+    let quill = null;
+    const MAX_DESCRIPTION_LENGTH = 1000;
+
     let currentImagePath = null;
     let imageChanged = false;
 
@@ -116,6 +120,86 @@ function initEditProductPage() {
         console.log('Categories populated, selected:', selectedId);
     }
 
+    // Load Quill Script
+    function loadQuillScript() {
+        return new Promise((resolve, reject) => {
+            // Check if Quill already exists
+            if (window.Quill) {
+                console.log('Quill already loaded');
+                resolve();
+                return;
+            }
+
+            // Check if script is already being loaded
+            if (document.querySelector('script[src*="quill.js"]')) {
+                console.log('Quill script already in DOM, waiting...');
+                const checkQuill = setInterval(() => {
+                    if (window.Quill) {
+                        clearInterval(checkQuill);
+                        resolve();
+                    }
+                }, 100);
+                return;
+            }
+
+            console.log('Loading Quill script...');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js';
+            script.onload = () => {
+                console.log('Quill script loaded');
+                resolve();
+            };
+            script.onerror = () => {
+                console.error('Failed to load Quill script');
+                reject(new Error('Failed to load Quill'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
+    // Initialize Quill Editor
+    async function initQuillEditor() {
+        try {
+            await loadQuillScript();
+
+            const editorElement = document.getElementById('editor');
+            
+            if (!editorElement) {
+                console.error('Editor element not found');
+                return;
+            }
+
+            console.log('Initializing Quill editor...');
+
+            quill = new Quill('#editor', {
+                theme: 'snow',
+                placeholder: 'Masukkan deskripsi produk (maksimal 1000 karakter)...'
+            });
+
+            console.log('Quill editor initialized!');
+
+            // Character counter
+            quill.on('text-change', function() {
+                const text = quill.getText();
+                const length = text.trim().length;
+                
+                const charCountEl = document.getElementById('charCount');
+                if (charCountEl) {
+                    charCountEl.textContent = length;
+                }
+                
+                // Update hidden textarea
+                const hiddenTextarea = document.getElementById('productDescription');
+                if (hiddenTextarea) {
+                    hiddenTextarea.value = quill.root.innerHTML;
+                }
+            });
+
+        } catch (error) {
+            console.error('Error initializing Quill:', error);
+        }
+    }
+
     // Load Product Data
     async function loadProductData() {
         try {
@@ -135,9 +219,22 @@ function initEditProductPage() {
             document.getElementById('product_id').value = product.product_id;
             document.getElementById('store_id').value = store.store_id;
             document.getElementById('productName').value = product.name;
-            document.getElementById('productDescription').value = product.description;
             document.getElementById('productPrice').value = product.price;
             document.getElementById('productStock').value = product.stock;
+
+            // Set description to Quill editor (wait for init)
+            if (quill) {
+                quill.root.innerHTML = product.description;
+                // Trigger text-change to update counter
+                const text = quill.getText();
+                const charCountEl = document.getElementById('charCount');
+                if (charCountEl) {
+                    charCountEl.textContent = text.trim().length;
+                }
+            } else {
+                console.warn('Quill not initialized yet, setting hidden textarea');
+                document.getElementById('productDescription').value = product.description;
+            }
 
             // Set image preview
             if (product.image_path) {
@@ -176,14 +273,20 @@ function initEditProductPage() {
             isValid = false;
         }
         
-        // Description
-        const desc = formData.get('description');
-        if (!desc || desc.trim().length === 0) {
-            document.getElementById('descError').textContent = 'Deskripsi wajib diisi';
+        // Description - Get from Quill
+        if (!quill) {
+            document.getElementById('descError').textContent = 'Editor belum siap';
             isValid = false;
-        } else if (desc.length > 1000) {
-            document.getElementById('descError').textContent = 'Maksimal 1000 karakter';
-            isValid = false;
+        } else {
+            const descText = quill.getText().trim();
+            
+            if (descText.length === 0) {
+                document.getElementById('descError').textContent = 'Deskripsi wajib diisi';
+                isValid = false;
+            } else if (descText.length > MAX_DESCRIPTION_LENGTH) {
+                document.getElementById('descError').textContent = `Maksimal ${MAX_DESCRIPTION_LENGTH} karakter`;
+                isValid = false;
+            }
         }
         
         // Category
@@ -379,8 +482,13 @@ function initEditProductPage() {
         }
     }
 
-    console.log('Initializing EditProduct page...');
-    loadProductData();
+    // Initialize everything
+    console.log('Starting initialization...');
+    
+    // Init Quill first, then load product data
+    initQuillEditor().then(() => {
+        loadProductData();
+    });
 }
 
 if (document.readyState === 'loading') {

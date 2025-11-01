@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Seller Dashboard - Nimonspedia</title>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
     <link rel="stylesheet" href="/styles/Dashboard.css">
   </head>
   <body>
@@ -67,10 +68,20 @@
                                 <label for="editStoreName" class="form-label">Nama Toko *</label>
                                 <input type="text" id="editStoreName" name="store_name" maxlength="100" required placeholder="Masukkan nama toko">
                             </div>
+                            
+                            <!-- Description -->
                             <div class="form-group">
-                                <label for="editStoreDescription" class="form-label">Deskripsi Toko</label>
-                                <textarea id="editStoreDescription" name="description" rows="4" maxlength="500" placeholder="Ceritakan tentang toko Anda..."></textarea>
-                                <p class="form-hint">Maksimal 500 karakter</p>
+                                <label class="form-label">Deskripsi Toko</label>
+                                
+                                <!-- Quill Editor Container -->
+                                <div id="editor"></div>
+                                
+                                <!-- Hidden textarea untuk store data -->
+                                <textarea id="editStoreDescription" name="description" style="display: none;"></textarea>
+                                
+                                <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #9ca3af; text-align: right;">
+                                    <span id="charCount">0</span> / 500 karakter
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -128,6 +139,10 @@
                     </button>
                     <button type="button" id="addProductBtn" class="action-btn">
                         Tambah Produk Baru
+                    </button>
+                    <!-- Export Button -->
+                    <button type="button" id="exportDataBtn" class="action-btn action-btn-export">
+                        Export Data Toko
                     </button>
                 </div>
             </div>

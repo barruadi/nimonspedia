@@ -4,7 +4,7 @@ use App\Core;
 use App\Core\Application;
 use App\Models\Category;
 use App\Middlewares\{AuthMiddleware, RoleMiddleware};
-use App\Controllers\Seller\{DashboardController, ProductManagementController, OrderManagementController};
+use App\Controllers\Seller\{DashboardController, ProductManagementController, OrderManagementController, ExportController};
 
 $auth = AuthMiddleware::requireAuth();
 $roleSeller = RoleMiddleware::allow(['seller']);
@@ -15,6 +15,7 @@ $router->group([
 ], function($r) {
     $r->get('/dashboard',                   fn($req) => DashboardController::showDashboard());
     $r->post('/store/update',               fn($req) => DashboardController::updateStoreInfo($req));
+    $r->get('/export',                      fn($req) => ExportController::exportData());
     $r->get('/products',                    fn($req) => ProductManagementController::getStoreProducts());
     $r->get('/products/add',                fn($req) => ProductManagementController::showAddProductForm());
     $r->post('/products/add',               fn($req) => ProductManagementController::handleAddProduct($req));
@@ -35,6 +36,7 @@ $router->group([
         return OrderManagementController::setDeliveryTime($id, $deliveryDays);
     });
 }); 
+
 // Public Endpoints (can be called from non-sellers)
 // GET /api/categories return Category list
 $router->get('/api/categories', function() {

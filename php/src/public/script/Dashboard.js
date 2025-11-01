@@ -5,6 +5,10 @@ function initDashboardPage() {
     let store = null;
     let stats = null;
 
+    // Quill Editor
+    let quill = null;
+    const MAX_DESCRIPTION_LENGTH = 500;
+
     // DOM Elements
     const loadingState = document.getElementById('loadingState');
     const mainContent = document.getElementById('mainContent');
@@ -29,6 +33,7 @@ function initDashboardPage() {
     const productManagementBtn = document.getElementById('productManagementBtn');
     const orderManagementBtn = document.getElementById('orderManagementBtn');
     const addProductBtn = document.getElementById('addProductBtn');
+    const exportDataBtn = document.getElementById('exportDataBtn');
 
     async function initPage() {
         try {
@@ -50,19 +55,18 @@ function initDashboardPage() {
                 throw new Error('No data returned from API');
             }
 
-            // Save dashboard info
             store = data.store;
             stats = data.stats;
             
             console.log('Dashboard data loaded:', { store, stats });
             
-            // Initialize UI
+            await initQuillEditor();
+            
             initStoreBanner();
             initStatCards();
             initButtons();
             initEditForm();
 
-            // Show main content after everything is loaded
             hideLoading();
             showMainContent();
 
@@ -76,11 +80,14 @@ function initDashboardPage() {
     function initStoreBanner() {
         if (!store) return;
 
-        // Set store info in banner
         bannerStoreName.textContent = store.store_name || 'Nama Toko';
-        bannerStoreDescription.textContent = store.description || 'Belum ada deskripsi';
         
-        // Set logo
+        if (store.description) {
+            bannerStoreDescription.innerHTML = store.description;
+        } else {
+            bannerStoreDescription.textContent = 'Belum ada deskripsi';
+        }
+        
         if (store.logo_path) {
             storeLogo.src = store.logo_path;
         }
@@ -118,13 +125,155 @@ function initDashboardPage() {
                 window.location.href = '/seller/products/add';
             });
         }
+
+        // Export Button Handler
+        if (exportDataBtn) {
+            exportDataBtn.addEventListener('click', async () => {
+                try {
+                    exportDataBtn.disabled = true;
+                    exportDataBtn.textContent = 'Memproses...';
+                    
+                    showToast('Memproses export...', 'Tunggu sebentar', 'success');
+
+                    // Call API to get CSV data
+                    const result = await api.get('/seller/export');
+                    
+                    console.log('Export result:', result);
+
+                    if (!result || !result.ok) {
+                        throw new Error(result?.error || 'Export gagal');
+                    }
+
+                    // Decode base64 CSV
+                    const csvData = atob(result.data.csv);
+                    const filename = result.data.filename;
+
+                    // Create blob and download
+                    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    
+                    if (navigator.msSaveBlob) { // IE 10+
+                        navigator.msSaveBlob(blob, filename);
+                    } else {
+                        const url = URL.createObjectURL(blob);
+                        link.href = url;
+                        link.download = filename;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }
+
+                    showToast('Export berhasil!', `File ${filename} telah diunduh`, 'success');
+
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showToast('Export gagal', error.message, 'error');
+                } finally {
+                    exportDataBtn.disabled = false;
+                    exportDataBtn.textContent = 'Export Data Toko';
+                }
+            });
+        }
+    }
+
+    // Load Quill Script
+    function loadQuillScript() {
+        return new Promise((resolve, reject) => {
+            // Check if Quill already exists
+            if (window.Quill) {
+                console.log('Quill already loaded');
+                resolve();
+                return;
+            }
+
+            // Check if script is already being loaded
+            if (document.querySelector('script[src*="quill.js"]')) {
+                console.log('Quill script already in DOM, waiting...');
+                const checkQuill = setInterval(() => {
+                    if (window.Quill) {
+                        clearInterval(checkQuill);
+                        resolve();
+                    }
+                }, 100);
+                return;
+            }
+
+            console.log('Loading Quill script...');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js';
+            script.onload = () => {
+                console.log('Quill script loaded');
+                resolve();
+            };
+            script.onerror = () => {
+                console.error('Failed to load Quill script');
+                reject(new Error('Failed to load Quill'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
+    // Initialize Quill Editor
+    async function initQuillEditor() {
+        try {
+            await loadQuillScript();
+
+            const editorElement = document.getElementById('editor');
+            
+            if (!editorElement) {
+                console.error('Editor element not found');
+                return;
+            }
+
+            console.log('Initializing Quill editor...');
+
+            quill = new Quill('#editor', {
+                theme: 'snow',
+                placeholder: 'Ceritakan tentang toko Anda (maksimal 500 karakter)...'
+            });
+
+            console.log('Quill editor initialized!');
+
+            // Character counter
+            quill.on('text-change', function() {
+                const text = quill.getText();
+                const length = text.trim().length;
+                
+                const charCountEl = document.getElementById('charCount');
+                if (charCountEl) {
+                    charCountEl.textContent = length;
+                }
+                
+                // Update hidden textarea
+                const hiddenTextarea = document.getElementById('editStoreDescription');
+                if (hiddenTextarea) {
+                    hiddenTextarea.value = quill.root.innerHTML;
+                }
+            });
+
+        } catch (error) {
+            console.error('Error initializing Quill:', error);
+        }
     }
 
     function initEditForm() {
         // Edit button - show form
         editStoreBtn?.addEventListener('click', () => {
             document.getElementById('editStoreName').value = store.store_name || '';
-            document.getElementById('editStoreDescription').value = store.description || '';
+            
+            // Set description to Quill editor
+            if (quill) {
+                quill.root.innerHTML = store.description || '';
+                // Trigger text-change to update counter
+                const text = quill.getText();
+                const charCountEl = document.getElementById('charCount');
+                if (charCountEl) {
+                    charCountEl.textContent = text.trim().length;
+                }
+            }
+            
             editStoreForm.style.display = 'block';
             storeInfoBanner.style.display = 'none';
         });
@@ -187,6 +336,19 @@ function initDashboardPage() {
         try {
             const formData = new FormData(storeInfoForm);
             
+            // Validate description from Quill
+            if (quill) {
+                const descText = quill.getText().trim();
+                
+                if (descText.length > MAX_DESCRIPTION_LENGTH) {
+                    showToast('Deskripsi terlalu panjang', `Maksimal ${MAX_DESCRIPTION_LENGTH} karakter`, 'error');
+                    return;
+                }
+                
+                // Set description from Quill
+                formData.set('description', quill.root.innerHTML);
+            }
+            
             // Add logo if selected
             const logoFile = logoInput.files[0];
             if (logoFile) {
@@ -196,7 +358,7 @@ function initDashboardPage() {
 
             console.log('Submitting store update...');
             console.log('Store name:', formData.get('store_name'));
-            console.log('Description:', formData.get('description'));
+            console.log('Description length:', quill ? quill.getText().trim().length : 0);
             console.log('Has logo:', !!logoFile);
 
             const result = await api.post('/seller/store/update', formData);
@@ -212,7 +374,13 @@ function initDashboardPage() {
                 
                 // Update banner
                 bannerStoreName.textContent = store.store_name;
-                bannerStoreDescription.textContent = store.description || 'Belum ada deskripsi';
+                
+                // Update banner description
+                if (store.description) {
+                    bannerStoreDescription.innerHTML = store.description;
+                } else {
+                    bannerStoreDescription.textContent = 'Belum ada deskripsi';
+                }
                 
                 // If logo changed, update preview
                 if (result.data && result.data.logo_path) {
