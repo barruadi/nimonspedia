@@ -14,18 +14,27 @@ $router->group([
     'middleware'  => [$auth, $roleSeller],
 ], function($r) {
     $r->get('/dashboard',                   fn($req) => DashboardController::showDashboard());
-    $r->put('/store',                       fn($req) => DashboardController::updateStoreInfo($req));
+    $r->post('/store/update',               fn($req) => DashboardController::updateStoreInfo($req));
     $r->get('/products',                    fn($req) => ProductManagementController::getStoreProducts());
     $r->get('/products/add',                fn($req) => ProductManagementController::showAddProductForm());
     $r->post('/products/add',               fn($req) => ProductManagementController::handleAddProduct($req));
     $r->get('/products/edit/{id}',          fn($req, $id) => ProductManagementController::showEditProductForm($id)); 
-    $r->put('/products/edit/{id}',          fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
+    $r->post('/products/edit/{id}',         fn($req, $id) => ProductManagementController::handleEditProduct($req, $id));
     $r->delete('/products/{id}',            fn($req, $id) => ProductManagementController::deleteProduct($id)); 
     $r->get('/orders',                      fn($req) => OrderManagementController::getStoreOrders());
+    $r->get('/orders/detail/{id}',          fn($req, $id) => OrderManagementController::getOrderDetail($id));
     $r->put('/orders/approve/{id}',         fn($req, $id) => OrderManagementController::approveOrder($id));
-    $r->put('/orders/delivery-time{id}/',   fn($req, $id) => OrderManagementController::setDeliveryTime($id, $req['body']['delivery_time'] ?? ''));
+    $r->put('/orders/reject/{id}', function($req, $id) {
+        $body = $req['body'] ?? [];
+        $rejectReason = $body['reject_reason'] ?? '';
+        return OrderManagementController::rejectOrder($id, $rejectReason);
+    });
+    $r->put('/orders/delivery/{id}', function($req, $id) {
+        $body = $req['body'] ?? [];
+        $deliveryDays = isset($body['delivery_days']) ? (int)$body['delivery_days'] : 0;
+        return OrderManagementController::setDeliveryTime($id, $deliveryDays);
+    });
 }); 
-
 // Public Endpoints (can be called from non-sellers)
 // GET /api/categories return Category list
 $router->get('/api/categories', function() {

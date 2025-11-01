@@ -22,25 +22,28 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
-  '/dashboard': {
+  '/seller/dashboard': {
     page: '/pages/DashboardPage.html',
     script: '/script/Dashboard.js',
   },
-  '/products': {
+  '/seller/products': {
     page: '/pages/ProductManagementPage.html',
     script: '/script/ProductManagement.js',
   },
-  '/products/add': {
+  '/seller/products/add': {
     page: '/pages/AddProductPage.html',
     script: '/script/AddProduct.js',
   },
-  '/products/edit/:id': {
+  '/seller/products/edit/:id': {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
   },
   '/product/:id': {
     page: '/pages/ProductDetailPage.html',
     script: '/script/ProductDetail.js',
+  '/seller/orders': {
+    page: '/pages/OrderManagementPage.html',
+    script: '/script/OrderManagement.js',
   }
 };
 
@@ -52,6 +55,9 @@ function mountNavbar() {
     const navEl = document.createElement('app-navbar');
     navbarRoot.appendChild(navEl);
   }
+}
+function refreshNavbar() {
+  navbarRoot.querySelector('app-navbar')?.refresh?.();
 }
 
 // Match dynamic routes
@@ -105,6 +111,9 @@ async function render(pathname) {
       const modulePath = route.script.replace(/^\//, './');
       await import(`${modulePath}?_=${cacheBuster}`);
     }
+    
+    refreshNavbar();
+    
   } catch (e) {
     app.innerHTML = `
       <section style="padding:1rem">
@@ -118,10 +127,16 @@ function onClick(e) {
   const a = e.target.closest('a[data-nav]');
   if (!a) return;
   if (a.origin !== location.origin) return;
+  
+  const url = a.getAttribute('href');
 
+  if (!(new URL(url, location.origin).pathname in routes)) {
+    location.reload();
+    return;
+  }
+  
   e.preventDefault();
 
-  const url = a.getAttribute('href');
   history.pushState({}, '', url);
   render(url);
 }

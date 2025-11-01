@@ -39,7 +39,7 @@ function initAddProductPage() {
         // Validate file type
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         if (!validTypes.includes(file.type)) {
-            showToast('Format file harus JPG, PNG, atau WEBP!', 'error');
+            showToast('Format file tidak valid!', 'Gunakan JPG, PNG, atau WEBP', 'error');
             e.target.value = '';
             return;
         }
@@ -47,7 +47,7 @@ function initAddProductPage() {
         // Validate file size (max 2MB)
         const maxSize = 2 * 1024 * 1024;
         if (file.size > maxSize) {
-            showToast('Ukuran file maksimal 2MB!', 'error');
+            showToast('Ukuran file terlalu besar!', 'Maksimal 2MB', 'error');
             e.target.value = '';
             return;
         }
@@ -143,7 +143,6 @@ function initAddProductPage() {
     }
 
     // Form Validation
-
     function validateForm(formData) {
         let isValid = true;
         
@@ -201,8 +200,22 @@ function initAddProductPage() {
         return isValid;
     }
 
-    // Form Submission
+    // Modal Functions - CANCEL MODAL
+    function showCancelModal() {
+        const modalBackdrop = document.getElementById('cancelModalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'flex';
+        }
+    }
 
+    function hideCancelModal() {
+        const modalBackdrop = document.getElementById('cancelModalBackdrop');
+        if (modalBackdrop) {
+            modalBackdrop.style.display = 'none';
+        }
+    }
+
+    // Form Submission
     const form = document.getElementById('addProductForm');
     if (form) {
         console.log('Form found, attaching submit handler');
@@ -234,7 +247,7 @@ function initAddProductPage() {
                 if (result && result.ok) {
                     showToast('Produk berhasil ditambahkan!', 'Yuk kembali ke toko!', 'success');
                     setTimeout(() => {
-                        window.location.href = '/products';
+                        window.location.href = '/seller/products';
                     }, 1500);
                 } else {
                     throw new Error(result?.error || 'Gagal menambahkan produk');
@@ -242,7 +255,7 @@ function initAddProductPage() {
                 
             } catch (error) {
                 console.error('Error submitting form:', error);
-                showToast(error.message, 'Terjadi kegagalan!', 'error');
+                showToast('Gagal menambahkan produk!', error.message, 'error');
                 
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Simpan';
@@ -252,16 +265,37 @@ function initAddProductPage() {
         console.error('Form #addProductForm not found!');
     }
 
-    // Cancel button
+    // Cancel button - Show CANCEL modal
     const cancelBtn = document.getElementById('cancelBtn');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
-            if (confirm('Batal menambahkan produk? Perubahan tidak akan disimpan.')) {
-                window.location.href = '/products';
-            }
+            // Show CANCEL confirmation modal
+            showCancelModal();
+            
+            // Get cancel modal buttons
+            const cancelModalConfirmBtn = document.getElementById('cancelModalConfirmBtn');
+            const cancelModalCancelBtn = document.getElementById('cancelModalCancelBtn');
+            
+            // Remove old listeners by cloning
+            const newCancelConfirmBtn = cancelModalConfirmBtn.cloneNode(true);
+            const newCancelCancelBtn = cancelModalCancelBtn.cloneNode(true);
+            cancelModalConfirmBtn.parentNode.replaceChild(newCancelConfirmBtn, cancelModalConfirmBtn);
+            cancelModalCancelBtn.parentNode.replaceChild(newCancelCancelBtn, cancelModalCancelBtn);
+            
+            // "Lanjut" button - close modal, continue adding
+            newCancelCancelBtn.addEventListener('click', () => {
+                hideCancelModal();
+            });
+            
+            // "Batal" button - go back to products page
+            newCancelConfirmBtn.addEventListener('click', () => {
+                hideCancelModal();
+                window.location.href = '/seller/products';
+            });
         });
     }
 
+    // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
         const backdrop = document.getElementById('toastBackdrop');

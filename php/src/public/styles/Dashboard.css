@@ -22,10 +22,46 @@ body {
 
 /* Loading State */
 .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 3rem;
-    font-size: 1.125rem;
+    padding: 4rem 2rem;
+    min-height: 60vh;
+}
+
+.loading-icon {
+    width: 280px;
+    height: 280px;
+    object-fit: contain;
+    margin-bottom: 2rem;
+    animation: floatAnimation 3s ease-in-out infinite;
+}
+
+.loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.75rem 0;
+    letter-spacing: 0.05em;
+}
+
+.loading-subtitle {
+    font-size: 1rem;
     color: #6b7280;
+    margin: 0;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+@keyframes floatAnimation {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-15px);
+    }
 }
 
 /* Store Info Banner */
@@ -281,7 +317,7 @@ body {
     height: 16px;
 }
 
-/* Stats Grid - UPDATED */
+/* Stats Grid */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -487,6 +523,25 @@ body {
     .dashboard-page {
         padding: 1rem;
         gap: 1.5rem;
+    }
+
+    .loading-state {
+        padding: 3rem 1.5rem;
+        min-height: 50vh;
+    }
+
+    .loading-icon {
+        width: 200px;
+        height: 200px;
+        margin-bottom: 1.5rem;
+    }
+
+    .loading-title {
+        font-size: 1.25rem;
+    }
+
+    .loading-subtitle {
+        font-size: 0.9375rem;
     }
 
     .stats-grid {

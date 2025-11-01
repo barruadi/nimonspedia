@@ -153,7 +153,20 @@
         <div id="toastSecondaryMessage"></div>
       </div>
       <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
-
     </div>
+
+     <!-- Cancel Confirmation Modal -->
+    <div id="cancelModalBackdrop" class="modal-backdrop" style="display:none;">
+      <div id="cancelConfirmationModal" class="modal">
+        <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
+        <div class="confirmation-text">Batal menambahkan produk? Perubahan tidak akan tersimpan.</div>
+        <div class="confirmation-buttons">
+          <button type="button" id="cancelModalCancelBtn" class="btn-modal-cancel">Lanjut</button>
+          <button type="button" id="cancelModalConfirmBtn" class="btn-modal-confirm">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/script/AddProduct.js" defer></script>
   </body>
 </html>

@@ -10,14 +10,13 @@ function initEditProductPage() {
     
     if (!productId) {
         showToast('Product ID tidak ditemukan!', 'Kembali ke halaman produk...', 'error');
-        setTimeout(() => window.location.href = '/products', 1500);
+        setTimeout(() => window.location.href = '/seller/products', 1500);
         return;
     }
 
     console.log('Product ID:', productId);
 
     // Image Upload
-
     const uploadBtn = document.getElementById('uploadBtn');
     const productImageInput = document.getElementById('productImage');
     const imagePlaceholder = document.getElementById('imagePlaceholder');
@@ -118,7 +117,6 @@ function initEditProductPage() {
     }
 
     // Load Product Data
-
     async function loadProductData() {
         try {
             console.log('Loading product data...');
@@ -157,12 +155,11 @@ function initEditProductPage() {
         } catch (error) {
             console.error('Error loading product:', error);
             showToast('Gagal memuat data produk!', error.message, 'error');
-            setTimeout(() => window.location.href = '/products', 2000);
+            setTimeout(() => window.location.href = '/seller/products', 2000);
         }
     }
 
     // Form Validation
-
     function validateForm(formData) {
         let isValid = true;
         
@@ -214,103 +211,130 @@ function initEditProductPage() {
     }
 
     // Modal Functions
-    function showModal() {
-        const modalBackdrop = document.getElementById('modalBackdrop');
+    function showEditModal() {
+        const modalBackdrop = document.getElementById('editModalBackdrop');
         if (modalBackdrop) {
             modalBackdrop.style.display = 'flex';
+            console.log('Edit modal shown');
+        } else {
+            console.error('Edit modal backdrop not found!');
         }
     }
 
-    function hideModal() {
-        const modalBackdrop = document.getElementById('modalBackdrop');
+    function hideEditModal() {
+        const modalBackdrop = document.getElementById('editModalBackdrop');
         if (modalBackdrop) {
             modalBackdrop.style.display = 'none';
         }
     }
 
-    // Form Submission
+    // Handle form submission
+    async function submitProductUpdate(formData) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Menyimpan...';
+        
+        console.log('Submitting to API...');
+        console.log('Image changed:', imageChanged);
+        
+        try {
+            // Only add image if changed
+            if (imageChanged && productImageInput?.files[0]) {
+                formData.set('image', productImageInput.files[0]);
+                console.log('Image file added:', productImageInput.files[0].name);
+            }
+            
+            // Log FormData contents
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
+                } else {
+                    console.log(`${key}: ${value}`);
+                }
+            }
+            
+            const result = await api.post(`/seller/products/edit/${productId}`, formData);
+            
+            console.log('API response:', result);
+            
+            if (result && result.ok) {
+                showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/seller/products';
+                }, 1500);
+            } else {
+                throw new Error(result?.error || 'Gagal memperbarui produk');
+            }
+            
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            showToast('Gagal memperbarui produk!', error.message, 'error');
+            
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Simpan Perubahan';
+        }
+    }
 
+    // Form submit handler
     const form = document.getElementById('editProductForm');
     if (form) {
         console.log('Form found, attaching submit handler');
         
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
+            console.log('Form submitted');
             
             const formData = new FormData(e.target);
             
             // Validate first
             if (!validateForm(formData)) {
+                console.log('Validation failed');
                 return;
             }
             
+            console.log('Validation passed, showing modal');
+            
             // Show confirmation modal
-            showModal();
+            showEditModal();
             
-            // Wait for user confirmation
-            const modalConfirmBtn = document.getElementById('modalConfirmBtn');
-            const modalCancelBtn = document.getElementById('modalCancelBtn');
+            // Set up modal confirm button
+            const confirmBtn = document.getElementById('editModalConfirmBtn');
+            const cancelBtn = document.getElementById('editModalCancelBtn');
             
-            // Remove old listeners
-            const newConfirmBtn = modalConfirmBtn.cloneNode(true);
-            const newCancelBtn = modalCancelBtn.cloneNode(true);
-            modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, modalConfirmBtn);
-            modalCancelBtn.parentNode.replaceChild(newCancelBtn, modalCancelBtn);
+            if (!confirmBtn || !cancelBtn) {
+                console.error('Modal buttons not found!');
+                return;
+            }
             
-            // Cancel button
+            // Clone buttons to remove old listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            
+            // Add new listeners
             newCancelBtn.addEventListener('click', () => {
-                hideModal();
+                console.log('Modal cancel clicked');
+                hideEditModal();
             });
             
-            // Confirm button - submit form
-            newConfirmBtn.addEventListener('click', async () => {
-                hideModal();
-                
-                // Only add image if changed
-                if (imageChanged) {
-                    const imageFile = productImageInput?.files[0];
-                    if (imageFile) {
-                        formData.set('image', imageFile);
-                    }
-                }
-                
-                // Disable submit button
-                const submitBtn = document.getElementById('submitBtn');
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Menyimpan...';
-                
-                try {
-                    const result = await api.put(`/seller/products/edit/${productId}`, formData);
-                    
-                    if (result && result.ok) {
-                        showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/products';
-                        }, 1500);
-                    } else {
-                        throw new Error(result?.error || 'Gagal memperbarui produk');
-                    }
-                    
-                } catch (error) {
-                    console.error('Error submitting form:', error);
-                    showToast('Gagal memperbarui produk!', error.message, 'error');
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Simpan Perubahan';
-                }
+            newConfirmBtn.addEventListener('click', () => {
+                console.log('Modal confirm clicked');
+                hideEditModal();
+                submitProductUpdate(formData);
             });
         });
     } else {
-        console.error('Form #editProductForm not found!');
+        console.error('Form editProductForm not found!');
     }
 
-    // Cancel button
+    // Cancel button - Go back to products page directly
     const cancelBtn = document.getElementById('cancelBtn');
     if (cancelBtn) {
         cancelBtn.addEventListener('click', () => {
-            if (confirm('Batal mengedit produk? Perubahan tidak akan disimpan.')) {
-                window.location.href = '/products';
-            }
+            console.log('Cancel button clicked, going back to products');
+            window.location.href = '/seller/products';
         });
     }
 
@@ -327,19 +351,15 @@ function initEditProductPage() {
             return;
         }
         
-        // Set messages and type
         primaryEl.textContent = primaryMessage;
         secondaryEl.textContent = secondaryMessage;
         toast.className = 'toast ' + type;
         
-        // Show backdrop + toast
         if (backdrop) backdrop.style.display = 'block';
         toast.style.display = 'flex';
         
-        // Auto hide after 5s
         let autoHideTimer = setTimeout(hideToast, 5000);
         
-        // Close handlers (button and backdrop click)
         if (closeBtn) {
             closeBtn.onclick = () => {
                 clearTimeout(autoHideTimer);
@@ -362,7 +382,6 @@ function initEditProductPage() {
     console.log('Initializing EditProduct page...');
     loadProductData();
 }
-
 
 if (document.readyState === 'loading') {
     console.log('DOM still loading, waiting...');

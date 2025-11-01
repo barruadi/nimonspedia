@@ -7,6 +7,7 @@ function initDashboardPage() {
 
     // DOM Elements
     const loadingState = document.getElementById('loadingState');
+    const mainContent = document.getElementById('mainContent');
     const storeInfoBanner = document.getElementById('storeInfoBanner');
     const bannerStoreName = document.getElementById('bannerStoreName');
     const bannerStoreDescription = document.getElementById('bannerStoreDescription');
@@ -38,7 +39,7 @@ function initDashboardPage() {
 
             if (!result || !result.ok) {
                 console.warn('Dashboard request failed:', result);
-                showToast('Unauthorized - Please login as seller', 'Silakan login sebagai seller', 'error');
+                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
                 setTimeout(() => window.location.href = '/login', 1500);
                 return;
             }
@@ -61,6 +62,10 @@ function initDashboardPage() {
             initButtons();
             initEditForm();
 
+            // Show main content after everything is loaded
+            hideLoading();
+            showMainContent();
+
         } catch (error) {
             console.error('Error initializing Dashboard Page:', error);
             showToast('Gagal memuat data dashboard', error.message, 'error');
@@ -79,15 +84,11 @@ function initDashboardPage() {
         if (store.logo_path) {
             storeLogo.src = store.logo_path;
         }
-
-        // Show banner
-        storeInfoBanner.style.display = 'flex';
     }
 
     function initStatCards() {
         if (!stats) {
             console.error('Stats is null/undefined');
-            hideLoading();
             return;
         }
 
@@ -97,26 +98,24 @@ function initDashboardPage() {
         
         const revenue = stats.total_revenue || 0;
         totalRevenueCard.textContent = `Rp ${revenue.toLocaleString('id-ID')}`;
-        
-        hideLoading();
     }
 
     function initButtons() {
         if (productManagementBtn) {
             productManagementBtn.addEventListener('click', () => {
-                window.location.href = 'products';
+                window.location.href = '/seller/products';
             });
         }
 
         if (orderManagementBtn) {
             orderManagementBtn.addEventListener('click', () => {
-                window.location.href = 'orders';
+                window.location.href = '/seller/orders';
             });
         }
 
         if (addProductBtn) {
             addProductBtn.addEventListener('click', () => {
-                window.location.href = 'products/add';
+                window.location.href = '/seller/products/add';
             });
         }
     }
@@ -192,9 +191,17 @@ function initDashboardPage() {
             const logoFile = logoInput.files[0];
             if (logoFile) {
                 formData.append('logo', logoFile);
+                console.log('Logo file added:', logoFile.name, logoFile.size, 'bytes');
             }
 
+            console.log('Submitting store update...');
+            console.log('Store name:', formData.get('store_name'));
+            console.log('Description:', formData.get('description'));
+            console.log('Has logo:', !!logoFile);
+
             const result = await api.post('/seller/store/update', formData);
+
+            console.log('Update result:', result);
 
             if (result && result.ok) {
                 showToast('Informasi toko berhasil diperbarui', 'Data telah disimpan', 'success');
@@ -207,13 +214,15 @@ function initDashboardPage() {
                 bannerStoreName.textContent = store.store_name;
                 bannerStoreDescription.textContent = store.description || 'Belum ada deskripsi';
                 
+                // If logo changed, update preview
+                if (result.data && result.data.logo_path) {
+                    store.logo_path = result.data.logo_path;
+                    storeLogo.src = result.data.logo_path;
+                }
+                
                 // Hide form, show banner
                 hideEditForm();
                 
-                // If logo changed, reload to get new path
-                if (logoFile) {
-                    setTimeout(() => window.location.reload(), 1500);
-                }
             } else {
                 throw new Error(result?.error || 'Gagal memperbarui informasi toko');
             }
@@ -226,13 +235,22 @@ function initDashboardPage() {
     // Helper functions
     function showLoading() {
         if (loadingState) {
-            loadingState.style.display = 'block';
+            loadingState.style.display = 'flex';
+        }
+        if (mainContent) {
+            mainContent.style.display = 'none';
         }
     }
 
     function hideLoading() {
         if (loadingState) {
             loadingState.style.display = 'none';
+        }
+    }
+
+    function showMainContent() {
+        if (mainContent) {
+            mainContent.style.display = 'block';
         }
     }
 

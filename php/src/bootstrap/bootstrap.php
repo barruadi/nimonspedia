@@ -1,5 +1,7 @@
 <?php
 
+define('VIEW_PATH', dirname(__DIR__) . '/App/Views/');
+
 spl_autoload_register(function ($class) {
     $prefix  = 'App\\';
     $baseDir = dirname(__DIR__) . '/app/';

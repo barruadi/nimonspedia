@@ -10,121 +10,126 @@
     <div class="dashboard-page">
         <!-- Loading State -->
         <div id="loadingState" class="loading-state">
-            <p>Memuat informasi dashboard...</p>
+            <img src="/uploads/loading/loading-icon.svg" alt="Loading Icon" class="loading-icon">
+            <h2 class="loading-title">Memuat...</h2>
+            <p class="loading-subtitle">Tunggu sebentar, halaman sedang disiapkan untukmu.</p>
         </div>
 
-        <!-- Store Info Banner (Collapsible) -->
-        <div class="store-info-banner" id="storeInfoBanner" style="display: none;">
-            <div class="banner-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+        <!-- Main Content (HIDDEN during loading) -->
+        <div id="mainContent" style="display: none;">
+            <!-- Store Info Banner (Collapsible) -->
+            <div class="store-info-banner" id="storeInfoBanner">
+                <div class="banner-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="banner-content">
+                    <h3 id="bannerStoreName">-</h3>
+                    <p id="bannerStoreDescription">-</p>
+                </div>
+                <button type="button" id="editStoreBtn" class="btn-edit-banner">
+                    Edit
+                </button>
             </div>
-            <div class="banner-content">
-                <h3 id="bannerStoreName">-</h3>
-                <p id="bannerStoreDescription">-</p>
-            </div>
-            <button type="button" id="editStoreBtn" class="btn-edit-banner">
-                Edit
-            </button>
-        </div>
 
-        <!-- Edit Store Form (Hidden by default) -->
-        <div class="edit-store-section" id="editStoreForm" style="display: none;">
-            <div class="section-header">
-                <h2>Edit Informasi Toko</h2>
-                <button type="button" id="cancelEditBtn" class="btn-icon-close">×</button>
-            </div>
-            
-            <form id="storeInfoForm">
-                <div class="store-edit-grid">
-                    <!-- Logo Upload Section -->
-                    <div class="logo-upload-section">
-                        <label class="form-label">Logo Toko</label>
-                        <div class="logo-upload-container">
-                            <img id="storeLogo" src="/uploads/stores/default-store.png" alt="Store Logo" class="store-logo-preview">
-                            <button type="button" id="changeLogoBtn" class="btn-change-logo">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Ganti Logo
-                            </button>
-                            <input type="file" id="logoInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
+            <!-- Edit Store Form (Hidden by default) -->
+            <div class="edit-store-section" id="editStoreForm" style="display: none;">
+                <div class="section-header">
+                    <h2>Edit Informasi Toko</h2>
+                    <button type="button" id="cancelEditBtn" class="btn-icon-close">×</button>
+                </div>
+                
+                <form id="storeInfoForm">
+                    <div class="store-edit-grid">
+                        <!-- Logo Upload Section -->
+                        <div class="logo-upload-section">
+                            <label class="form-label">Logo Toko</label>
+                            <div class="logo-upload-container">
+                                <img id="storeLogo" src="/uploads/stores/default-store.png" alt="Store Logo" class="store-logo-preview">
+                                <button type="button" id="changeLogoBtn" class="btn-change-logo">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Ganti Logo
+                                </button>
+                                <input type="file" id="logoInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
+                            </div>
+                            <p class="form-hint">Format: JPG, PNG, WEBP. Maksimal 2MB.</p>
                         </div>
-                        <p class="form-hint">Format: JPG, PNG, WEBP. Maksimal 2MB.</p>
+
+                        <!-- Store Info Section -->
+                        <div class="store-info-section">
+                            <div class="form-group">
+                                <label for="editStoreName" class="form-label">Nama Toko *</label>
+                                <input type="text" id="editStoreName" name="store_name" maxlength="100" required placeholder="Masukkan nama toko">
+                            </div>
+                            <div class="form-group">
+                                <label for="editStoreDescription" class="form-label">Deskripsi Toko</label>
+                                <textarea id="editStoreDescription" name="description" rows="4" maxlength="500" placeholder="Ceritakan tentang toko Anda..."></textarea>
+                                <p class="form-hint">Maksimal 500 karakter</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Store Info Section -->
-                    <div class="store-info-section">
-                        <div class="form-group">
-                            <label for="editStoreName" class="form-label">Nama Toko *</label>
-                            <input type="text" id="editStoreName" name="store_name" maxlength="100" required placeholder="Masukkan nama toko">
-                        </div>
-                        <div class="form-group">
-                            <label for="editStoreDescription" class="form-label">Deskripsi Toko</label>
-                            <textarea id="editStoreDescription" name="description" rows="4" maxlength="500" placeholder="Ceritakan tentang toko Anda..."></textarea>
-                            <p class="form-hint">Maksimal 500 karakter</p>
-                        </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M17 21V13H7V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M7 3V8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Simpan Perubahan
+                        </button>
+                        <button type="button" id="cancelEditBtn2" class="btn btn-secondary">
+                            Batal
+                        </button>
                     </div>
+                </form>
+            </div>
+
+            <!-- Quick Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Produk Unik</div>
+                    <div class="stat-value" id="totalProductsCard">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending Orders</div>
+                    <div class="stat-value" id="pendingOrdersCard">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Stok Menipis</div>
+                    <div class="stat-value" id="lowStockProductsCard">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Pendapatan</div>
+                    <div class="stat-value" id="totalRevenueCard">Rp 0</div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="dashboard-main">
+                <!-- Left: Illustration -->
+                <div class="illustration-section">
+                    <img src="/uploads/seller/dashboard-logo.svg" alt="Dashboard Illustration" class="dashboard-illustration">
                 </div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M17 21V13H7V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M7 3V8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Simpan Perubahan
+                <!-- Right: Action Buttons -->
+                <div class="actions-section">
+                    <button type="button" id="productManagementBtn" class="action-btn">
+                        Kelola Produk
                     </button>
-                    <button type="button" id="cancelEditBtn2" class="btn btn-secondary">
-                        Batal
+                    <button type="button" id="orderManagementBtn" class="action-btn">
+                        Lihat Orders
+                    </button>
+                    <button type="button" id="addProductBtn" class="action-btn">
+                        Tambah Produk Baru
                     </button>
                 </div>
-            </form>
-        </div>
-
-        <!-- Quick Stats Cards -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Produk Unik</div>
-                <div class="stat-value" id="totalProductsCard">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Pending Orders</div>
-                <div class="stat-value" id="pendingOrdersCard">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Stok Menipis</div>
-                <div class="stat-value" id="lowStockProductsCard">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Total Pendapatan</div>
-                <div class="stat-value" id="totalRevenueCard">Rp 0</div>
-            </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="dashboard-main">
-            <!-- Left: Illustration -->
-            <div class="illustration-section">
-                <img src="/uploads/seller/dashboard-logo.svg" alt="Dashboard Illustration" class="dashboard-illustration">
-            </div>
-
-            <!-- Right: Action Buttons -->
-            <div class="actions-section">
-                <button type="button" id="productManagementBtn" class="action-btn">
-                    Kelola Produk
-                </button>
-                <button type="button" id="orderManagementBtn" class="action-btn">
-                    Lihat Orders
-                </button>
-                <button type="button" id="addProductBtn" class="action-btn">
-                    Tambah Produk Baru
-                </button>
             </div>
         </div>
     </div>

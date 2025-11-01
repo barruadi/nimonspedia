@@ -314,6 +314,7 @@
 
 .toast-close-btn {
     padding: 0.5rem 1rem;
+    background-color: #10b981;
     color: white;
     border: none;
     border-radius: 6px;
@@ -333,8 +334,12 @@
     transform: scale(0.95);
 }
 
-.toast.error {
-    border-color: #ef4444;
+.toast.success .toast-close-btn {
+    background-color: #10b981;
+}
+
+.toast.success .toast-close-btn:hover {
+    background-color: #059669;
 }
 
 .toast.error .toast-close-btn {
@@ -424,7 +429,7 @@
 }
 
 .btn-modal-cancel:hover {
-    background-color: #d1d5db;
+    background-color: #6b7280;
 }
 
 .btn-modal-confirm {

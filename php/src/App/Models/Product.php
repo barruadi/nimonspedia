@@ -142,6 +142,160 @@ class Product
         
         return $stmt->execute($params);
     }
+    
+    public static function countAll(): int
+    {
+        $db = self::getDB();
+        
+        $stmt = $db->query("SELECT COUNT(*) AS total FROM products");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return (int) ($row['total'] ?? 0);
+    }
+    
+    public static function getPerPage(int $limit, int $offset): array
+    {
+        $db = self::getDB();
+        
+        $stmt = $db->prepare("
+            SELECT product_id, name, price, stock, image_path
+            FROM products
+            ORDER BY product_id DESC
+            LIMIT :limit OFFSET :offset
+        ");
+
+        $stmt->bindValue(':limit',  $limit,  PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public static function countFiltered(
+        ?string $q,
+        ?string $category,
+        ?float $minPrice,
+        ?float $maxPrice
+    ): int
+    {
+        $db = self::getDB();
+    
+        $where = [];
+        $params = [];
+    
+        if ($q !== null && $q !== '') {
+            $where[] = "name ILIKE :q";
+            $params['q'] = '%' . $q . '%';
+        }
+    
+        if ($category !== null && $category !== '') {
+            $where[] = "category_id = :cat";
+            $params['cat'] = $category;
+        }
+    
+        if ($minPrice !== null) {
+            $where[] = "price >= :minPrice";
+            $params['minPrice'] = $minPrice;
+        }
+    
+        if ($maxPrice !== null) {
+            $where[] = "price <= :maxPrice";
+            $params['maxPrice'] = $maxPrice;
+        }
+    
+        $whereSql = '';
+        if (!empty($where)) {
+            $whereSql = 'WHERE ' . implode(' AND ', $where);
+        }
+    
+        $stmt = $db->prepare("
+            SELECT COUNT(*) AS total
+            FROM products
+            $whereSql
+        ");
+    
+        foreach ($params as $key => $val) {
+            $stmt->bindValue(':' . $key, $val);
+        }
+    
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int) ($row['total'] ?? 0);
+    }
+    
+    public static function findFiltered(
+        ?string $q,
+        ?string $category,
+        ?float $minPrice,
+        ?float $maxPrice,
+        int $limit,
+        int $offset
+    ): array
+    {
+        $db = self::getDB();
+    
+        $where = [];
+        $params = [];
+    
+        // search by name (ILIKE for case-insensitive substring in Postgres)
+        if ($q !== null && $q !== '') {
+            $where[] = "name ILIKE :q";
+            $params['q'] = '%' . $q . '%';
+        }
+    
+        // filter by category
+        if ($category !== null && $category !== '') {
+            $where[] = "category_id = :cat";
+            $params['cat'] = $category;
+        }
+    
+        // min price
+        if ($minPrice !== null) {
+            $where[] = "price >= :minPrice";
+            $params['minPrice'] = $minPrice;
+        }
+    
+        // max price
+        if ($maxPrice !== null) {
+            $where[] = "price <= :maxPrice";
+            $params['maxPrice'] = $maxPrice;
+        }
+    
+        $whereSql = '';
+        if (!empty($where)) {
+            $whereSql = 'WHERE ' . implode(' AND ', $where);
+        }
+    
+        $sql = "
+            SELECT
+                p.product_id,
+                p.name,
+                p.price,
+                p.stock,
+                p.image_path,
+                p.store_id,
+                s.store_name
+            FROM products p
+            JOIN stores s ON s.store_id = p.store_id
+            $whereSql
+            ORDER BY p.product_id DESC
+            LIMIT :limit OFFSET :offset
+        ";
+    
+        $stmt = $db->prepare($sql);
+    
+        // bind dynamic params
+        foreach ($params as $key => $val) {
+            $stmt->bindValue(':' . $key, $val);
+        }
+        $stmt->bindValue(':limit',  $limit,  PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 
     // Soft delete product (by turning is_deleted to TRUE)
     public static function softDelete(int $productId): bool
