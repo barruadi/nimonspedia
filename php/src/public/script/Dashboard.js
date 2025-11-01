@@ -33,6 +33,7 @@ function initDashboardPage() {
     const productManagementBtn = document.getElementById('productManagementBtn');
     const orderManagementBtn = document.getElementById('orderManagementBtn');
     const addProductBtn = document.getElementById('addProductBtn');
+    const exportDataBtn = document.getElementById('exportDataBtn');
 
     async function initPage() {
         try {
@@ -54,22 +55,18 @@ function initDashboardPage() {
                 throw new Error('No data returned from API');
             }
 
-            // Save dashboard info
             store = data.store;
             stats = data.stats;
             
             console.log('Dashboard data loaded:', { store, stats });
             
-            // Initialize Quill first
             await initQuillEditor();
             
-            // Initialize UI
             initStoreBanner();
             initStatCards();
             initButtons();
             initEditForm();
 
-            // Show main content after everything is loaded
             hideLoading();
             showMainContent();
 
@@ -83,17 +80,14 @@ function initDashboardPage() {
     function initStoreBanner() {
         if (!store) return;
 
-        // Set store info in banner
         bannerStoreName.textContent = store.store_name || 'Nama Toko';
         
-        // Render HTML description
         if (store.description) {
             bannerStoreDescription.innerHTML = store.description;
         } else {
             bannerStoreDescription.textContent = 'Belum ada deskripsi';
         }
         
-        // Set logo
         if (store.logo_path) {
             storeLogo.src = store.logo_path;
         }
@@ -129,6 +123,57 @@ function initDashboardPage() {
         if (addProductBtn) {
             addProductBtn.addEventListener('click', () => {
                 window.location.href = '/seller/products/add';
+            });
+        }
+
+        // Export Button Handler
+        if (exportDataBtn) {
+            exportDataBtn.addEventListener('click', async () => {
+                try {
+                    exportDataBtn.disabled = true;
+                    exportDataBtn.textContent = 'Memproses...';
+                    
+                    showToast('Memproses export...', 'Tunggu sebentar', 'success');
+
+                    // Call API to get CSV data
+                    const result = await api.get('/seller/export');
+                    
+                    console.log('Export result:', result);
+
+                    if (!result || !result.ok) {
+                        throw new Error(result?.error || 'Export gagal');
+                    }
+
+                    // Decode base64 CSV
+                    const csvData = atob(result.data.csv);
+                    const filename = result.data.filename;
+
+                    // Create blob and download
+                    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    
+                    if (navigator.msSaveBlob) { // IE 10+
+                        navigator.msSaveBlob(blob, filename);
+                    } else {
+                        const url = URL.createObjectURL(blob);
+                        link.href = url;
+                        link.download = filename;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }
+
+                    showToast('Export berhasil!', `File ${filename} telah diunduh`, 'success');
+
+                } catch (error) {
+                    console.error('Export error:', error);
+                    showToast('Export gagal', error.message, 'error');
+                } finally {
+                    exportDataBtn.disabled = false;
+                    exportDataBtn.textContent = 'Export Data Toko';
+                }
             });
         }
     }
