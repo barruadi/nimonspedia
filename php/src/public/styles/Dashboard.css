@@ -106,6 +106,39 @@ body {
     margin: 0;
 }
 
+/* Rich text styling untuk description di banner */
+.banner-content p strong {
+    font-weight: 700;
+    color: #111827;
+}
+
+.banner-content p em {
+    font-style: italic;
+}
+
+.banner-content p u {
+    text-decoration: underline;
+}
+
+.banner-content p ol,
+.banner-content p ul {
+    margin: 0.25rem 0 0.25rem 1.5rem;
+    padding: 0;
+}
+
+.banner-content p li {
+    margin: 0.125rem 0;
+}
+
+.banner-content p a {
+    color: #10b981;
+    text-decoration: underline;
+}
+
+.banner-content p a:hover {
+    color: #059669;
+}
+
 .btn-edit-banner {
     padding: 0.5rem 1.25rem;
     background: #10b981;

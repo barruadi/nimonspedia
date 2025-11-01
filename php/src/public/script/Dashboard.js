@@ -85,7 +85,13 @@ function initDashboardPage() {
 
         // Set store info in banner
         bannerStoreName.textContent = store.store_name || 'Nama Toko';
-        bannerStoreDescription.textContent = store.description || 'Belum ada deskripsi';
+        
+        // Render HTML description
+        if (store.description) {
+            bannerStoreDescription.innerHTML = store.description;
+        } else {
+            bannerStoreDescription.textContent = 'Belum ada deskripsi';
+        }
         
         // Set logo
         if (store.logo_path) {
@@ -324,11 +330,12 @@ function initDashboardPage() {
                 // Update banner
                 bannerStoreName.textContent = store.store_name;
                 
-                // Update banner description (strip HTML tags for display)
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = store.description;
-                const plainText = tempDiv.textContent || tempDiv.innerText || '';
-                bannerStoreDescription.textContent = plainText || 'Belum ada deskripsi';
+                // Update banner description
+                if (store.description) {
+                    bannerStoreDescription.innerHTML = store.description;
+                } else {
+                    bannerStoreDescription.textContent = 'Belum ada deskripsi';
+                }
                 
                 // If logo changed, update preview
                 if (result.data && result.data.logo_path) {
