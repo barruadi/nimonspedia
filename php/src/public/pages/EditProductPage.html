@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Edit Product - Nimonspedia</title>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
     <link rel="stylesheet" href="/styles/EditProduct.css">
   </head>
   <body>
@@ -63,18 +64,19 @@
 
           <!-- Description -->
           <div class="form-group">
-            <label for="productDescription" class="form-label">
+            <label class="form-label">
               Deskripsi<span class="required">*</span>
             </label>
-            <textarea 
-              id="productDescription" 
-              name="description" 
-              class="form-textarea" 
-              placeholder="Masukkan deskripsi produk (maksimal 1000 karakter)"
-              maxlength="1000"
-              rows="4"
-              required
-            ></textarea>
+            
+            <!-- Quill Editor Container -->
+            <div id="editor"></div>
+            
+            <!-- Hidden textarea untuk store data -->
+            <textarea id="productDescription" name="description" style="display: none;"></textarea>
+            
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; color: #6b7280; text-align: right;">
+              <span id="charCount">0</span> / 1000 karakter
+            </div>
             <span class="error-message" id="descError"></span>
           </div>
 
@@ -169,7 +171,5 @@
         </div>
       </div>
     </div>
-
-    <script type="module" src="/script/EditProduct.js" defer></script>
   </body>
 </html>
