@@ -13,14 +13,14 @@ class CartController
         }
 
         $user = $_SESSION['user'] ?? null;
-        
+
         if (!$user || $user['role'] !== 'buyer') {
             http_response_code(403);
             return ['ok' => false, 'error' => 'Hanya buyer yang bisa menambah keranjang'];
         }
 
         $productId = $req['body']['product_id'] ?? null;
-        $qty = (int)($req['body']['qty'] ?? 0);
+        $qty = (int) ($req['body']['qty'] ?? 0);
 
         if (!$productId || $qty <= 0) {
             http_response_code(400);
@@ -32,7 +32,7 @@ class CartController
             http_response_code(404);
             return ['ok' => false, 'error' => 'Produk tidak ditemukan'];
         }
-        
+
         if ($product['stock'] < $qty) {
             http_response_code(400);
             return ['ok' => false, 'error' => 'Stok produk tidak mencukupi'];
@@ -53,11 +53,12 @@ class CartController
             return ['ok' => true, 'message' => 'Produk ditambahkan ke keranjang'];
 
         } catch (\Exception $e) {
-            error_log('Cart Error: ' . $e->getMessage()); 
-            
+            error_log('Cart Error: ' . $e->getMessage());
+
             http_response_code(500);
             return ['ok' => false, 'error' => 'Server error: ' . $e->getMessage()];
         }
+    }
 
     public function addProduct($req): array
     {
