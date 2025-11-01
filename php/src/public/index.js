@@ -45,7 +45,11 @@ const routes = {
   '/store/:id': {
     page: '/pages/StoreDetailPage.html',
     script: '/script/StoreDetail.js',
-  }
+  },
+  '/orders': {
+    page: '/pages/OrderHistoryPage.html',
+    script: '/script/OrderHistory.js',
+  },
 };
 
 const app = document.getElementById('app');
