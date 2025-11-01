@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Add Product - Nimonspedia</title>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
     <link rel="stylesheet" href="/styles/AddProduct.css">
   </head>
   <body>
@@ -13,12 +14,10 @@
         <div class="image-upload-container">
           <input type="file" id="productImage" accept="image/*" hidden />
           
-          <!-- Preview Container (hidden by default) -->
           <div id="imagePreviewContainer" class="image-preview" style="display: none;">
             <img id="imagePreview" src="" alt="Product Preview" />
           </div>
           
-          <!-- Placeholder (shown when no image) -->
           <div id="imagePlaceholder" class="image-placeholder">
             <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -59,24 +58,24 @@
 
           <!-- Description -->
           <div class="form-group">
-            <label for="productDescription" class="form-label">
+            <label class="form-label">
               Deskripsi<span class="required">*</span>
             </label>
-            <textarea 
-              id="productDescription" 
-              name="description" 
-              class="form-textarea" 
-              placeholder="Masukkan deskripsi produk (maksimal 1000 karakter)"
-              maxlength="1000"
-              rows="4"
-              required
-            ></textarea>
+            
+            <!-- Quill Editor Container -->
+            <div id="editor"></div>
+            
+            <!-- Hidden textarea untuk store data -->
+            <textarea id="productDescription" name="description" style="display: none;"></textarea>
+            
+            <div style="margin-top: 0.5rem; font-size: 0.875rem; color: #6b7280; text-align: right;">
+              <span id="charCount">0</span> / 1000 karakter
+            </div>
             <span class="error-message" id="descError"></span>
           </div>
 
           <!-- Category & Price Row -->
           <div class="form-row">
-            <!-- Category -->
             <div class="form-group form-group-half">
               <label for="productCategory" class="form-label">
                 Kategori<span class="required">*</span>
@@ -88,12 +87,10 @@
                 required
               >
                 <option value="">Pilih kategori produk</option>
-                <!-- Options akan diisi via JavaScript -->
               </select>
               <span class="error-message" id="categoryError"></span>
             </div>
 
-            <!-- Price -->
             <div class="form-group form-group-half">
               <label for="productPrice" class="form-label">
                 Harga<span class="required">*</span>
@@ -142,7 +139,7 @@
       </div>
     </div>
 
-    <!-- Backdrop for toast (will block interaction) -->
+    <!-- Backdrop for toast -->
     <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
 
     <!-- Toast Notification -->
@@ -155,7 +152,7 @@
       <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
     </div>
 
-     <!-- Cancel Confirmation Modal -->
+    <!-- Cancel Confirmation Modal -->
     <div id="cancelModalBackdrop" class="modal-backdrop" style="display:none;">
       <div id="cancelConfirmationModal" class="modal">
         <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
@@ -166,7 +163,5 @@
         </div>
       </div>
     </div>
-
-    <script type="module" src="/script/AddProduct.js" defer></script>
   </body>
 </html>
