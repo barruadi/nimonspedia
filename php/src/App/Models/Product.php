@@ -71,10 +71,36 @@ class Product
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Get all products for a store with category info
+    public static function findByStoreIdWithCategory(int $storeId): array
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT 
+                p.product_id,
+                p.name,
+                p.description,
+                p.price,
+                p.stock,
+                p.image_path,
+                p.created_at,
+                p.updated_at,
+                c.category_id,
+                c.name as category_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.category_id
+            WHERE p.store_id = :store_id
+            AND p.is_deleted <> TRUE
+            ORDER BY p.created_at DESC
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // Create new product
     public static function create(array $data): ?int
     {
-        $db = self::getDB();
+        $db = Database::getInstance();
         
         $stmt = $db->prepare("
             INSERT INTO products (store_id, category_id, name, description, price, stock, image_path)
@@ -82,64 +108,64 @@ class Product
             RETURNING product_id
         ");
         
+        // Ensure price is integer
+        $price = is_numeric($data['price']) ? (int)$data['price'] : 0;
+        
         $stmt->execute([
-            'store_id'    => $data['store_id'],
-            'category_id' => $data['category_id'] ?? null,
-            'name'        => $data['name'],
-            'description' => $data['description'] ?? null,
-            'price'       => $data['price'],
-            'stock'       => $data['stock'],
-            'image_path'  => $data['image_path'] ?? null,
+            'store_id' => $data['store_id'],
+            'category_id' => $data['category_id'],
+            'name' => $data['name'],
+            'description' => $data['description'],
+            'price' => $price,
+            'stock' => (int)$data['stock'],
+            'image_path' => $data['image_path'],
         ]);
         
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result['product_id'] ?? null;
+        return $result ? (int)$result['product_id'] : null;
     }
 
     // Update product by ID
     public static function update(int $productId, array $data): bool
     {
-        $db = self::getDB();
+        $db = Database::getInstance();
         
-        // Build dynamic UPDATE query based on provided fields
-        $fields = [];
-        $params = ['id' => $productId];
+        $sql = "UPDATE products SET updated_at = NOW()";
+        $params = ['product_id' => $productId];
         
         if (isset($data['name'])) {
-            $fields[] = "name = :name";
+            $sql .= ", name = :name";
             $params['name'] = $data['name'];
         }
+        
         if (isset($data['description'])) {
-            $fields[] = "description = :description";
+            $sql .= ", description = :description";
             $params['description'] = $data['description'];
         }
+        
         if (isset($data['category_id'])) {
-            $fields[] = "category_id = :category_id";
+            $sql .= ", category_id = :category_id";
             $params['category_id'] = $data['category_id'];
         }
+        
         if (isset($data['price'])) {
-            $fields[] = "price = :price";
-            $params['price'] = $data['price'];
+            $sql .= ", price = :price";
+            $params['price'] = (int)$data['price'];
         }
+        
         if (isset($data['stock'])) {
-            $fields[] = "stock = :stock";
-            $params['stock'] = $data['stock'];
+            $sql .= ", stock = :stock";
+            $params['stock'] = (int)$data['stock'];
         }
+        
         if (isset($data['image_path'])) {
-            $fields[] = "image_path = :image_path";
+            $sql .= ", image_path = :image_path";
             $params['image_path'] = $data['image_path'];
         }
         
-        // Add updated_at timestamp
-        $fields[] = "updated_at = NOW()";
+        $sql .= " WHERE product_id = :product_id";
         
-        if (empty($fields)) {
-            return false; // nothing to update
-        }
-        
-        $sql = "UPDATE products SET " . implode(', ', $fields) . " WHERE product_id = :id";
         $stmt = $db->prepare($sql);
-        
         return $stmt->execute($params);
     }
     
@@ -296,17 +322,33 @@ class Product
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Check if product has pending orders (waiting_approval, approved, on_delivery)
+    // Returns count of pending orders
+    public static function hasPendingOrders(int $productId): int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as count
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id = :product_id
+            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
+        ");
+        $stmt->execute(['product_id' => $productId]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
 
-    // Soft delete product (by turning is_deleted to TRUE)
+    // Soft delete a product
     public static function softDelete(int $productId): bool
     {
-        $db = self::getDB();
+        $db = Database::getInstance();
         $stmt = $db->prepare("
             UPDATE products 
-            SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
-            WHERE product_id = :id
+            SET is_deleted = TRUE,
+                deleted_at = NOW(),
+                updated_at = NOW()
+            WHERE product_id = :product_id
         ");
-        
-        return $stmt->execute(['id' => $productId]);
+        return $stmt->execute(['product_id' => $productId]);
     }
 }

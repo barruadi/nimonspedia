@@ -40,7 +40,7 @@ $router->group([
 // Public Endpoints (can be called from non-sellers)
 // GET /api/categories return Category list
 $router->get('/api/categories', function() {
-    $Category = Category::getAll();
+    $Category = Category::findAll();
     
     http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');

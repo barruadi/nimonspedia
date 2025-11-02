@@ -2,8 +2,7 @@
 
 namespace App\Controllers\Seller;
 
-use App\Models\Store;
-use App\Models\Order;
+use App\Models\{Store, Order};
 use Exception;
 
 class OrderManagementController

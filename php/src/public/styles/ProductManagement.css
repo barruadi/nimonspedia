@@ -402,6 +402,14 @@ body {
     animation: slideDown 0.3s ease;
 }
 
+.toast.error {
+    border-left: 4px solid #ef4444;
+}
+
+.toast.success {
+    border-left: 4px solid #10b981;
+}
+
 .toast-icon {
     width: 48px;
     height: 48px;
