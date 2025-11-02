@@ -1,6 +1,12 @@
 import { api } from '../utils/api.js';
+import { checkSellerAuth } from '../utils/sellerAuth.js';
+import { showToast } from '../utils/toast.js';
+import { showLoading, hideLoading } from '../utils/loading.js';
 
-function initAddProductPage() {
+async function initAddProductPage() {
+    const isAuthorized = await checkSellerAuth();
+    if (!isAuthorized) return;
+
     console.log('DOM ready, initializing page...');
 
     // Image Upload Handler
@@ -84,14 +90,11 @@ function initAddProductPage() {
     // Load Quill
     function loadQuillScript() {
         return new Promise((resolve, reject) => {
-            // Check if Quill already exists
             if (window.Quill) {
                 console.log('Quill already loaded');
                 resolve();
                 return;
             }
-
-            // Check if script is already being loaded
             if (document.querySelector('script[src*="quill.js"]')) {
                 console.log('Quill script already in DOM, waiting...');
                 const checkQuill = setInterval(() => {
@@ -102,7 +105,6 @@ function initAddProductPage() {
                 }, 100);
                 return;
             }
-
             console.log('Loading Quill script...');
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js';
@@ -122,71 +124,62 @@ function initAddProductPage() {
     async function initQuillEditor() {
         try {
             await loadQuillScript();
-
             const editorElement = document.getElementById('editor');
-            
             if (!editorElement) {
                 console.error('Editor element not found');
                 return;
             }
-
             console.log('Initializing Quill editor...');
-
             quill = new Quill('#editor', {
                 theme: 'snow',
                 placeholder: 'Masukkan deskripsi produk (maksimal 1000 karakter)...'
             });
-
             console.log('Quill editor initialized!');
-
-            // Character counter
             quill.on('text-change', function() {
                 const text = quill.getText();
                 const length = text.trim().length;
                 
                 const charCountEl = document.getElementById('charCount');
-                if (charCountEl) {
-                    charCountEl.textContent = length;
-                }
+                if (charCountEl) charCountEl.textContent = length;
                 
-                // Update hidden textarea
                 const hiddenTextarea = document.getElementById('productDescription');
-                if (hiddenTextarea) {
-                    hiddenTextarea.value = quill.root.innerHTML;
-                }
+                if (hiddenTextarea) hiddenTextarea.value = quill.root.innerHTML;
             });
-
         } catch (error) {
             console.error('Error initializing Quill:', error);
         }
     }
 
-    // Init Form
     async function initForm() {
         try {
+            showLoading('Memuat Form...', 'Menyiapkan form tambah produk');
             console.log('Fetching store info...');
             const result = await api.get('/seller/products/add');
-            
-            if (!result || !result.ok) {
-                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
-                setTimeout(() => window.location.href = '/login', 1500);
-                return;
+
+            if (result === null || !result.ok) {
+                hideLoading();
+                showToast('Gagal memuat data', 'Terjadi kesalahan saat mengambil data', 'error');
+                return false;
             }
 
             const storeIdInput = document.getElementById('store_id');
             if (storeIdInput) {
                 storeIdInput.value = result.data.store_id;
             }
-            
+
             await fetchCategories();
-            
+            hideLoading();
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) mainContent.style.display = 'block';
+            return true;
+
         } catch (error) {
             console.error('Error in initForm:', error);
+            hideLoading();
             showToast('Gagal memuat informasi toko!', 'Tolong kembali sesaat lagi...', 'error');
+            return false;
         }
     }
-
-    // Form Validation
     function validateForm(formData) {
         let isValid = true;
         
@@ -234,8 +227,8 @@ function initAddProductPage() {
             isValid = false;
         }
         
-        const image = formData.get('image');
-        if (!image || image.size === 0) {
+        const imageFile = productImageInput?.files[0];
+        if (!imageFile) {
             showToast('Foto produk wajib diunggah!', 'Supaya pembeli tertarik dengan produkmu!', 'error');
             isValid = false;
         }
@@ -273,7 +266,8 @@ function initAddProductPage() {
                         window.location.href = '/seller/products';
                     }, 1500);
                 } else {
-                    throw new Error(result?.error || 'Gagal menambahkan produk');
+                    const errorMsg = result?.error?.message || result?.error || 'Gagal menambahkan produk';
+                    throw new Error(errorMsg);
                 }
                 
             } catch (error) {
@@ -314,45 +308,23 @@ function initAddProductPage() {
         });
     }
 
-    // Toast Notification
-    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
-        const toast = document.getElementById('toast');
-        const backdrop = document.getElementById('toastBackdrop');
-        const primaryEl = document.getElementById('toastPrimaryMessage');
-        const secondaryEl = document.getElementById('toastSecondaryMessage');
-        
-        if (!toast || !primaryEl || !secondaryEl) return;
-        
-        primaryEl.textContent = primaryMessage;
-        secondaryEl.textContent = secondaryMessage;
-        toast.className = 'toast ' + type;
-        
-        if (backdrop) backdrop.style.display = 'block';
-        toast.style.display = 'flex';
-        
-        const autoHideTimer = setTimeout(() => {
-            toast.style.display = 'none';
-            if (backdrop) backdrop.style.display = 'none';
-        }, 5000);
-        
-        const closeBtn = document.getElementById('toastCloseBtn');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                clearTimeout(autoHideTimer);
-                toast.style.display = 'none';
-                if (backdrop) backdrop.style.display = 'none';
-            };
-        }
+    console.log('Starting initialization...');
+
+    const formLoaded = await initForm();
+
+    if (!formLoaded) {
+        console.log('Form failed to load. Halting page load.');
+        return;
     }
 
-    // Initialize everything
-    console.log('Starting initialization...');
-    initQuillEditor();
-    initForm();
+    console.log('Form loaded successfully. Loading Quill Editor...');
+    await initQuillEditor();
+
+    console.log('Page initialization complete.');
 }
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAddProductPage);
 } else {
-    setTimeout(initAddProductPage, 100);
+    initAddProductPage(); 
 }

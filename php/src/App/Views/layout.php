@@ -1,12 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title><?= htmlspecialchars($title ?? ''); ?></title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/styles/Navbar.css">
-  
   <link rel="stylesheet" href="/styles/BalanceModal.css">
+  
+  <link rel="stylesheet" href="/styles/LoadingComponent.css">
+  <link rel="preload" href="/uploads/loading/loading-icon.svg" as="image">
   
   <script>
     window.__BOOT_SESSION__ = <?= json_encode([
@@ -32,9 +31,11 @@
   </main>
   
   <balance-modal></balance-modal>
-
-  <script type="module" src="/components/Navbar.js"></script>
+  <app-toast></app-toast> 
   
+  <script type="module" src="/components/Navbar.js"></script>
   <script type="module" src="/components/BalanceModal.js"></script>
+  <script type="module" src="/components/ToastNotification.js"></script> 
+  <script type="module" src="/components/LoadingComponent.js"></script> 
   </body>
 </html>
