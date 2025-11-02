@@ -219,8 +219,8 @@ function initEditProductPage() {
             document.getElementById('product_id').value = product.product_id;
             document.getElementById('store_id').value = store.store_id;
             document.getElementById('productName').value = product.name;
-            document.getElementById('productPrice').value = product.price;
-            document.getElementById('productStock').value = product.stock;
+            document.getElementById('productPrice').value = parseInt(product.price);
+            document.getElementById('productStock').value = parseInt(product.stock);
 
             // Set description to Quill editor (wait for init)
             if (quill) {
@@ -297,7 +297,7 @@ function initEditProductPage() {
         }
         
         // Price
-        const price = parseFloat(formData.get('price'));
+        const price = parseInt(formData.get('price'));
         if (!price || price < 1000) {
             document.getElementById('priceError').textContent = 'Harga minimal Rp 1.000';
             isValid = false;

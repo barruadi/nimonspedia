@@ -118,8 +118,8 @@ function initProductManagementPage() {
                     valueB = (b.name || '').toLowerCase();
                     break;
                 case 'price':
-                    valueA = parseFloat(a.price) || 0;
-                    valueB = parseFloat(b.price) || 0;
+                    valueA = parseInt(a.price) || 0;
+                    valueB = parseInt(b.price) || 0;
                     break;
                 case 'stock':
                     valueA = parseInt(a.stock) || 0;
