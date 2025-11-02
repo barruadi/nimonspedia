@@ -4,6 +4,7 @@ namespace App\Controllers\Buyer;
 
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\SearchService;
 use App\Core\View;
 
 class ProductController
@@ -46,11 +47,21 @@ class ProductController
 
         $offset = ($page - 1) * $perPage;
 
-        // 2. Query model
-        $totalItems = Product::countFiltered($q, $category, $minPrice, $maxPrice);
-        $products   = Product::findFiltered($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+        // Use advanced search if query exists, otherwise regular search
+        if (!empty($q)) {
+            // Advanced search with fuzzy matching and synonyms
+            $result = SearchService::search($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+            $products = $result['products'];
+            $totalItems = $result['total'];
+            
+            error_log("Advanced Search: '{$q}' expanded to [" . implode(', ', $result['expanded_terms']) . "], found {$totalItems} products");
+        } else {
+            // Regular search
+            $totalItems = Product::countFiltered($q, $category, $minPrice, $maxPrice);
+            $products   = Product::findFiltered($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+        }
 
-        // 3. Pagination math
+        // Pagination
         $totalPages = max(1, (int) ceil($totalItems / $perPage));
         if ($page > $totalPages) {
             $page = $totalPages;
@@ -67,9 +78,9 @@ class ProductController
             'nextPage'    => ($page < $totalPages) ? $page + 1 : null,
         ];
 
-        $title = "Browse Products";
+        $title = !empty($q) ? "Search: {$q}" : "Browse Products";
 
-        // 4. Support JSON for XHR updates (for debounce search, filters)
+        // AJAX response
         $wantsJson =
             isset($_GET['ajax']) && $_GET['ajax'] === '1' ||
             (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'fetch');
