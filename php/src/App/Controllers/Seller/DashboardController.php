@@ -95,7 +95,7 @@ class DashboardController
         }
     }
 
-    // Update store information (edit in place)
+    // Update store information
     public static function updateStoreInfo(array $req): array
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -122,7 +122,7 @@ class DashboardController
         $storeName = $body['store_name'] ?? null;
         $description = $body['description'] ?? '';
 
-        // Validation
+        // Validations
         if (!$storeName || strlen($storeName) > 100) {
             http_response_code(400);
             return ['ok' => false, 'error' => 'Store name required (max 100 chars)'];
@@ -197,7 +197,6 @@ class DashboardController
     private static function handleLogoUpload(array $file): array
     {
         // Validate file type
-        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);

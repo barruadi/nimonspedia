@@ -7,15 +7,8 @@ use PDO;
 use PDOException;
 
 class Store
-{
-    public int    $store_id;
-    public int    $owner_id;
-    public string $store_name;
-    public string $description;
-    public string $logo_path;
-    public string $created_at;
-    public string $updated_at;
-    
+{    
+    // Get database connection
     private static function getDB(): PDO
     {
         return Database::getInstance();
@@ -58,6 +51,7 @@ class Store
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    // Find store by store ID
     public static function findById(int $storeId): ?array
     {
         $db = self::getDB();
@@ -73,6 +67,7 @@ class Store
         return $result ?: null;
     }
 
+    // Update store details
     public static function update(int $storeId, array $data): bool
     {
         $db = self::getDB();
@@ -107,6 +102,7 @@ class Store
         return $stmt->execute($params);
     }
     
+    // Create new store
     public static function create(
         int    $owner_id,
         string $store_name,

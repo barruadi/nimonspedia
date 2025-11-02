@@ -202,7 +202,7 @@ class ProductManagementController
 
         error_log("File uploaded: " . $file['name'] . " (" . $file['size'] . " bytes)");
 
-        // Validate file type using MIME
+        // Validate file type using MIME type
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
@@ -285,9 +285,8 @@ class ProductManagementController
     }
 
     /*
-    // ========================================
     // IMAGE OPTIMIZATION - CURRENTLY DISABLED
-    // ========================================
+    //
     // Uncomment this function to enable image optimization
     // 
     // Optimize image: resize to max 800x800 and compress quality to 85%
