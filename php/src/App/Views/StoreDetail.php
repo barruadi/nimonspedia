@@ -299,7 +299,12 @@ $base_params = [
                             <option value="4" <?= $items_per_page == 4 ? 'selected' : '' ?>>4</option>
                             <option value="8" <?= $items_per_page == 8 ? 'selected' : '' ?>>8</option>
                             <option value="12" <?= $items_per_page == 12 ? 'selected' : '' ?>>12</option>
+                            <option value="16" <?= $items_per_page == 16 ? 'selected' : '' ?>>16</option>
                             <option value="20" <?= $items_per_page == 20 ? 'selected' : '' ?>>20</option>
+                            <option value="24" <?= $items_per_page == 24 ? 'selected' : '' ?>>24</option>
+                            <option value="28" <?= $items_per_page == 28 ? 'selected' : '' ?>>28</option>
+                            <option value="32" <?= $items_per_page == 32 ? 'selected' : '' ?>>32</option>
+                            <option value="48" <?= $items_per_page == 48 ? 'selected' : '' ?>>48</option>
                         </select>
                     </form>
                 </div>
@@ -310,6 +315,9 @@ $base_params = [
 
 <script type="module">
     import { api } from '/utils/api.js';
+    import { redirectSellerToDashboard } from '/utils/sellerRedirect.js';
+
+    redirectSellerToDashboard();
 
     (function() {
         const lastFocusId = sessionStorage.getItem('lastActiveFilterId');

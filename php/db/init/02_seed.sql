@@ -37,19 +37,19 @@ END$$;
 -- ============================================================
 -- USERS
 -- ============================================================
--- Password for sellers: seller123
--- Password for buyers: buyer123
+-- Password for sellers: Seller123*
+-- Password for buyers: Buyer123*
 INSERT INTO users (email, password_hash, full_name, role, address, balance)
 VALUES
   -- SELLERS
-  ('rina@gadgethub.com',     '$2y$10$Hl7APGK2igVyW8trTdjQdelpdizgAiG3GG9coVDuK4heWh4iI7rT2', 'Rina Pratama',   'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 5000000),
-  ('budi@freshmart.com',     '$2y$10$Hl7APGK2igVyW8trTdjQdelpdizgAiG3GG9coVDuK4heWh4iI7rT2', 'Budi Santoso',   'seller', 'Jl. Gatot Subroto No. 45, Bandung', 3500000),
-  ('charlie@fashionista.com','$2y$10$Hl7APGK2igVyW8trTdjQdelpdizgAiG3GG9coVDuK4heWh4iI7rT2', 'Charlie Wijaya', 'seller', 'Jl. Asia Afrika No. 78, Surabaya', 2800000),
+  ('rina@gadgethub.com',     '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Rina Pratama',   'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 5000000),
+  ('budi@freshmart.com',     '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Budi Santoso',   'seller', 'Jl. Gatot Subroto No. 45, Bandung', 3500000),
+  ('charlie@fashionista.com','$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Charlie Wijaya', 'seller', 'Jl. Asia Afrika No. 78, Surabaya', 2800000),
   
   -- BUYERS
-  ('alice@buyer.com',        '$2y$10$NYL7LG/wvoWGk3fYKtes1.vQseX2eZLoZ64Kv6sULueThTIdqpPLK', 'Alice Wardhani', 'buyer',  'Jl. Merdeka No. 67, Jakarta Selatan', 1500000),
-  ('bob@buyer.com',          '$2y$10$NYL7LG/wvoWGk3fYKtes1.vQseX2eZLoZ64Kv6sULueThTIdqpPLK', 'Bob Saputra',    'buyer',  'Jl. Diponegoro No. 89, Yogyakarta', 2000000),
-  ('carol@buyer.com',        '$2y$10$NYL7LG/wvoWGk3fYKtes1.vQseX2eZLoZ64Kv6sULueThTIdqpPLK', 'Carol Susanto',  'buyer',  'Jl. Thamrin No. 34, Medan', 1200000)
+  ('alice@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Alice Wardhani', 'buyer',  'Jl. Merdeka No. 67, Jakarta Selatan', 1500000),
+  ('bob@buyer.com',          '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Bob Saputra',    'buyer',  'Jl. Diponegoro No. 89, Yogyakarta', 2000000),
+  ('carol@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Carol Susanto',  'buyer',  'Jl. Thamrin No. 34, Medan', 1200000)
 ON CONFLICT (email) DO NOTHING;
 
 -- ============================================================

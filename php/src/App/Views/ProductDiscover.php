@@ -5,7 +5,7 @@
 /** @var array|null $sessionUser */
 /** @var string $title */
 
-// Fallbacks in case controller didn't provide them (safe to remove if you always set them)
+// Fallbacks
 $title       = $title       ?? 'Products';
 $filters     = $filters     ?? [];
 $pagination  = $pagination  ?? ['page'=>1,'perPage'=>12,'totalPages'=>1,'totalItems'=>0,'hasPrev'=>false,'hasNext'=>false,'prevPage'=>null,'nextPage'=>null];
@@ -16,302 +16,360 @@ $sessionUser = $sessionUser ?? null;
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title><?= htmlspecialchars($title) ?></title>
+<title><?= htmlspecialchars($title ?? 'Browse Products') ?></title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
-  body {
-    font-family: system-ui, sans-serif;
-    margin: 0;
-    background: #fafafa;
-    color: #222;
-  }
+/* --- Page Layout --- */
+.store-detail-page {
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  padding: 0 1rem 4rem;
+  color: #222;
+  font-family: system-ui, -apple-system, sans-serif;
+}
 
-  main.page {
-    max-width: 1200px;
-    margin: 1.5rem auto;
-    padding: 0 1rem 4rem;
-  }
+.store-banner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding-top: 1rem;
+}
 
-  h1.page-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0 0 1rem;
-  }
-
-  /* Filter bar */
+/* --- Filters --- */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+@media(min-width: 768px) {
   .filters {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: .75rem;
-    margin-bottom: 1rem;
+    grid-template-columns: 1fr 300px 150px 150px;
+    align-items: end;
   }
-  @media(min-width:600px){
-    .filters {
-      grid-template-columns: 1fr 300px 150px 150px;
-      align-items: end;
-    }
-  }
+}
 
-  .filters label {
-    display: flex;
-    flex-direction: column;
-    font-size: .8rem;
-    color: #444;
-  }
-  .filters input, .filters select, .multi__button {
-    padding: .5rem .6rem;
-    border-radius: .4rem;
-    border: 1px solid #bbb;
-    font-size: .9rem;
-    background: #fff;
-  }
+.filters label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #444;
+}
 
-  .results-meta {
-    font-size: .8rem;
-    color: #666;
-    margin-bottom: 1rem;
-  }
+.filters input, .filters select, .multi__button {
+  padding: .5rem .6rem;
+  border-radius: .4rem;
+  border: 1px solid #bbb;
+  font-size: .9rem;
+  gap: 0.25rem;
+}
 
-  /* grid */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
-    gap: 1rem;
-    min-height: 200px;
-    position: relative;
-  }
+.filters input,
+.filters select {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+  background: #fff;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.filters input:focus,
+.filters select:focus {
+  outline: none;
+  border-color: #03ac0e;
+}
 
-  /* Loading skeleton overlay */
-  .grid.loading::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      -45deg,
-      #eee,
-      #eee 10px,
-      #f5f5f5 10px,
-      #f5f5f5 20px
-    );
-    opacity: 0.6;
-    pointer-events: none;
-    border-radius: .5rem;
-  }
+/* Search with icon */
+.filter-search { position: relative; }
+.filter-search input {
+  padding-left: 2.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.filter-search svg {
+  position: absolute;
+  left: 0.75rem;
+  bottom: calc(0.75rem - 1px);
+  color: #888;
+  pointer-events: none;
+}
 
-  .card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: .5rem;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    min-height: 260px;
-    position: relative;
-    text-decoration: none;
-    color: inherit;
-    transition: box-shadow .12s ease, filter .12s ease, opacity .12s ease;
-  }
-  .card:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,.06);
-  }
+/* --- Results header --- */
+.results-header { margin-bottom: 1.5rem; }
+.product-grid-title {
+  font-size: 0.9rem;
+  font-weight: 400;
+  margin: 0;
+  color: #666;
+}
 
-  .card.out-of-stock {
-    background: #f5f5f5;
-    border-color: #ccc;
-    color: #999;
-  }
+/* --- Product Grid --- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  min-height: 200px;
+  margin-bottom: 2rem;
+  position: relative;
+}
+/* Loading skeleton */
+.grid.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    #eee, #eee 10px,
+    #f5f5f5 10px, #f5f5f5 20px
+  );
+  opacity: 0.6;
+  pointer-events: none;
+  border-radius: .5rem;
+}
 
-  /* NEW: disabled state when user not logged in */
-  .card.disabled {
-    background: #f5f5f5;
-    border-color: #ddd;
-    color: #999;
-    opacity: .75;
-    filter: grayscale(1);
-    pointer-events: none; /* block all interactions inside card */
-  }
-  .card.disabled .btn-addcart { display: none; }
-  .card.disabled .btn-disabled { pointer-events: none; }
+/* --- Product Card --- */
+.card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  transition: all 0.2s ease;
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+}
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+.card.out-of-stock {
+  background: #f9f9f9;
+  opacity: 0.7;
+  border-color: #e5e5e5;
+  color: #999;
+}
+.card.out-of-stock:hover { transform: none; box-shadow: none; }
+.card.disabled {
+  background: #f9f9f9;
+  border-color: #e5e5e5;
+  color: #999;
+  opacity: .7;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+.card.disabled:hover { transform: none; box-shadow: none; }
+.card.disabled .btn-addcart { display: none; }
+.card.disabled .btn-disabled { pointer-events: none; }
 
-  .card img {
-    width: 100%;
-    height: 140px;
-    object-fit: cover;
-    border-radius: .5rem;
-    background: #eee;
-    margin-bottom: .75rem;
-  }
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  background: #f5f5f5;
+  margin-bottom: 0.75rem;
+}
+.card .name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #111;
+  margin-bottom: 0.5rem;
+  flex-grow: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.store {
+  font-size: .75rem;
+  margin-bottom: .5rem;
+  color: #555;
+}
+.store a { color: inherit; text-decoration: underline; }
 
-  .name {
-    font-size: .9rem;
-    font-weight: 600;
-    line-height: 1.4;
-    flex-grow: 1;
-    margin-bottom: .5rem;
-    color: #111;
-  }
+.card .price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 0.5rem;
+}
+.card .stock-line {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+.badge-out {
+  display: inline-block;
+  font-size: 0.7rem;
+  background: #e5e5e5;
+  color: #999;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
 
-  .store {
-    font-size: .75rem;
-    margin-bottom: .5rem;
-    color: #555;
-  }
-  .store a {
-    color: inherit;
-    text-decoration: underline;
-  }
+/* --- Action Buttons --- */
+.actions { margin-top: auto; }
+.btn-addcart,
+.btn-disabled {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-addcart { background: #03ac0e; color: #fff; }
+.btn-addcart:hover:not(:disabled) {
+  background: #028a0b;
+  box-shadow: 0 2px 8px rgba(3, 172, 14, 0.3);
+}
+.btn-addcart:disabled { opacity: 0.7; cursor: not-allowed; position: relative; }
+.btn-addcart svg { flex-shrink: 0; }
+.btn-disabled {
+  background: #f5f5f5;
+  color: #999;
+  border: 1px solid #e5e5e5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
-  .price {
-    font-size: .9rem;
-    font-weight: 500;
-    color: #111;
-    margin-bottom: .25rem;
-  }
+/* --- Empty State --- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #666;
+  min-height: 400px;
+  grid-column: 1 / -1;
+}
+.empty-state-icon {
+  width: 160px; height: 160px; margin-bottom: 1.5rem; opacity: 0.5;
+}
+.empty-state-title {
+  font-size: 1.25rem; font-weight: 600; color: #333; margin: 0 0 0.5rem;
+}
+.empty-state-subtitle { font-size: 0.95rem; color: #666; margin: 0; }
 
-  .stock-line {
-    font-size: .75rem;
-    margin-bottom: .5rem;
-    color: #666;
-  }
+/* --- Pagination (dev style) --- */
+.pagination-container {
+  display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+  margin-top: 2rem; padding: 1.5rem 0; border-top: 1px solid #e5e5e5;
+}
+@media(min-width: 768px) {
+  .pagination-container { flex-direction: row; justify-content: space-between; }
+  .results-header { margin-bottom: 0; }
+}
+.pagination-controls { display: flex; align-items: center; gap: 0.5rem; }
+.pagination-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 1px solid #e5e5e5; border-radius: 0.5rem;
+  background: #fff; color: #333; cursor: pointer; transition: all 0.2s ease; text-decoration: none;
+}
+.pagination-btn:hover { background: #f5f5f5; border-color: #03ac0e; }
+.pagination-btn[aria-disabled="true"], .pagination-btn.disabled {
+  opacity: 0.4; cursor: not-allowed; pointer-events: none; color: #999; background: #f5f5f5;
+}
+.pagination-numbers { display: flex; align-items: center; gap: 0.5rem; }
+.pagination-number {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 36px; height: 36px; padding: 0 0.5rem; border: 1px solid #e5e5e5; border-radius: 0.5rem;
+  background: #fff; color: #333; font-size: 0.9rem; font-weight: 500;
+  cursor: pointer; transition: all 0.2s ease; text-decoration: none;
+}
+.pagination-number:hover { background: #f5f5f5; border-color: #03ac0e; }
+.pagination-number[aria-disabled="true"], .pagination-number.active {
+  background: #03ac0e; color: #fff; border-color: #03ac0e; cursor: default; pointer-events: none;
+}
+.pagination-ellipsis {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; color: #999; font-weight: 500;
+}
 
-  .badge-out {
-    display: inline-block;
-    font-size: .7rem;
-    background: #bbb;
-    color: #fff;
-    padding: .25rem .5rem;
-    border-radius: .4rem;
-    font-weight: 500;
-  }
+/* Items per page selector */
+.per-page-selector { display: flex; align-items: center; gap: 0.75rem; }
+.per-page-label { font-size: 0.9rem; font-weight: 500; color: #444; }
+.per-page-select {
+  padding: 0.5rem 2rem 0.5rem 0.75rem; border: 1px solid #e5e5e5; border-radius: 0.5rem; background: #fff;
+  font-size: 0.9rem; font-weight: 500; color: #333; cursor: pointer; transition: border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.75rem center;
+}
+.per-page-select:hover { border-color: #03ac0e; }
+.per-page-select:focus { outline: none; border-color: #03ac0e; }
 
-  .actions {
-    margin-top: auto;
-  }
+/* Responsive pagination adjustments */
+@media(max-width: 767px) {
+  .pagination-controls { flex-wrap: wrap; justify-content: center; }
+  .pagination-numbers { order: -1; width: 100%; justify-content: center; margin-bottom: 0.5rem; }
+}
 
-  .btn-disabled,
-  .btn-addcart {
-    display: inline-block;
-    padding: .5rem .75rem;
-    font-size: .8rem;
-    line-height: 1.2;
-    border-radius: .4rem;
-    border: 1px solid #aaa;
-    text-decoration: none;
-  }
+/* Loading spinner for Add to cart */
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
 
-  .btn-addcart {
-    background: #111;
-    color: #fff;
-    border-color: #111;
-    cursor: pointer;
-  }
-
-  .btn-disabled {
-    background: #e5e5e5;
-    color: #999;
-    border-color: #ccc;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #666;
-    grid-column: 1 / -1;
-    font-size: .9rem;
-  }
-
-  .pagination {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: .5rem 1rem;
-    margin-top: 2rem;
-    font-size: .9rem;
-    align-items: center;
-  }
-  .pagination__spacer { flex: 1 1 auto; } /* for right-aligning the per-page select on wide screens */
-
-  .pagination a {
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: .4rem;
-    padding: .4rem .7rem;
-    text-decoration: none;
-    color: #333;
-    font-weight: 500;
-  }
-
-  .pagination a[aria-disabled="true"] {
-    color: #999;
-    background: #eee;
-    border-color: #ddd;
-    pointer-events: none;
-    cursor: not-allowed;
-  }
-
-  .pagination .page-label {
-    padding: .4rem .7rem;
-    color: #444;
-  }
-
-  .per-page {
-    display: inline-flex;
-    gap: .4rem;
-    align-items: center;
-  }
-  .per-page select {
-    padding: .35rem .6rem;
-    border-radius: .4rem;
-    border: 1px solid #bbb;
-    background: #fff;
-    font-size: .85rem;
-  }
-
-  /* === MULTI SELECT DROPDOWN === */
-  .multi { position: relative; }
-  .multi__button {
-    width: 100%; text-align: left;
-    display: flex; align-items: center; justify-content: space-between; gap: .5rem; cursor: pointer;
-  }
-  .multi__label { font-size: .9rem; color:#222; }
-  .multi__count { font-size:.75rem; background:#111; color:#fff; border-radius:.4rem; padding:.15rem .4rem; }
-  .multi__chev { flex: 0 0 auto; }
-  .multi[data-open="true"] .multi__button { border-color:#888; box-shadow:0 2px 8px rgba(0,0,0,.06); }
-  .multi__panel {
-    position: absolute; z-index: 50; inset-inline: 0; top: calc(100% + .35rem);
-    background:#fff; border:1px solid #ccc; border-radius:.5rem; box-shadow:0 10px 30px rgba(0,0,0,.08);
-    padding:.5rem; display:none;
-  }
-  .multi[data-open="true"] .multi__panel { display:block; }
-  .multi__options { max-height: 220px; overflow:auto; display:grid; gap:.25rem; padding:.25rem; }
-  .multi__option {
-    display:flex; align-items:center; gap:.5rem; padding:.35rem; border-radius:.35rem; cursor:pointer;
-  }
-  .multi__option:hover { background:#f7f7f7; }
-  .multi__option input { accent-color:#111; }
-  .multi__empty { color:#666; font-size:.85rem; padding:.5rem; }
-  .multi__actions {
-    display:flex; justify-content: space-between; gap:.5rem; padding:.35rem .25rem .15rem;
-  }
-  .multi__actions button {
-    border:1px solid #bbb; background:#fff; border-radius:.4rem; padding:.4rem .6rem; font-size:.85rem; cursor:pointer;
-  }
-  .multi__actions .multi__apply { background:#111; color:#fff; border-color:#111; }
+/* === MULTI SELECT DROPDOWN (from fix/bug-check) === */
+.multi { position: relative; }
+.multi__button {
+  width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; cursor: pointer; padding:.75rem; border-radius:.5rem; border:1px solid #ddd; background:#fff;
+}
+.multi__label { font-size: .9rem; color:#222; }
+.multi__count { font-size:.75rem; background:#111; color:#fff; border-radius:.4rem; padding:.15rem .4rem; }
+.multi__chev { flex: 0 0 auto; }
+.multi[data-open="true"] .multi__button { border-color:#888; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.multi__panel {
+  position: absolute; z-index: 50; inset-inline: 0; top: calc(100% + .35rem);
+  background:#fff; border:1px solid #ccc; border-radius:.5rem; box-shadow:0 10px 30px rgba(0,0,0,.08);
+  padding:.5rem; display:none;
+}
+.multi[data-open="true"] .multi__panel { display:block; }
+.multi__options { max-height: 220px; overflow:auto; display:grid; gap:.25rem; padding:.25rem; }
+.multi__option { display:flex; align-items:center; gap:.5rem; padding:.35rem; border-radius:.35rem; cursor:pointer; }
+.multi__option:hover { background:#f7f7f7; }
+.multi__option input { accent-color:#111; }
+.multi__empty { color:#666; font-size:.85rem; padding:.5rem; }
+.multi__actions { display:flex; justify-content: space-between; gap:.5rem; padding:.35rem .25rem .15rem; }
+.multi__actions button {
+  border:1px solid #bbb; background:#fff; border-radius:.4rem; padding:.4rem .6rem; font-size:.85rem; cursor:pointer;
+}
+.multi__actions .multi__apply { background:#111; color:#fff; border-color:#111; }
 </style>
 </head>
 <body>
 
-<main class="page">
-
-  <h1 class="page-title">Cari produk</h1>
+<div class="store-detail-page">
 
   <!-- Filters / search UI -->
   <section class="filters" id="filters-form">
-    <label>
-      Search
+    <label class="filter-search">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
       <input
         type="text"
         name="q"
@@ -329,14 +387,15 @@ $sessionUser = $sessionUser ?? null;
         name="categories"
         id="filter-category"
         value="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
-
       <!-- Dropdown with checkboxes -->
       <div class="multi" id="category-menu"
            data-selected-csv="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
         <button type="button" class="multi__button" aria-haspopup="listbox" aria-expanded="false">
           <span class="multi__label">Pilih kategori</span>
           <span class="multi__count" hidden>0</span>
-          <svg class="multi__chev" width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+          <svg class="multi__chev" width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 7l5 6 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
         </button>
         <div class="multi__panel" role="listbox" aria-multiselectable="true">
           <div class="multi__options" id="category-options">
@@ -353,34 +412,18 @@ $sessionUser = $sessionUser ?? null;
     <label>
       Min Price
       <input
-        type="number"
-        min="0"
-        name="min_price"
-        id="filter-min"
-        value="<?= htmlspecialchars($filters['min_price'] ?? '') ?>"
-        placeholder="0"
-      >
+        type="number" min="0" name="min_price" id="filter-min"
+        value="<?= htmlspecialchars($filters['min_price'] ?? '') ?>" placeholder="0">
     </label>
 
     <label>
       Max Price
       <input
-        type="number"
-        min="0"
-        name="max_price"
-        id="filter-max"
-        value="<?= htmlspecialchars($filters['max_price'] ?? '') ?>"
-        placeholder="5000000"
-      >
+        type="number" min="0" name="max_price" id="filter-max"
+        value="<?= htmlspecialchars($filters['max_price'] ?? '') ?>" placeholder="5000000">
     </label>
   </section>
 
-  <div class="results-meta" id="results-meta">
-    Showing page <?= (int)$pagination['page'] ?> of <?= (int)$pagination['totalPages'] ?> —
-    <?= (int)$pagination['totalItems'] ?> total products
-  </div>
-
-  <!-- Product Grid -->
   <section
     class="grid"
     id="product-grid"
@@ -388,11 +431,12 @@ $sessionUser = $sessionUser ?? null;
     data-total-pages="<?= (int)$pagination['totalPages'] ?>"
     data-per-page="<?= (int)$pagination['perPage'] ?>"
   >
-
     <?php if (empty($products)): ?>
-      <div class="empty-state">
-        Tidak ada produk 😔
-      </div>
+      <section class="empty-state">
+        <img src="/uploads/seller/dashboard-logo.svg" alt="Empty State" class="empty-state-icon">
+        <h2 class="empty-state-title">Produk tidak ditemukan</h2>
+        <p class="empty-state-subtitle">Coba ubah kata kunci pencarian atau filter Anda. 😔</p>
+      </section>
     <?php else: ?>
       <?php foreach ($products as $p): ?>
         <?php
@@ -403,25 +447,17 @@ $sessionUser = $sessionUser ?? null;
           $img        = $p['image_path'] ?? '';
           $storeName  = $p['store_name'] ?? 'Unknown Store';
           $storeId    = $p['store_id'] ?? null;
-
-          $isOut = ($stock <= 0);
+          $isOut      = ($stock <= 0);
           $isDisabled = !$sessionUser;
-          $cardClass = 'card'
-            . ($isOut ? ' out-of-stock' : '')
-            . ($isDisabled ? ' disabled' : '');
-
-          $detailUrl = "/product/$id";
-          $storeUrl  = $storeId ? "/store/$storeId" : "#";
-          $pointer   = ($isOut || $isDisabled) ? 'none' : 'auto';
+          $cardClass  = 'card' . ($isOut ? ' out-of-stock' : '') . ($isDisabled ? ' disabled' : '');
+          $detailUrl  = "/product/$id";
+          $storeUrl   = $storeId ? "/store/$storeId" : "#";
+          $pointer    = ($isOut || $isDisabled) ? 'none' : 'auto';
         ?>
         <article class="<?= $cardClass ?>">
-          <a href="<?= htmlspecialchars($detailUrl) ?>" style="text-decoration:none;color:inherit;pointer-events:<?= $pointer ?>;">
-            <?php if ($img): ?>
-              <img src="<?= htmlspecialchars($img) ?>" alt="">
-            <?php else: ?>
-              <img src="/placeholder.png" alt="">
-            <?php endif; ?>
-
+          <a href="<?= htmlspecialchars($detailUrl) ?>"
+             style="text-decoration:none;color:inherit;pointer-events:<?= $pointer ?>;">
+            <img src="<?= htmlspecialchars($img ?: '/placeholder.png') ?>" alt="<?= htmlspecialchars($name) ?>">
             <div class="name"><?= htmlspecialchars($name) ?></div>
           </a>
 
@@ -435,9 +471,9 @@ $sessionUser = $sessionUser ?? null;
 
           <div class="stock-line">
             <?php if ($isOut): ?>
-              <span class="badge-out">Out of stock</span>
+              <span class="badge-out">Habis</span>
             <?php else: ?>
-              Stok: <?= $stock ?>
+              Stok: <?= (int)$stock ?>
             <?php endif; ?>
           </div>
 
@@ -447,91 +483,111 @@ $sessionUser = $sessionUser ?? null;
             <?php elseif (!$sessionUser): ?>
               <span class="btn-disabled">Login to buy</span>
             <?php else: ?>
-              <button class="btn-addcart" data-product-id="<?= $id ?>">Add to cart</button>
+              <button class="btn-addcart" data-product-id="<?= $id ?>">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                Add to cart
+              </button>
             <?php endif; ?>
           </div>
         </article>
       <?php endforeach; ?>
     <?php endif; ?>
-
   </section>
 
-  <!-- Pagination -->
-  <nav class="pagination" id="pagination-bar">
+  <!-- Pagination (dev layout) -->
+  <nav class="pagination-container" id="pagination-container">
+    <div class="results-header">
+      <h2 class="product-grid-title" id="results-meta">
+        Showing page <?= (int)$pagination['page'] ?> of <?= (int)$pagination['totalPages'] ?> —
+        <?= (int)$pagination['totalItems'] ?> total products
+      </h2>
+    </div>
+
     <?php
-      // NOTE: we persist 'categories' CSV in the URL, not 'category'
+      // Build initial SSR pagination controls
       $baseQuery = [
-        'q'           => $filters['q']           ?? '',
-        'categories'  => $filters['categories']  ?? ($filters['category'] ?? ''),
-        'min_price'   => $filters['min_price']   ?? '',
-        'max_price'   => $filters['max_price']   ?? '',
+        'q'           => $filters['q'] ?? '',
+        // Note: use CSV categories (merged behavior)
+        'categories'  => $filters['categories'] ?? ($filters['category'] ?? ''),
+        'min_price'   => $filters['min_price'] ?? '',
+        'max_price'   => $filters['max_price'] ?? '',
         'per_page'    => $pagination['perPage'],
       ];
-      function buildUrl($pageNum, $baseQuery) {
-        $merged = array_merge($baseQuery, ['page' => $pageNum]);
-        $q = http_build_query(array_filter($merged, fn($v) => $v !== '' && $v !== null));
-        return '/products?' . $q;
-      }
-
       $current = (int)$pagination['page'];
       $total   = (int)$pagination['totalPages'];
       $window  = 2;
-
-      $makeLink = function($page, $label = null, $isActive = false, $disabled = false) use ($baseQuery) {
-        if ($disabled) return '<a aria-disabled="true">'.htmlspecialchars($label ?? $page).'</a>';
-        $label = $label ?? (string)$page;
-        $href  = buildUrl($page, $baseQuery);
-        return $isActive
-          ? '<a aria-disabled="true" style="font-weight:700;background:#111;color:#fff;border-color:#111;">'.htmlspecialchars($label).'</a>'
-          : '<a href="'.htmlspecialchars($href).'">'.htmlspecialchars($label).'</a>';
+      $buildUrl = function($pageNum, $baseQuery) {
+        $merged = array_merge($baseQuery, ['page' => $pageNum]);
+        $q = http_build_query(array_filter($merged, fn($v) => $v !== '' && $v !== null));
+        return '/products?' . $q;
       };
+      $makeBtn = function($page, $content, $disabled = false) use ($baseQuery, $buildUrl) {
+        $href = htmlspecialchars($buildUrl($page, $baseQuery));
+        $dis  = $disabled ? 'aria-disabled="true"' : '';
+        return "<a href=\"$href\" class=\"pagination-btn\" $dis>$content</a>";
+      };
+      $makeNum = function($page, $active = false) use ($baseQuery, $buildUrl) {
+        $href  = htmlspecialchars($buildUrl($page, $baseQuery));
+        $dis   = $active ? 'aria-disabled="true"' : '';
+        $class = $active ? 'pagination-number active' : 'pagination-number';
+        return "<a href=\"$href\" class=\"$class\" $dis>$page</a>";
+      };
+      $prevIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+      $nextIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    ?>
 
-      echo !empty($pagination['hasPrev']) ? $makeLink($pagination['prevPage'], 'Prev') : $makeLink(1, 'Prev', false, true);
-      echo $makeLink(1, '1', $current === 1);
+    <div class="pagination-controls">
+      <?= $makeBtn($pagination['prevPage'] ?? 1, $prevIcon, !$pagination['hasPrev']) ?>
 
-      if ($current - $window > 2) {
-        echo '<span class="page-label">…</span>';
-      }
+      <div class="pagination-numbers">
+        <?php
+          $start = max(1, $current - $window);
+          $end   = min($total, $current + $window);
+          if ($start > 1) {
+            echo $makeNum(1);
+            if ($start > 2) echo '<span class="pagination-ellipsis">...</span>';
+          }
+          for ($p = $start; $p <= $end; $p++) {
+            echo $makeNum($p, $p === $current);
+          }
+          if ($end < $total) {
+            if ($end < $total - 1) echo '<span class="pagination-ellipsis">...</span>';
+            echo $makeNum($total);
+          }
+        ?>
+      </div>
 
-      $start = max(2, $current - $window);
-      $end   = min($total - 1, $current + $window);
-      for ($p = $start; $p <= $end; $p++) {
-        echo $makeLink($p, (string)$p, $current === $p);
-      }
+      <?= $makeBtn($pagination['nextPage'] ?? $total, $nextIcon, !$pagination['hasNext']) ?>
+    </div>
 
-      if ($current + $window < $total - 1) {
-        echo '<span class="page-label">…</span>';
-      }
-
-      if ($total > 1) {
-        echo $makeLink($total, (string)$total, $current === $total);
-      }
-
-      echo !empty($pagination['hasNext']) ? $makeLink($pagination['nextPage'], 'Next') : $makeLink($total, 'Next', false, true);
-
+    <?php
       $perPageCurrent = (int)$pagination['perPage'];
       $perOptions = [4, 8, 12, 16, 20, 24, 28, 32, 48];
       if (!in_array($perPageCurrent, $perOptions, true)) { $perOptions[] = $perPageCurrent; sort($perOptions); }
     ?>
-
-    <span class="pagination__spacer"></span>
-    <span class="per-page">
-      <label for="per-page-select" style="font-size:.85rem;color:#444;">Items</label>
-      <select id="per-page-select">
+    <div class="per-page-selector">
+      <span class="per-page-label">Items</span>
+      <select id="per-page-select" class="per-page-select">
         <?php foreach ($perOptions as $opt): ?>
           <option value="<?= (int)$opt ?>" <?= ((int)$opt === $perPageCurrent) ? 'selected' : '' ?>><?= (int)$opt ?></option>
         <?php endforeach; ?>
       </select>
-    </span>
+    </div>
   </nav>
 
-
-</main>
+</div>
 
 <script>window.isLoggedIn = <?= $sessionUser ? 'true' : 'false' ?>;</script>
-
 <script type="module">
+
 import { api } from '/utils/api.js';
+import { redirectSellerToDashboard } from '/utils/sellerRedirect.js';
+
+redirectSellerToDashboard();
 
 /* --------------------- helpers ---------------------- */
 function parseCsv(str) {
@@ -540,7 +596,15 @@ function parseCsv(str) {
 function toCsv(arr) {
   return (arr ?? []).map(String).filter(Boolean).join(',');
 }
+function debounce(fn, delay = 500) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
 
+/* -------- multi-category menu helpers (fix/bug-check) -------- */
 function getSelectedCategoryIdsFromMenu() {
   return Array.from(document.querySelectorAll('#category-menu input[type="checkbox"]:checked'))
     .map(cb => cb.value);
@@ -573,15 +637,6 @@ function updateCategoryBadge() {
   }
 }
 
-// ------- helper: debounce -------
-function debounce(fn, delay = 500) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), delay);
-  }
-}
-
 /* ------------------ categories loader ------------------ */
 async function loadCategories() {
   const menu = document.getElementById('category-menu');
@@ -590,12 +645,11 @@ async function loadCategories() {
 
   const url = new URLSearchParams(window.location.search);
   const urlCsv   = url.get('categories');
-  const urlSingle= url.get('category'); // legacy
+  const urlSingle= url.get('category'); // legacy single
   const selectedCsv = urlCsv ?? urlSingle ?? menu.dataset.selectedCsv ?? '';
   const desired = parseCsv(selectedCsv);
 
   try {
-    // Expect typical shapes: array | {data: array} | {categories: array} | map
     const payload = await api.get('/categories');
     let categories = [];
     if (Array.isArray(payload)) categories = payload;
@@ -636,10 +690,9 @@ async function loadCategories() {
 
     setSelectedCategoryIdsInMenu(desired);
     updateCategoryHiddenInput();
-
   } catch (err) {
     console.error('Failed to load /categories', err);
-    // Fallback static options
+    // Fallback options
     optionsBox.innerHTML = `
       <label class="multi__option">
         <input type="checkbox" value="phone" data-name="Phone"><span>Phone</span>
@@ -670,24 +723,15 @@ loadCategories();
     const isOpen = menu.dataset.open === "true";
     isOpen ? close() : open();
   });
-
-  document.addEventListener('click', (e) => {
-    if (!menu.contains(e.target)) close();
-  });
-
-  // live update label/count on check
+  document.addEventListener('click', (e) => { if (!menu.contains(e.target)) close(); });
   menu.addEventListener('change', (e) => {
-    if (e.target.matches('input[type="checkbox"]')) {
-      updateCategoryBadge();
-    }
+    if (e.target.matches('input[type="checkbox"]')) updateCategoryBadge();
   });
-
   clearBtn.addEventListener('click', () => {
     menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     updateCategoryBadge();
   });
 
-  // apply writes hidden CSV and triggers filtering
   const debouncedFilter = debounce(() => {
     const params = getCurrentQueryParams(1);
     refetchAndRender(params);
@@ -699,7 +743,6 @@ loadCategories();
     debouncedFilter();
   });
 
-  // keyboard support
   panel.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { close(); btn.focus(); }
   });
@@ -707,20 +750,21 @@ loadCategories();
 
 /* --------------------- list interactions --------------------- */
 function getCurrentQueryParams(pageOverride = null) {
-  const q        = document.getElementById('filter-q').value.trim();
+  const q             = document.getElementById('filter-q').value.trim();
   const categoriesCsv = document.getElementById('filter-category').value; // CSV from hidden
-  const minP     = document.getElementById('filter-min').value;
-  const maxP     = document.getElementById('filter-max').value;
+  const minP          = document.getElementById('filter-min').value;
+  const maxP          = document.getElementById('filter-max').value;
 
-  const grid     = document.getElementById('product-grid');
-  const perPage  = document.getElementById('per-page-select')?.value || grid.dataset.perPage;
+  const grid   = document.getElementById('product-grid');
+  const perSel = document.getElementById('per-page-select');
+  const perPage = perSel?.value || grid.dataset.perPage;
 
   const params = new URLSearchParams();
-  if (q)        params.set('q', q);
+  if (q)             params.set('q', q);
   if (categoriesCsv) params.set('categories', categoriesCsv);
-  if (minP)     params.set('min_price', minP);
-  if (maxP)     params.set('max_price', maxP);
-  if (perPage)  params.set('per_page', perPage);
+  if (minP)          params.set('min_price', minP);
+  if (maxP)          params.set('max_price', maxP);
+  if (perPage)       params.set('per_page', perPage);
 
   if (pageOverride !== null) {
     params.set('page', pageOverride);
@@ -732,10 +776,11 @@ function getCurrentQueryParams(pageOverride = null) {
   return params.toString();
 }
 
+/* ------- render products from JSON (merged) ------- */
 function renderProducts(json) {
   const grid = document.getElementById('product-grid');
   const meta = document.getElementById('results-meta');
-  const pag  = document.getElementById('pagination-bar');
+  const pag  = document.getElementById('pagination-container');
 
   grid.dataset.page       = json.pagination.page;
   grid.dataset.perPage    = json.pagination.perPage;
@@ -745,21 +790,23 @@ function renderProducts(json) {
 
   if (!json.products.length) {
     grid.innerHTML = `
-      <div class="empty-state">
-        Tidak ada produk 
-      </div>
+      <section class="empty-state">
+        <img src="/uploads/seller/dashboard-logo.svg" alt="Empty State" class="empty-state-icon">
+        <h2 class="empty-state-title">Produk tidak ditemukan</h2>
+        <p class="empty-state-subtitle">Coba ubah kata kunci pencarian atau filter Anda. 😔</p>
+      </section>
     `;
   } else {
     grid.innerHTML = json.products.map(p => {
       const id        = p.product_id;
       const name      = p.name ?? 'Untitled';
-      const price     = p.price ?? 0;
+      const price     = Number(p.price ?? 0);
       const stock     = Number(p.stock ?? 0);
       const img       = p.image_path ?? '';
       const storeName = p.store_name ?? 'Unknown Store';
       const storeId   = p.store_id ?? null;
 
-      const isOut = stock <= 0;
+      const isOut   = stock <= 0;
       const disabled = loggedOut;
       const cardClass = `card${isOut ? ' out-of-stock' : ''}${disabled ? ' disabled' : ''}`;
       const detailUrl = `/product/${id}`;
@@ -772,131 +819,153 @@ function renderProducts(json) {
       } else if (disabled) {
         actionHtml = `<span class="btn-disabled">Login to buy</span>`;
       } else {
-        actionHtml = `<button class="btn-addcart" data-product-id="${id}">Add to cart</button>`;
+        actionHtml = `<button class="btn-addcart" data-product-id="${id}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          Add to cart
+        </button>`;
       }
 
       return `
         <article class="${cardClass}">
           <a href="${detailUrl}" style="text-decoration:none;color:inherit;pointer-events:${pointer};">
-            <img src="${img ? img : '/placeholder.png'}" alt="">
+            <img src="${img ? img : '/placeholder.png'}" alt="${name}">
             <div class="name">${name}</div>
           </a>
-
           <div class="store">
             <a href="${storeUrl}" style="pointer-events:${pointer};">${storeName}</a>
           </div>
-
-          <div class="price">Rp ${Number(price).toLocaleString('id-ID')}</div>
-
+          <div class="price">Rp ${price.toLocaleString('id-ID')}</div>
           <div class="stock-line">
-            ${isOut
-              ? '<span class="badge-out">Out of stock</span>'
-              : `Stok: ${stock}`
-            }
+            ${isOut ? '<span class="badge-out">Out of stock</span>' : `Stok: ${stock}`}
           </div>
-
           <div class="actions">${actionHtml}</div>
         </article>
       `;
     }).join('');
   }
 
+  // Update results meta text
   meta.textContent =
     `Showing page ${json.pagination.page} of ${json.pagination.totalPages} — `
     + `${json.pagination.totalItems} total products`;
 
-  const curParams = new URLSearchParams(window.location.search);
-
-  function link(page, label = null, active = false, disabled = false) {
-    if (disabled) return `<a aria-disabled="true">${label ?? page}</a>`;
-    if (active)   return `<a aria-disabled="true" style="font-weight:700;background:#111;color:#fff;border-color:#111;">${label ?? page}</a>`;
-    const nonAjax = new URLSearchParams(curParams);
-    nonAjax.set('page', page);
-    nonAjax.delete('ajax');
-    const url = `/products?` + nonAjax.toString();
-    return `<a href="${url}">${label ?? page}</a>`;
-  }
-
+  // Build pagination (dev layout)
   function buildNumberedPagination(p) {
+    const curParams = new URLSearchParams(window.location.search);
+
+    const link = (page, content, active = false, disabled = false, isBtn = false) => {
+      const nonAjax = new URLSearchParams(curParams);
+      nonAjax.set('page', page);
+      nonAjax.delete('ajax');
+      const url = `/products?` + nonAjax.toString();
+
+      if (disabled)  return `<a class="${isBtn ? 'pagination-btn' : 'pagination-number'}" aria-disabled="true">${content}</a>`;
+      if (active)    return `<a class="${isBtn ? 'pagination-btn' : 'pagination-number'} active" aria-disabled="true">${content}</a>`;
+      return `<a href="${url}" class="${isBtn ? 'pagination-btn' : 'pagination-number'}">${content}</a>`;
+    };
+
     const { page: current, totalPages: total, hasPrev, prevPage, hasNext, nextPage, perPage } = p;
+
+    const prevIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+    const nextIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+
+    const controls = [];
+    controls.push(link(prevPage ?? 1, prevIcon, false, !hasPrev, true));
+
+    const numbers = [];
     const windowSize = 2;
-    const first = 1, last = Math.max(1, total);
+    const start = Math.max(1, current - windowSize);
+    const end   = Math.min(total, current + windowSize);
 
-    const parts = [];
-    parts.push(hasPrev ? link(prevPage, 'Prev') : link(first, 'Prev', false, true));
-    parts.push(link(first, '1', current === first));
-
-    if (current - windowSize > 2) parts.push('<span class="page-label">…</span>');
-
-    const start = Math.max(2, current - windowSize);
-    const end   = Math.min(last - 1, current + windowSize);
+    if (start > 1) {
+      numbers.push(link(1, '1'));
+      if (start > 2) numbers.push('<span class="pagination-ellipsis">...</span>');
+    }
     for (let i = start; i <= end; i++) {
-      parts.push(link(i, String(i), current === i));
+      numbers.push(link(i, String(i), current === i));
+    }
+    if (end < total) {
+      if (end < total - 1) numbers.push('<span class="pagination-ellipsis">...</span>');
+      numbers.push(link(total, String(total)));
     }
 
-    if (current + windowSize < last - 1) parts.push('<span class="page-label">…</span>');
+    controls.push(`<div class="pagination-numbers">${numbers.join('')}</div>`);
+    controls.push(link(nextPage ?? total, nextIcon, false, !hasNext, true));
 
-    if (last > 1) parts.push(link(last, String(last), current === last));
-
-    parts.push(hasNext ? link(nextPage, 'Next') : link(last, 'Next', false, true));
-
-    const perOptions = [4, 8,12,16,20,24,28,32,48];
+    // Per Page Selector
+    const perOptions = [4, 8, 12, 16, 20, 24, 28, 32, 48];
+    const currentPer = Number(perPage);
+    if (!perOptions.includes(currentPer)) {
+      perOptions.push(currentPer);
+      perOptions.sort((a,b) => a - b);
+    }
     const perHtml = `
-      <span class="pagination__spacer"></span>
-      <span class="per-page">
-        <label for="per-page-select" style="font-size:.85rem;color:#444;">Items</label>
-        <select id="per-page-select">
-          ${perOptions.map(n => `<option value="${n}" ${Number(perPage)===n?'selected':''}>${n}</option>`).join('')}
+      <div class="per-page-selector">
+        <span class="per-page-label">Items</span>
+        <select id="per-page-select" class="per-page-select">
+          ${perOptions.map(n => `<option value="${n}" ${currentPer === n ? 'selected' : ''}>${n}</option>`).join('')}
         </select>
-      </span>
+      </div>
     `;
-    return parts.join('') + perHtml;
+
+    return `
+      <div class="results-header">
+        <h2 class="product-grid-title" id="results-meta">${meta.textContent}</h2>
+      </div>
+      <div class="pagination-controls">${controls.join('')}</div>
+      ${perHtml}
+    `;
   }
 
   pag.innerHTML = buildNumberedPagination(json.pagination);
 
-  document.getElementById('per-page-select')?.addEventListener('change', () => {
+  // Re-bind per-page change (newly rendered)
+  pag.querySelector('#per-page-select')?.addEventListener('change', () => {
     const params = getCurrentQueryParams(1);
     refetchAndRender(params);
   });
-
-  // sync category badge with current hidden CSV (e.g., when URL changes)
-  const currentCsv = document.getElementById('filter-category')?.value || '';
-  setSelectedCategoryIdsInMenu(parseCsv(currentCsv));
 }
 
-async function addToCart(productId, qty = 1) {
+/* ------- Add to Cart (dev spinner + merged) ------- */
+async function addToCart(productId, qty = 1, btn) {
+  if (!window.isLoggedIn) {
+    window.location.href = '/login';
+    return;
+  }
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span> Loading...';
+
   try {
-    const res = await api.post('/cart/add', {
-      product_id: Number(productId),
-      qty: 1
-    });
+    const res = await api.post('/cart/add', { product_id: Number(productId), qty });
+    if (!res || res.ok === false) throw new Error(res?.error || 'Gagal menambahkan ke keranjang');
 
-    if (!res || res.ok === false) {
-      alert(res?.message || 'Failed to add to cart.');
-      return;
-    }
-
-    alert('Added to cart');
+    btn.innerHTML = '✓ Added';
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = originalHTML; }, 1200);
   } catch (e) {
     console.error(e);
-    alert('Network error. Please try again.');
+    alert(e.message || 'Network error. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
   }
 }
 
+/* ------- fetch & render with skeleton ------- */
 async function refetchAndRender(paramsString) {
   const grid = document.getElementById('product-grid');
   grid.classList.add('loading');
-
   try {
-    const res = await fetch('/products?' + paramsString, {
-      headers: { 'X-Requested-With': 'fetch' }
-    });
+    const res = await fetch('/products?' + paramsString, { headers: { 'X-Requested-With': 'fetch' } });
     const json = await res.json();
     renderProducts(json);
 
-    const withoutAjax = paramsString.replace(/(&)?ajax=1(&)?/, '$1').replace(/ajax=1&?/, '');
-    const newUrl = '/products?' + withoutAjax;
+    // Update URL (strip ajax=1)
+    const withoutAjax = paramsString.replace(/(&)?ajax=1(&)?/, '$1').replace(/(^|&)ajax=1$/, '');
+    const newUrl = '/products?' + withoutAjax.replace(/^&/, '');
     history.replaceState(null, '', newUrl);
   } catch (err) {
     console.error(err);
@@ -905,41 +974,32 @@ async function refetchAndRender(paramsString) {
   }
 }
 
-/* ------- wire filter inputs (debounced search) ------- */
+/* ------- wire filters (debounced) ------- */
 const debouncedFilter = debounce(() => {
-  const params = getCurrentQueryParams(1); // always go back to page 1 on filter
+  const params = getCurrentQueryParams(1);
   refetchAndRender(params);
 }, 500);
 
-document.getElementById('filter-q').addEventListener('input', debouncedFilter);
+document.getElementById('filter-q')?.addEventListener('input', debouncedFilter);
+document.getElementById('filter-min')?.addEventListener('input', debouncedFilter);
+document.getElementById('filter-max')?.addEventListener('input', debouncedFilter);
 
-// Category menu uses Apply button; if you want instant apply, do it here instead:
-// document.getElementById('category-menu')?.addEventListener('change', () => {
-//   updateCategoryHiddenInput();
-//   debouncedFilter();
-// });
+// Sync category badge with current hidden CSV (SSR)
+const currentCsv = document.getElementById('filter-category')?.value || '';
+setSelectedCategoryIdsInMenu(parseCsv(currentCsv));
 
-document.getElementById('filter-min').addEventListener('input', debouncedFilter);
-document.getElementById('filter-max').addEventListener('input', debouncedFilter);
-
+/* ------- Add to cart click ------- */
 document.getElementById('product-grid').addEventListener('click', (e) => {
   const btn = e.target.closest('.btn-addcart');
   if (!btn) return;
   e.preventDefault();
   const pid = btn.getAttribute('data-product-id');
   if (!pid) return;
-
-  if (!window.isLoggedIn) {
-    window.location.href = '/login';
-    return;
-  }
-
-  btn.disabled = true;
-  addToCart(pid, 1).finally(() => { btn.disabled = false; });
+  addToCart(pid, 1, btn);
 });
 
-// Intercept pagination clicks for SPA-like page changes
-document.getElementById('pagination-bar').addEventListener('click', (e) => {
+/* ------- SPA-like pagination ------- */
+document.getElementById('pagination-container').addEventListener('click', (e) => {
   const a = e.target.closest('a[href]');
   if (!a) return;
   if (a.getAttribute('aria-disabled') === 'true') return;
@@ -952,12 +1012,13 @@ document.getElementById('pagination-bar').addEventListener('click', (e) => {
   refetchAndRender(params);
 });
 
-// Keep per-page select in sync (SSR initial render)
+/* Keep SSR per-page select active on first render */
 document.getElementById('per-page-select')?.addEventListener('change', () => {
   const params = getCurrentQueryParams(1);
   refetchAndRender(params);
 });
-</script>
 
+
+</script>
 </body>
 </html>

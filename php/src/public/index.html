@@ -1,5 +1,3 @@
-<!doctype html>
-<html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>Nimonspedia - [ K01-08 ]</title>
@@ -7,7 +5,9 @@
       
   <link rel="stylesheet" href="/styles/Navbar.css">
   <link rel="stylesheet" href="/styles/BalanceModal.css">
-
+  <link rel="stylesheet" href="/styles/ToastNotification.css">
+  <link rel="stylesheet" href="/styles/LoadingComponent.css">
+  <link rel="preload" href="/uploads/loading/loading-icon.svg" as="image">
 </head>
 <body>
   <header id="navbar-root">
@@ -17,9 +17,12 @@
   <main id="app" class="container"></main>
 
   <balance-modal></balance-modal>
-
+  <app-toast></app-toast>
+  
   <script type="module" src="/components/Navbar.js"></script>
   <script type="module" src="/components/BalanceModal.js"></script>
+  <script type="module" src="/components/ToastNotification.js"></script> 
+  <script type="module" src="/components/LoadingComponent.js"></script> 
   <script type="module" src="/index.js"></script>
 </body>
 </html>

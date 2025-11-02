@@ -6,16 +6,14 @@
     <title>Seller Dashboard - Nimonspedia</title>
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
     <link rel="stylesheet" href="/styles/Dashboard.css">
+    <link rel="stylesheet" href="/styles/ToastNotification.css">
+    <link rel="stylesheet" href="/styles/LoadingComponent.css">
   </head>
   <body>
-    <div class="dashboard-page">
-        <!-- Loading State - Shown when loading data -->
-        <div id="loadingState" class="loading-state">
-            <img src="/uploads/loading/loading-icon.svg" alt="Loading Icon" class="loading-icon">
-            <h2 class="loading-title">Memuat...</h2>
-            <p class="loading-subtitle">Tunggu sebentar, halaman sedang disiapkan untukmu.</p>
-        </div>
+    <app-loading></app-loading>
+    <app-toast></app-toast>
 
+    <div class="dashboard-page">
         <!-- Main Content - Shown after data has been successfully loaded -->
         <div id="mainContent" style="display: none;">
             <!-- Store Info Banner (Collapsible) -->
@@ -149,19 +147,8 @@
         </div>
     </div>
 
-    <!-- Backdrop for toast (will block interaction) -->
-    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast" style="display: none;">
-      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
-      <div class="toast-message">
-        <div id="toastPrimaryMessage"></div>
-        <div id="toastSecondaryMessage"></div>
-      </div>
-      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
-    </div>
-
+    <script type="module" src="/components/ToastNotification.js"></script>
+    <script type="module" src="/components/LoadingComponent.js"></script>
     <script type="module" src="/script/Dashboard.js" defer></script>
   </body>
 </html>

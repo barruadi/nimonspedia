@@ -3,6 +3,7 @@
 // Quill is lazy-loaded using the exact pattern you provided.
 
 import { api } from '/utils/api.js';
+import { checkAlreadyLoggedIn } from '/utils/loginRedirect.js';
 
 // --------------------------- CONSTS ---------------------------
 const ICONS = {
@@ -22,6 +23,9 @@ const MAX_STORE_DESC = 1000;
 // --------------------------- STATE ---------------------------
 let selectedRole = null; // 'buyer' | 'seller'
 let storeQuill = null;
+
+checkAlreadyLoggedIn();
+
 
 // --------------------------- ELEMENTS ---------------------------
 // Steps
