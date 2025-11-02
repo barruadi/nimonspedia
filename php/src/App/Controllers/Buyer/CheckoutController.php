@@ -34,25 +34,53 @@ class CheckoutController
     
     public function showCheckout(): void
     {
-        if (!isset($_SESSION['user'])) {
-            header('location: /login');
-            exit;
-        }
-
-        $user_id = $_SESSION['user']['user_id'];
+        if (!isset($_SESSION['user'])) { header('location: /login'); exit; }
         
-        $sel = $_SESSION['checkout_selection'] ?? [];
-
-        $cart_items = Cart::getByUserId($user_id);
-        $summary = Cart::getSummary($user_id);
-        
+        $user   = $_SESSION['user'];
+        $userId = (int)$user['user_id'];
+    
+        // selection prepared by saveSelection()
+        $sel      = $_SESSION['checkout_selection'] ?? [];
         $snapshot = Cart::snapshotSelection($sel);
-
+    
+        $items   = $snapshot['items'] ?? [];
+        $summary = $snapshot['summary'] ?? ['subtotal'=>0,'shipping'=>0,'total'=>0];
+    
+        // ---- group by store for left column + per-store lines for summary
+        $groups = [];                // [store_id => ['store_name','items'=>[], 'subtotal'=>int, 'count'=>int]]
+        foreach ($items as $it) {
+            $sid = (int)$it['store_id'];
+            if (!isset($groups[$sid])) {
+                $groups[$sid] = [
+                    'store_name' => $it['store_name'] ?: 'Toko',
+                    'items'      => [],
+                    'subtotal'   => 0,
+                    'count'      => 0,
+                ];
+            }
+            $groups[$sid]['items'][] = $it;
+            $groups[$sid]['subtotal'] += ((int)$it['price']) * (int)$it['qty'];
+            $groups[$sid]['count']    += (int)$it['qty'];
+        }
+    
+        // wallet & address from session user (adjust if you load from DB)
+        $address = (string)($user['address'] ?? '');
+        $balance = (int)  ($user['balance'] ?? 0);
+    
+        $totalItems   = array_sum(array_column($groups, 'count')) ?: 0;
+        $grandTotal   = (int)($summary['total'] ?? 0);
+        $afterBalance = $balance - $grandTotal;
+        $canCheckout  = $grandTotal > 0 && $afterBalance >= 0;
+    
         View::render('CheckoutView.php', [
-            'title'       => 'Checkout',
-            'items'       => $snapshot['items'],
-            'summary'     => $snapshot['summary'],
-            'sessionUser' => $_SESSION['user'] ?? null,
+            'title'        => 'Checkout',
+            'groups'       => $groups,
+            'summary'      => $summary,
+            'address'      => $address,
+            'balance'      => $balance,
+            'totalItems'   => $totalItems,
+            'afterBalance' => $afterBalance,
+            'canCheckout'  => $canCheckout,
         ]);
 
         return;
@@ -60,47 +88,37 @@ class CheckoutController
     
     public function confirmOrder($req): array
     {
-        if (!isset($_SESSION['user'])) {
-            header('Location: /login');
-            exit;
-        }
-
-        $userId = $_SESSION['user']['user_id'];
-        $sel = $_SESSION['checkout_selection'] ?? [];
-
-        $snapshot = Cart::snapshotSelection($sel);
-        $items = $snapshot['items'];
-        $total = $snapshot['summary']['total'];
-
-        $user_balance = User::getBalance($userId);
+        if (!isset($_SESSION['user'])) { header('Location: /login'); exit; }
         
+        $userId = (int)$_SESSION['user']['user_id'];
+        $sel    = $_SESSION['checkout_selection'] ?? [];
+    
+        $snapshot     = Cart::snapshotSelection($sel);
+        $total        = (int)($snapshot['summary']['total'] ?? 0);
+        $user_balance = (int)User::getBalance($userId);
+    
         if ($user_balance < $total) {
-            return [
-                'ok' => false,
-                'error' => 'balance not enough'
-            ];
+            return ['ok'=>false, 'error'=>'balance not enough'];
         }
-        
-        // $addr = $req['body']['shipping_address'] ?? null;
+    
         $address = $_POST['address'] ?? null;
-
-        $ok = Cart::finalizeOrderFromSelection($userId, $sel, $address);
-        
-        if (!$ok['ok']) {
-            $_SESSION['flash'] = $ok['error'] ?? 'Gagal checkout';
+    
+        $result = Cart::finalizeOrderFromSelection($userId, $sel, $address);
+        if (!$result['ok']) {
+            $_SESSION['flash'] = $result['error'] ?? 'Gagal checkout';
             header('Location: /cart'); exit;
         }
-        
+    
         unset($_SESSION['checkout_selection']);
-
-        // 3. clear cart
-        
-        
-        // Set the balance
-        User::updateBalance($userId, (int) floor($user_balance - $total));
-
-        // 4. redirect
-        header("Location: /checkout/success?order_id=".$userId);
+    
+        // Deduct balance
+        User::updateBalance($userId, (int)floor($user_balance - $total));
+    
+        // Collect created order ids for success page
+        $orderIds = array_map(fn($o)=>(int)$o['order_id'], $result['orders'] ?? []);
+        $qs = $orderIds ? implode(',', $orderIds) : '';
+    
+        header('Location: /checkout/success'.($qs ? '?order_id='.$qs : ''));
         exit;
     }
     
