@@ -261,7 +261,7 @@
 
 <main class="page">
 
-  <h1 class="page-title">Browse Products</h1>
+  <h1 class="page-title">Cari produk</h1>
 
   <!-- Filters / search UI -->
   <section class="filters" id="filters-form">
@@ -278,11 +278,14 @@
 
     <label>
       Kategori
-      <select name="category" id="filter-category">
-        <option value="">All</option>
-        <!-- [TODO]: render real categories from DB -->
-        <option value="phone" <?= ($filters['category'] ?? '') === 'phone' ? 'selected' : '' ?>>Phone</option>
-        <option value="laptop" <?= ($filters['category'] ?? '') === 'laptop' ? 'selected' : '' ?>>Laptop</option>
+      <select
+        multiple
+        size="6"
+        name="category"
+        id="filter-category"
+        data-selected-csv="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>"
+      >
+        <option disabled>Loading…</option>
       </select>
     </label>
 
@@ -467,6 +470,21 @@
 
 <script type="module">
 import { api } from '/utils/api.js'; 
+
+function getSelectedValues(sel) {
+  return Array.from(sel?.selectedOptions ?? []).map(o => String(o.value));
+}
+function setSelectedValues(sel, values) {
+  const want = new Set(values.map(String));
+  Array.from(sel.options).forEach(opt => { opt.selected = want.has(String(opt.value)); });
+}
+function parseCsv(str) {
+  return (str ?? '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
 // ------- helper: debounce -------
 function debounce(fn, delay = 500) {
   let t;
@@ -476,10 +494,78 @@ function debounce(fn, delay = 500) {
   }
 }
 
+async function loadCategories() {
+  const sel = document.getElementById('filter-category');
+  if (!sel) return;
+
+  // Preferred: URL ?categories=1,2,3 ; Fallbacks: ?category=1 or data-selected-csv
+  const url = new URLSearchParams(window.location.search);
+  const urlCsv = url.get('categories');
+  const urlSingle = url.get('category');
+  const selectedCsv = urlCsv ?? urlSingle ?? sel.dataset.selectedCsv ?? '';
+  const desired = parseCsv(selectedCsv);
+
+  try {
+    // Expect: [{ category_id, name }]
+    const payload = await api.get('/categories');
+    // Normalize to array of {cat_id, name}
+    let categories = [];
+    
+    if (Array.isArray(payload)) {
+      categories = payload;
+    } else if (Array.isArray(payload?.data)) {
+      categories = payload.data;
+    } else if (Array.isArray(payload?.categories)) {
+      categories = payload.categories;
+    } else if (payload && typeof payload === 'object') {
+      // If backend accidentally returned an object map like {"1":"Phone"}
+      const entries = Object.entries(payload)
+        .filter(([k]) => k !== 'ok' && k !== 'error' && k !== 'message'); // ignore meta keys
+      const looksLikeMap = entries.every(([, v]) => typeof v === 'string');
+      if (looksLikeMap) {
+        categories = entries.map(([cat_id, name]) => ({ cat_id, name }));
+      }
+    }
+    
+    if (!Array.isArray(categories)) {
+      console.error('Unexpected /categories payload:', payload);
+      throw new Error('Categories must be an array');
+    }
+
+    sel.innerHTML = categories.map(c =>
+      `<option value="${String(c.category_id)}">${c.name ?? `Category ${c.category_id}`}</option>`
+    ).join('');
+
+    // If URL references categories that aren't in API (stale), append them so UI shows selection
+    const have = new Set(categories.map(c => String(c.category_id)));
+    desired
+      .filter(v => !have.has(String(v)))
+      .forEach(v => {
+        const o = document.createElement('option');
+        o.value = String(v);
+        o.textContent = `(Unknown) ${v}`;
+        sel.appendChild(o);
+      });
+
+    setSelectedValues(sel, desired);
+
+  } catch (err) {
+    console.error('Failed to load /categories', err);
+    // Fallback static options if API fails
+    sel.innerHTML = `
+      <option value="phone">Phone</option>
+      <option value="laptop">Laptop</option>
+    `;
+    setSelectedValues(sel, desired.length ? desired : []);
+  }
+}
+loadCategories();
+
 // ------- build query string from current filters -------
 function getCurrentQueryParams(pageOverride = null) {
   const q        = document.getElementById('filter-q').value.trim();
-  const category = document.getElementById('filter-category').value;
+  const selCat   = document.getElementById('filter-category');
+  const categories = getSelectedValues(selCat); // NEW
   const minP     = document.getElementById('filter-min').value;
   const maxP     = document.getElementById('filter-max').value;
 
@@ -488,7 +574,7 @@ function getCurrentQueryParams(pageOverride = null) {
 
   const params = new URLSearchParams();
   if (q)        params.set('q', q);
-  if (category) params.set('category', category);
+  if (categories.length) params.set('categories', categories.join(',')); // NEW (CSV)
   if (minP)     params.set('min_price', minP);
   if (maxP)     params.set('max_price', maxP);
   if (perPage)  params.set('per_page', perPage);
@@ -662,7 +748,6 @@ async function addToCart(productId, qty = 1) {
     console.log(res);
     if (!res || res.ok === false) {
       console.log(res);
-      alert("djsiaodjsia");
       return;
     }
 

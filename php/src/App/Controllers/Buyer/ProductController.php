@@ -5,6 +5,8 @@ namespace App\Controllers\Buyer;
 use App\Models\Product;
 use App\Models\Store;
 use App\Core\View;
+use App\Core\Database;
+use PDO;
 
 class ProductController
 {
@@ -97,5 +99,28 @@ class ProductController
         ]);
         
         return;
+    }
+    
+    public function getAllCategories(): array
+    {
+        $db = Database::getInstance();
+        
+        $stmt = $db->query("
+            SELECT category_id, name
+            FROM categories
+        ");
+        
+        $cat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (!$cat) {
+            http_response_code(404);
+            echo "Terjadi keasalahan";
+            return [];
+        }
+
+        return [
+            'ok' => true,
+            'categories' => $cat
+        ];
     }
 }
