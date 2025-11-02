@@ -60,6 +60,7 @@
 /* saldo */
 .saldo { 
   font-weight: 600; 
+  cursor: pointer;
 }
 .saldo .val {
   color: #2f9d4a; 

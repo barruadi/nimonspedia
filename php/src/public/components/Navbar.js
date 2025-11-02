@@ -82,7 +82,9 @@ class AppNavbar extends HTMLElement {
         <a class="nav-link" href="/seller/dashboard" data-nav>Dashboard</a>
         <a class="nav-link" href="/seller/products" data-nav>Produk</a>
         <a class="nav-link" href="/seller/orders" data-nav>Orders</a>
-        <span class="saldo">Saldo: <span class="val">${balance}</span></span>
+        <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
+          Saldo: <span class="val">${balance}</span>
+        </span>
         <button id="logout-btn" class="logout-btn" type="button">Logout</button>
       `;
     } else {
@@ -93,7 +95,9 @@ class AppNavbar extends HTMLElement {
           <span class="cart"></span>
           ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
         </a>
-        <span class="saldo">Saldo: <span class="val">${balance}</span></span>
+        <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
+          Saldo: <span class="val">${balance}</span>
+        </span>
         <a class="profile-pill" href="/profile" data-nav>
           <span class="dot"></span>
           <span>Hi, ${this.escape(name.split(' ')[0])}</span>
@@ -117,7 +121,10 @@ class AppNavbar extends HTMLElement {
     `;
 
     this.wireSpaLinks();
-    if (loggedIn) this.wireLogout();
+    if (loggedIn) { 
+      this.wireLogout();
+      this.wireBalanceModal();
+    }
   }
 
   wireSpaLinks() {
@@ -154,6 +161,16 @@ class AppNavbar extends HTMLElement {
       } finally {
         btn.disabled = false;
       }
+    });
+  }
+
+  wireBalanceModal() {
+    const trigger = this.querySelector('#saldo-trigger');
+    if (!trigger) return; 
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('open-top-up-modal'));
     });
   }
 
