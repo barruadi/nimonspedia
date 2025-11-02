@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daftar Order - Nimonspedia</title>
+    <link rel="stylesheet" href="/styles/OrderHistory.css" />
+  </head>
+  <body>
+    <div class="order-history-page">
+      <div id="loadingState" class="loading-state">
+        <img
+          src="/uploads/loading/loading-icon.svg"
+          alt="Loading Icon"
+          class="loading-icon"
+        />
+        <h2 class="loading-title">Memuat...</h2>
+        <p class="loading-subtitle">
+          Tunggu sebentar, riwayat ordermu sedang disiapkan.
+        </p>
+      </div>
+
+      <div id="mainContent" class="history-layout" style="display: none">
+        <aside class="filter-sidebar">
+          <h2 class="filter-title">Daftar Order</h2>
+          <nav id="filterSidebar" class="filter-nav">
+            <h3 class="filter-subtitle">Filter Status</h3>
+            <button class="filter-btn active" data-status="">Semua</button>
+            <button class="filter-btn" data-status="waiting_approval">
+              Waiting Approval
+            </button>
+            <button class="filter-btn" data-status="approved">Approved</button>
+            <button class="filter-btn" data-status="on_delivery">
+              On Delivery
+            </button>
+            <button class="filter-btn" data-status="received">Received</button>
+            <button class="filter-btn" data-status="rejected">Rejected</button>
+          </nav>
+        </aside>
+
+        <main class="order-content">
+          <div id="ordersGrid" class="orders-grid"></div>
+          <div id="emptyState" class="empty-state" style="display: none">
+            <img
+              src="/uploads/seller/dashboard-logo.svg"
+              alt="Empty State"
+              class="empty-state-icon"
+            />
+            <h2 class="empty-state-title" id="emptyStateTitle">
+              Belum ada order
+            </h2>
+            <p class="empty-state-subtitle" id="emptyStateSubtitle">
+              Kamu belum melakukan transaksi apapun.
+            </p>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div id="detailModal" class="modal-backdrop" style="display: none">
+      <div class="modal modal-detail">
+        <button class="modal-close" id="closeDetailModal">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <h2 class="modal-title">Detail Transaksi</h2>
+        <div id="detailContent" class="detail-content">
+          </div>
+      </div>
+    </div>
+
+    <script type="module" src="/script/OrderHistory.js" defer></script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ use App\Core;
 
 use App\Core\Application;
 use App\Middlewares\AuthMiddleware;
-use App\Controllers\Buyer\{ProductController, CartController, CheckoutController, StoreController};
+use App\Controllers\Buyer\{ProductController, CartController, CheckoutController, StoreController, OrderController};
 
 $auth = AuthMiddleware::requireAuth();
 
@@ -23,6 +23,7 @@ $router->group([
     $r->post('/cart/add', fn($req) => (new CartController())->addProduct($req));
     $r->patch('/cart',    fn($req) => (new CartController())->setQuantity($req));
     $r->get('/cart',    fn($req) => (new CartController())->showCart());
+    $r->get('/orders',  fn($req) => (new OrderController())->showHistory($req));
     // delete cart
     // delete product
 });
