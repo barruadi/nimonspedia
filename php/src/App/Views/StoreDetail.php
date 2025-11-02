@@ -315,6 +315,9 @@ $base_params = [
 
 <script type="module">
     import { api } from '/utils/api.js';
+    import { redirectSellerToDashboard } from '/utils/sellerRedirect.js';
+
+    redirectSellerToDashboard();
 
     (function() {
         const lastFocusId = sessionStorage.getItem('lastActiveFilterId');

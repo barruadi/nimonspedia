@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manajemen Produk - Nimonspedia</title>
     <link rel="stylesheet" href="/styles/ProductManagement.css">
+    <link rel="stylesheet" href="/styles/ToastNotification.css">
+    <link rel="stylesheet" href="/styles/LoadingComponent.css">
   </head>
   <body>
     <app-loading></app-loading>
+    <app-toast></app-toast>
 
     <div class="product-management-page">
       <!-- Main Content - Shown after data has been successfully loaded -->
@@ -81,6 +84,8 @@
       </div>
     </div>
 
+    <script type="module" src="/components/ToastNotification.js"></script>
+    <script type="module" src="/components/LoadingComponent.js"></script>
     <script type="module" src="/script/ProductManagement.js" defer></script>
   </body>
 </html>

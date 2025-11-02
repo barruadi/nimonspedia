@@ -1,4 +1,7 @@
 import { api } from "../utils/api.js";
+import { showToast } from '../utils/toast.js';
+import { checkBuyerAuth } from '../utils/buyerAuth.js';
+import { showLoading, hideLoading } from '../utils/loading.js';
 
 const STATUS_MAP = {
   waiting_approval: "Waiting Approval",
@@ -73,6 +76,21 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function canOrderBeReceived(order) {
+  if (order.status !== 'on_delivery') {
+    return false;
+  }
+
+  if (!order.delivery_time) {
+    return false;
+  }
+
+  const deliveryTime = new Date(order.delivery_time).getTime();
+  const now = new Date().getTime();
+
+  return now >= deliveryTime;
 }
 
 function setLoading(isLoading) {
@@ -264,11 +282,65 @@ function showDetailModal(order) {
            </div>`
         : ""
     }
+
+    ${
+      canOrderBeReceived(order)
+        ? `<div class="detail-section">
+             <button class="btn-confirm-received" data-order-id="${order.order_id}" style="width: 100%; padding: 0.75rem 1rem; background: #03ac0e; color: white; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">
+               Konfirmasi Penerimaan Barang
+             </button>
+           </div>`
+        : ""
+    }
   `;
   detailModal.style.display = "flex";
+
+  const confirmBtn = detailContent.querySelector('.btn-confirm-received');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => handleConfirmReceived(order.order_id));
+  }
+}
+
+async function handleConfirmReceived(orderId) {
+  const confirmBtn = detailContent.querySelector('.btn-confirm-received');
+
+  if (!confirm('Apakah Anda yakin sudah menerima barang ini?')) {
+    return;
+  }
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Memproses...';
+  }
+
+  try {
+    const result = await api.post('/orders/received', { order_id: orderId });
+
+    if (!result || !result.ok) {
+      throw new Error(result?.error || 'Gagal mengkonfirmasi penerimaan barang');
+    }
+
+    showToast('Berhasil!', 'Penerimaan barang telah dikonfirmasi', 'success');
+
+    detailModal.style.display = "none";
+
+    await initPage();
+
+  } catch (error) {
+    console.error('Error confirming receipt:', error);
+    showToast('Gagal!', error.message || 'Terjadi kesalahan saat konfirmasi', 'error');
+
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Konfirmasi Penerimaan Barang';
+    }
+  }
 }
 
 async function initPage() {
+  const isAuthorized = await checkBuyerAuth();
+  if (!isAuthorized) return;
+
   setLoading(true);
   try {
     const result = await api.get("/orders");
