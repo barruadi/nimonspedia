@@ -10,7 +10,7 @@ const ICONS = {
   hide: "/uploads/auth/closed-eye-icon.png",
 };
 
-const allow = api.get('/register');
+const allow = await api.get('/register');
 if (!allow || !allow.ok) {
   window.location.href = '/products';
 }
