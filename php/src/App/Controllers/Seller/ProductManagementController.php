@@ -2,7 +2,7 @@
 
 namespace App\Controllers\Seller;
 
-use App\Models\Product;
+use App\Models\{Product, Store, Category};
 
 class ProductManagementController
 {
@@ -20,44 +20,16 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
         }
 
-        $db = \App\Core\Database::getInstance();
-        
         // Get seller's store
-        $stmt = $db->prepare("
-            SELECT store_id, store_name, description, logo_path 
-            FROM stores 
-            WHERE owner_id = :owner_id 
-            LIMIT 1
-        ");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerIdWithDetails($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
             return ['ok' => false, 'error' => 'Store not found'];
         }
 
-        // Get ALL products with category info (for client-side filtering)
-        $stmt = $db->prepare("
-            SELECT 
-                p.product_id,
-                p.name,
-                p.description,
-                p.price,
-                p.stock,
-                p.image_path,
-                p.created_at,
-                p.updated_at,
-                c.category_id,
-                c.name as category_name
-            FROM products p
-            LEFT JOIN categories c ON p.category_id = c.category_id
-            WHERE p.store_id = :store_id
-            AND p.is_deleted <> TRUE
-            ORDER BY p.created_at DESC
-        ");
-        $stmt->execute(['store_id' => $store['store_id']]);
-        $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        // Get products with category info
+        $products = Product::findByStoreIdWithCategory($store['store_id']);
 
         http_response_code(200);
         return [
@@ -74,15 +46,13 @@ class ProductManagementController
         ];
     }
 
-    //  Returns store information for the add product form
+    // Returns store information for the add product form
     public static function showAddProductForm(): array
     {
-        // Start session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        // Validate user and role
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
@@ -90,17 +60,8 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
         }
 
-        $db = \App\Core\Database::getInstance();
-        
         // Get seller's store
-        $stmt = $db->prepare("
-            SELECT store_id, store_name, description, logo_path 
-            FROM stores 
-            WHERE owner_id = :owner_id 
-            LIMIT 1
-        ");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerId($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
@@ -108,8 +69,7 @@ class ProductManagementController
         }
 
         // Get categories
-        $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
-        $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $categories = Category::findAll();
 
         http_response_code(200);
         return [
@@ -127,7 +87,6 @@ class ProductManagementController
     // Handles the submission of the add product form
     public static function handleAddProduct(array $req): array
     {
-        // Start session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -140,10 +99,7 @@ class ProductManagementController
         }
 
         // Get seller's store
-        $db = \App\Core\Database::getInstance();
-        $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerId($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
@@ -155,7 +111,7 @@ class ProductManagementController
         $description = $req['body']['description'] ?? '';
         $categoryId = $req['body']['category_id'] ?? null;
         $price = $req['body']['price'] ?? null;
-        $stock = $req['body']['stock'] ?? 0; // Default to 0
+        $stock = $req['body']['stock'] ?? 0;
 
         // Server-side validation
         if (!$name || strlen($name) > 200) {
@@ -235,7 +191,7 @@ class ProductManagementController
     {
         // Check if file was uploaded
         if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-            error_log("❌ Upload failed: No file uploaded or invalid upload");
+            error_log("Upload failed: No file uploaded or invalid upload");
             return ['ok' => false, 'error' => 'No file uploaded'];
         }
 
@@ -473,7 +429,6 @@ class ProductManagementController
     // Returns all the product information needed to show on the edit form
     public static function showEditProductForm(int $productId): array
     {
-        // Start session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -494,10 +449,7 @@ class ProductManagementController
         }
 
         // Get seller's store
-        $db = \App\Core\Database::getInstance();
-        $stmt = $db->prepare("SELECT store_id, store_name FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerId($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
@@ -511,8 +463,7 @@ class ProductManagementController
         }
 
         // Get categories
-        $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
-        $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $categories = Category::findAll();
 
         http_response_code(200);
         return [
@@ -528,7 +479,6 @@ class ProductManagementController
     // Handles the submission of the edit product form
     public static function handleEditProduct(array $req, int $productId): array
     {
-        // Start session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -549,10 +499,7 @@ class ProductManagementController
         }
 
         // Get seller's store
-        $db = \App\Core\Database::getInstance();
-        $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerId($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
@@ -654,20 +601,16 @@ class ProductManagementController
     // Handles selected product soft deletion (sets is_deleted to TRUE)
     public static function deleteProduct(int $productId): array
     {
-        // Start session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        // Validate user and role
         $user = $_SESSION['user'] ?? null;
         
         if (!$user || $user['role'] !== 'seller') {
             http_response_code(403);
             return ['ok' => false, 'error' => 'Unauthorized'];
         }
-
-        $db = \App\Core\Database::getInstance();
 
         // Get product
         $product = Product::findById($productId);
@@ -678,25 +621,15 @@ class ProductManagementController
         }
 
         // Get seller's store
-        $stmt = $db->prepare("SELECT store_id FROM stores WHERE owner_id = :owner_id");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerId($user['user_id']);
 
         if (!$store || $product['store_id'] !== $store['store_id']) {
             http_response_code(403);
             return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
         }
 
-        // Check if product has pending orders (waiting_approval, approved, on_delivery)
-        $stmt = $db->prepare("
-            SELECT COUNT(*) as count
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.order_id
-            WHERE oi.product_id = :product_id
-            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
-        ");
-        $stmt->execute(['product_id' => $productId]);
-        $pendingOrders = (int)$stmt->fetch(\PDO::FETCH_ASSOC)['count'];
+        // Check if product has pending orders
+        $pendingOrders = Product::hasPendingOrders($productId);
 
         if ($pendingOrders > 0) {
             http_response_code(400);
@@ -708,15 +641,11 @@ class ProductManagementController
 
         // Soft delete
         try {
-            // Set is_deleted = TRUE dan deleted_at
-            $stmt = $db->prepare("
-                UPDATE products 
-                SET is_deleted = TRUE,
-                    deleted_at = NOW(),
-                    updated_at = NOW()
-                WHERE product_id = :product_id
-            ");
-            $stmt->execute(['product_id' => $productId]);
+            $success = Product::softDelete($productId);
+
+            if (!$success) {
+                throw new \Exception('Failed to delete product');
+            }
 
             // Delete image file
             if ($product['image_path']) {

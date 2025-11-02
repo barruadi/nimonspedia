@@ -20,17 +20,11 @@ class Category
         return Database::getInstance();
     }
 
-    // Get all categories in database
-    public static function getAll(): array
+    // Get all categories ordered by name
+    public static function findAll(): array
     {
-        $db = self::getDB();
-        $stmt = $db ->prepare("
-            SELECT * FROM categories
-            ORDER BY name
-        ");
-        $stmt->execute();
-
-        $categories = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        return $categories;
+        $db = Database::getInstance();
+        $stmt = $db->query("SELECT category_id, name FROM categories ORDER BY name");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

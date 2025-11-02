@@ -2,8 +2,7 @@
 
 namespace App\Controllers\Seller;
 
-use App\Core\Database;
-use PDO;
+use App\Models\Store;
 
 class DashboardController
 {
@@ -21,23 +20,8 @@ class DashboardController
             return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
         }
 
-        $db = Database::getInstance();
-
         // Get seller's store information
-        $stmt = $db->prepare("
-            SELECT 
-                store_id, 
-                store_name, 
-                description, 
-                logo_path,
-                created_at,
-                updated_at
-            FROM stores 
-            WHERE owner_id = :owner_id 
-            LIMIT 1
-        ");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerIdWithDetails($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
@@ -46,53 +30,11 @@ class DashboardController
 
         $storeId = $store['store_id'];
 
-        // Quick Stats
-
-        // Total Unique Products (not quantity)
-        $stmt = $db->prepare("
-            SELECT COUNT(*) as total
-            FROM products
-            WHERE store_id = :store_id
-            AND deleted_at IS NULL
-        ");
-        $stmt->execute(['store_id' => $storeId]);
-        $totalProducts = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-        // Pending Orders
-        $stmt = $db->prepare("
-            SELECT COUNT(DISTINCT o.order_id) as total
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE p.store_id = :store_id
-            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
-        ");
-        $stmt->execute(['store_id' => $storeId]);
-        $pendingOrders = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-        // Low Stock Products (< 10)
-        $stmt = $db->prepare("
-            SELECT COUNT(*) as total
-            FROM products
-            WHERE store_id = :store_id
-            AND stock < 10
-            AND stock > 0
-            AND deleted_at IS NULL
-        ");
-        $stmt->execute(['store_id' => $storeId]);
-        $lowStockProducts = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-        // Total Revenue (completed orders only)
-        $stmt = $db->prepare("
-            SELECT COALESCE(SUM(oi.qty * oi.price_at), 0) as total_revenue
-            FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
-            WHERE p.store_id = :store_id
-            AND o.status = 'received'
-        ");
-        $stmt->execute(['store_id' => $storeId]);
-        $totalRevenue = (float)$stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
+        // Get statistics
+        $totalProducts = Store::getTotalProductCount($storeId);
+        $pendingOrders = Store::getPendingOrdersCount($storeId);
+        $lowStockProducts = Store::getLowStockProductsCount($storeId);
+        $totalRevenue = Store::getTotalRevenue($storeId);
 
         http_response_code(200);
         return [
@@ -130,18 +72,10 @@ class DashboardController
             return ['ok' => false, 'error' => 'Unauthorized'];
         }
 
-        $db = Database::getInstance();
-
         try {
-            $stmt = $db->prepare("
-                SELECT balance 
-                FROM stores 
-                WHERE owner_id = :owner_id
-            ");
-            $stmt->execute(['owner_id' => $user['user_id']]);
-            $store = $stmt->fetch(PDO::FETCH_ASSOC);
+            $balance = Store::getBalanceByOwnerId($user['user_id']);
 
-            if (!$store) {
+            if ($balance === null) {
                 http_response_code(404);
                 return ['ok' => false, 'error' => 'Store not found'];
             }
@@ -150,7 +84,7 @@ class DashboardController
             return [
                 'ok' => true,
                 'data' => [
-                    'balance' => (float)$store['balance']
+                    'balance' => $balance
                 ]
             ];
 
@@ -175,17 +109,8 @@ class DashboardController
             return ['ok' => false, 'error' => 'Unauthorized: Not a seller'];
         }
 
-        $db = Database::getInstance();
-
         // Get seller's store
-        $stmt = $db->prepare("
-            SELECT store_id, logo_path
-            FROM stores 
-            WHERE owner_id = :owner_id 
-            LIMIT 1
-        ");
-        $stmt->execute(['owner_id' => $user['user_id']]);
-        $store = $stmt->fetch(PDO::FETCH_ASSOC);
+        $store = Store::findByOwnerId($user['user_id']);
 
         if (!$store) {
             http_response_code(404);
@@ -212,7 +137,6 @@ class DashboardController
         $updateData = [
             'store_name' => $storeName,
             'description' => $description,
-            'store_id' => $store['store_id'],
         ];
 
         $oldLogoPath = null;
@@ -232,22 +156,7 @@ class DashboardController
 
         // Update store
         try {
-            $sql = "
-                UPDATE stores 
-                SET 
-                    store_name = :store_name,
-                    description = :description,
-                    updated_at = NOW()
-            ";
-
-            if (isset($updateData['logo_path'])) {
-                $sql .= ", logo_path = :logo_path";
-            }
-
-            $sql .= " WHERE store_id = :store_id";
-
-            $stmt = $db->prepare($sql);
-            $success = $stmt->execute($updateData);
+            $success = Store::updateInfo($store['store_id'], $updateData);
 
             if (!$success) {
                 throw new \Exception('Database update failed');

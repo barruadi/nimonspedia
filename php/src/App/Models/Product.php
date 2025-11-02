@@ -71,6 +71,32 @@ class Product
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Get all products for a store with category info
+    public static function findByStoreIdWithCategory(int $storeId): array
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT 
+                p.product_id,
+                p.name,
+                p.description,
+                p.price,
+                p.stock,
+                p.image_path,
+                p.created_at,
+                p.updated_at,
+                c.category_id,
+                c.name as category_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.category_id
+            WHERE p.store_id = :store_id
+            AND p.is_deleted <> TRUE
+            ORDER BY p.created_at DESC
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // Create new product
     public static function create(array $data): ?int
     {
@@ -297,16 +323,32 @@ class Product
     }
 
 
-    // Soft delete product (by turning is_deleted to TRUE)
+    // Check if product has pending orders
+    public static function hasPendingOrders(int $productId): int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as count
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id = :product_id
+            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
+        ");
+        $stmt->execute(['product_id' => $productId]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
+
+    // Soft delete a product
     public static function softDelete(int $productId): bool
     {
-        $db = self::getDB();
+        $db = Database::getInstance();
         $stmt = $db->prepare("
             UPDATE products 
-            SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
-            WHERE product_id = :id
+            SET is_deleted = TRUE,
+                deleted_at = NOW(),
+                updated_at = NOW()
+            WHERE product_id = :product_id
         ");
-        
-        return $stmt->execute(['id' => $productId]);
+        return $stmt->execute(['product_id' => $productId]);
     }
 }
