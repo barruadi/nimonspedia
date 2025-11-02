@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Services\SearchService;
 use App\Core\View;
+use App\Core\Database;
+use PDO;
 
 class ProductController
 {
@@ -31,6 +33,19 @@ class ProductController
       
     public function showAllProducts(): void 
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if ($user) {   
+            if ($user['role'] === 'seller') {
+                header('location: /seller/dashboard');
+                exit;
+            }
+        }
+        
         $q         = isset($_GET['q']) ? trim($_GET['q']) : null;
         $category  = isset($_GET['category']) ? trim($_GET['category']) : null;
         $minPrice  = isset($_GET['min_price']) && $_GET['min_price'] !== ''
@@ -108,5 +123,28 @@ class ProductController
         ]);
         
         return;
+    }
+    
+    public function getAllCategories(): array
+    {
+        $db = Database::getInstance();
+        
+        $stmt = $db->query("
+            SELECT category_id, name
+            FROM categories
+        ");
+        
+        $cat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (!$cat) {
+            http_response_code(404);
+            echo "Terjadi keasalahan";
+            return [];
+        }
+
+        return [
+            'ok' => true,
+            'categories' => $cat
+        ];
     }
 }

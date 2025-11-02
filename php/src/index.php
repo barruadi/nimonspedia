@@ -18,6 +18,17 @@ foreach (glob(__DIR__ . '/App/Routes/*.php') as $file) {
     require $file;
 }
 
+$router->setNotFoundHandler(function(array $req) {
+    require __DIR__ . '/App/Views/NotFound.php';
+    return null;
+});
+
+$router->setErrorHandler(function(array $req) {
+    require __DIR__ . '/App/Views/ErrorView.php';
+    return null;
+});
+
+
 $app->run();
 
 // SPA routes
