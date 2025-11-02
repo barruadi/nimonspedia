@@ -1,7 +1,9 @@
 import { api } from '/utils/api.js';
+import { checkAlreadyLoggedIn } from '/utils/loginRedirect.js';
 
-// --- STATE ---
-let selectedRole = null; // 'buyer' | 'seller'
+checkAlreadyLoggedIn();
+
+let selectedRole = null;
 
 // --- ELEMENTS ---
 const stepRole   = document.getElementById('step-role');

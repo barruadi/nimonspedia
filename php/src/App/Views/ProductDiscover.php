@@ -728,8 +728,10 @@
 
 <script type="module">
 import { api } from '/utils/api.js';
+import { redirectSellerToDashboard } from '/utils/sellerRedirect.js';
 
-// ------- helper: debounce (Kept from original) -------
+redirectSellerToDashboard();
+
 function debounce(fn, delay = 500) {
     let t;
     return (...args) => {
