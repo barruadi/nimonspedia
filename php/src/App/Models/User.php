@@ -45,7 +45,7 @@ class User {
             return $row === false ? null : $row;
 
         } catch (PDOException $e) {
-            return null;
+            return [];
         }
     }
 

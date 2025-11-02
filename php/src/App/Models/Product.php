@@ -322,8 +322,8 @@ class Product
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-
-    // Check if product has pending orders
+    // Check if product has pending orders (waiting_approval, approved, on_delivery)
+    // Returns count of pending orders
     public static function hasPendingOrders(int $productId): int
     {
         $db = Database::getInstance();

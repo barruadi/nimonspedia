@@ -637,14 +637,14 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
         }
 
-        // Check if product has pending orders
+        // Cascade Validation: Checks for number of pending orders
         $pendingOrders = Product::hasPendingOrders($productId);
 
         if ($pendingOrders > 0) {
             http_response_code(400);
             return [
                 'ok' => false,
-                'error' => "Cannot delete product: $pendingOrders pending order(s) exist"
+                'error' => "Tidak dapat menghapus produk: Masih ada {$pendingOrders} pesanan yang belum selesai"
             ];
         }
 
@@ -656,21 +656,29 @@ class ProductManagementController
                 throw new \Exception('Failed to delete product');
             }
 
-            // Delete image file
+            //Delete image file (commented out to preserve for order history)
+            /*
             if ($product['image_path']) {
                 $imagePath = __DIR__ . '/../../../public' . $product['image_path'];
                 if (file_exists($imagePath)) {
                     unlink($imagePath);
                 }
             }
+            */
 
             http_response_code(200);
-            return ['ok' => true, 'message' => 'Product deleted successfully'];
+            return [
+                'ok' => true,
+                'message' => 'Product berhasil dihapus!'
+            ];
 
         } catch (\Exception $e) {
             error_log("Delete product error: " . $e->getMessage());
             http_response_code(500);
-            return ['ok' => false, 'error' => 'Failed to delete product: ' . $e->getMessage()];
+            return [
+                'ok' => false,
+                'error' => 'Gagal menghapus produk: ' . $e->getMessage()
+            ];
         }
     }
 }
