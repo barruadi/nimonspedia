@@ -7,14 +7,9 @@
     <link rel="stylesheet" href="/styles/ProductManagement.css">
   </head>
   <body>
-    <div class="product-management-page">
-      <!-- Loading State - Shown when loading data -->
-      <div id="loadingState" class="loading-state">
-        <img src="/uploads/loading/loading-icon.svg" alt="Loading Icon" class="loading-icon">
-        <h2 class="loading-title">Memuat . . .</h2>
-        <p class="loading-subtitle">Tunggu sebentar, halaman sedang disiapkan untukmu.</p>
-      </div>
+    <app-loading></app-loading>
 
+    <div class="product-management-page">
       <!-- Main Content - Shown after data has been successfully loaded -->
       <div id="mainContent" style="display: none;">
         <!-- Header Section -->
@@ -72,19 +67,6 @@
           + Tambah Produk
         </button>
       </div>
-    </div>
-
-    <!-- Backdrop for toast -->
-    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast" style="display: none;">
-      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
-      <div class="toast-message">
-        <div id="toastPrimaryMessage"></div>
-        <div id="toastSecondaryMessage"></div>
-      </div>
-      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
     </div>
 
     <!-- Delete Confirmation Modal -->
