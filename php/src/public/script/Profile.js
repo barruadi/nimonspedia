@@ -1,51 +1,78 @@
 import { api } from '/utils/api.js';
 
 (async function initProfile() {
-  const rootLoading  = document.getElementById('profile-loading');
-  const rootContent  = document.getElementById('profile-content');
-  const errBox       = document.getElementById('profile-error');
-  const okBox        = document.getElementById('profile-success');
+  const rootLoading   = document.getElementById('profile-loading');
+  const rootContent   = document.getElementById('profile-content');
+  const errBox        = document.getElementById('profile-error');
+  const okBox         = document.getElementById('profile-success');
 
-  const nameSpan     = document.getElementById('p-name');
-  const emailSpan    = document.getElementById('p-email');
+  const nameSpan      = document.getElementById('p-name');
+  const emailSpan     = document.getElementById('p-email');
 
-  const editNameBtn  = document.getElementById('editNameBtn');
-  const nameForm     = document.getElementById('nameForm');
-  const nameInput    = document.getElementById('nameInput');
-  const cancelNameBtn= document.getElementById('cancelNameBtn');
+  // triggers
+  const editNameBtn   = document.getElementById('editNameBtn');
+  const changePwBtn   = document.getElementById('changePwBtn');
 
-  const changePwBtn  = document.getElementById('changePwBtn');
-  const pwForm       = document.getElementById('pwForm');
-  const cancelPwBtn  = document.getElementById('cancelPwBtn');
-  const oldPwInput   = document.getElementById('oldPwInput');
-  const newPwInput   = document.getElementById('newPwInput');
+  // modals + forms
+  const nameModal     = document.getElementById('nameModal');
+  const pwModal       = document.getElementById('pwModal');
+
+  const nameForm      = document.getElementById('nameForm');
+  const nameInput     = document.getElementById('nameInput');
+  const cancelNameBtn = document.getElementById('cancelNameBtn');
+
+  const pwForm        = document.getElementById('pwForm');
+  const oldPwInput    = document.getElementById('oldPwInput');
+  const newPwInput    = document.getElementById('newPwInput');
   const newPwConfirmInput = document.getElementById('newPwConfirmInput');
+  const cancelPwBtn   = document.getElementById('cancelPwBtn');
 
-  // helpers
   function showError(msg) {
-    if (!errBox) return;
+    if (!errBox || !okBox) return;
     errBox.style.display = 'block';
     errBox.textContent = msg;
     okBox.style.display = 'none';
     okBox.textContent = '';
   }
-
   function showSuccess(msg) {
-    if (!okBox) return;
+    if (!errBox || !okBox) return;
     okBox.style.display = 'block';
     okBox.textContent = msg;
     errBox.style.display = 'none';
     errBox.textContent = '';
   }
-
   function clearMessages() {
-    errBox.style.display = 'none';
-    errBox.textContent = '';
-    okBox.style.display = 'none';
-    okBox.textContent = '';
+    if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+    if (okBox)  { okBox.style.display  = 'none'; okBox.textContent  = ''; }
   }
 
-  // load profile data
+  // simple modal helpers
+  function openModal(modal) {
+    if (!modal) return;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    // focus first input if any
+    const first = modal.querySelector('input, textarea, button.save-btn');
+    first?.focus();
+  }
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  function wireModalClose(modal) {
+    if (!modal) return;
+    modal.querySelectorAll('[data-close]').forEach(el => {
+      el.addEventListener('click', () => closeModal(modal));
+    });
+    modal.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal(modal);
+    });
+  }
+  wireModalClose(nameModal);
+  wireModalClose(pwModal);
+
+  /* ---------- load profile ---------- */
   try {
     const res = await api.get('/me');
 
@@ -55,36 +82,31 @@ import { api } from '/utils/api.js';
     }
 
     const { user } = res;
-
     nameSpan.textContent  = user.full_name || user.name || '';
     emailSpan.textContent = user.email || '';
-
-    // stash the current name for editing
-    nameInput.value = nameSpan.textContent;
+    nameInput.value       = nameSpan.textContent;
 
     rootLoading.style.display = 'none';
     rootContent.style.display = 'block';
   } catch (err) {
-    rootLoading.textContent = 'Failed to load profile.';
+    rootLoading.textContent = 'Anda belum login.';
     console.error(err);
     return;
   }
 
-  // --- NAME EDIT FLOW ---
-
+  /* ---------- NAME (modal) ---------- */
   editNameBtn.addEventListener('click', () => {
     clearMessages();
-
-    nameInput.value = nameSpan.textContent;
-    nameForm.style.display = 'block';
-
+    nameInput.value = nameSpan.textContent || '';
+    openModal(nameModal);
   });
 
-  cancelNameBtn.addEventListener('click', () => {
-    clearMessages();
-    nameForm.style.display = 'none';
-    // show row again if you hid it
-  });
+  if (cancelNameBtn) {
+    cancelNameBtn.addEventListener('click', () => {
+      clearMessages();
+      closeModal(nameModal);
+    });
+  }
 
   nameForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -96,54 +118,44 @@ import { api } from '/utils/api.js';
       return;
     }
 
-    // optimistic disable
     const saveBtn = nameForm.querySelector('.save-btn');
-    saveBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
 
     try {
-      const updateRes = await api.patch('/me', {
-        full_name: newName
-      });
+      const updateRes = await api.patch('/me', { full_name: newName });
 
       if (!updateRes || updateRes.ok === false) {
         showError(updateRes?.error?.message || 'Gagal memperbarui nama.');
-        saveBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
         return;
       }
 
-      // reflect new name
       nameSpan.textContent = newName;
-
+      closeModal(nameModal);
       showSuccess('Nama berhasil diperbarui.');
-      nameForm.style.display = 'none';
-      saveBtn.disabled = false;
     } catch (err) {
       console.error(err);
       showError('Terjadi kesalahan jaringan.');
-      saveBtn.disabled = false;
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
     }
   });
 
-  // --- PASSWORD CHANGE FLOW ---
-
+  /* ---------- PASSWORD (modal) ---------- */
   changePwBtn.addEventListener('click', () => {
     clearMessages();
-    // toggle password form
-    const visible = pwForm.style.display === 'block';
-    pwForm.style.display = visible ? 'none' : 'block';
-
-    // clear fields whenever opening
-    if (!visible) {
-      oldPwInput.value = '';
-      newPwInput.value = '';
-      newPwConfirmInput.value = '';
-    }
+    oldPwInput.value = '';
+    newPwInput.value = '';
+    newPwConfirmInput.value = '';
+    openModal(pwModal);
   });
 
-  cancelPwBtn.addEventListener('click', () => {
-    clearMessages();
-    pwForm.style.display = 'none';
-  });
+  if (cancelPwBtn) {
+    cancelPwBtn.addEventListener('click', () => {
+      clearMessages();
+      closeModal(pwModal);
+    });
+  }
 
   pwForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -163,30 +175,30 @@ import { api } from '/utils/api.js';
     }
 
     const saveBtn = pwForm.querySelector('.save-btn');
-    saveBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
 
     try {
       const pwRes = await api.patch('/profile/change-password', {
         old_password: oldPw,
         new_password: newPw
       });
-      
+
       if (!pwRes || pwRes.ok === false) {
         showError(pwRes?.error?.message || 'Gagal mengganti password.');
-        saveBtn.disabled = false;
+        if (saveBtn) saveBtn.disabled = false;
         return;
       }
 
+      closeModal(pwModal);
       showSuccess('Password berhasil diubah.');
-      pwForm.style.display = 'none';
-      saveBtn.disabled = false;
       oldPwInput.value = '';
       newPwInput.value = '';
       newPwConfirmInput.value = '';
     } catch (err) {
       console.error(err);
       showError('Terjadi kesalahan jaringan.');
-      saveBtn.disabled = false;
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
     }
   });
 })();

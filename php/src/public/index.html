@@ -6,16 +6,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
       
   <link rel="stylesheet" href="/styles/Navbar.css">
+  <link rel="stylesheet" href="/styles/BalanceModal.css">
 
 </head>
 <body>
-  <!-- navbar will be injected here -->
-  <header id="navbar-root"></header>
+  <header id="navbar-root">
+    <app-navbar></app-navbar>
+  </header>
 
-  <!-- page content (route output) -->
   <main id="app" class="container"></main>
 
-  <!-- boot app -->
+  <balance-modal></balance-modal>
+
+  <script type="module" src="/components/Navbar.js"></script>
+  <script type="module" src="/components/BalanceModal.js"></script>
   <script type="module" src="/index.js"></script>
 </body>
 </html>

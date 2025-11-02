@@ -45,7 +45,7 @@ class User {
             return $row === false ? null : $row;
 
         } catch (PDOException $e) {
-            return null;
+            return [];
         }
     }
 
@@ -96,6 +96,37 @@ class User {
         unset($user['password_hash']);
         return $user;
     }
+
+    public static function addBalance(int $user_id, float $amount): ?float
+    {
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $query = "
+            UPDATE users
+            SET balance = balance + :amount,
+                updated_at = NOW()
+            WHERE user_id = :user_id
+            RETURNING balance
+        ";
+        
+        try {
+            $pdo = Database::pdo();
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([
+                ':amount'   => $amount,
+                ':user_id'  => $user_id,
+            ]);
+
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (float)$row['balance'] : null;
+
+        } catch (PDOException $e) {
+            error_log("User::addBalance error: " . $e->getMessage());
+            return null;
+        }
+    }
     
     public static function updatePassword(
         string $new_password,
@@ -117,5 +148,33 @@ class User {
         ]);
         
         return $row_affected === 1;
+    }
+    
+    // Update balance
+    public static function updateBalance(int $userId, int $amount): bool
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            UPDATE users 
+            SET balance = balance + :amount,
+                updated_at = NOW()
+            WHERE user_id = :user_id
+            AND (balance + :amount) >= 0
+        ");
+        
+        return $stmt->execute([
+            'user_id' => $userId,
+            'amount' => $amount
+        ]);
+    }
+
+    // Get user balance as integer
+    public static function getBalance(int $userId): ?int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT balance FROM users WHERE user_id = :user_id");
+        $stmt->execute(['user_id' => $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? (int)$result['balance'] : null;
     }
 }

@@ -23,6 +23,38 @@ class ProfileController
         ];
     }
     
+    public function topUpBalance($req): array
+    {
+        $user_id = (int) $_SESSION['user']['user_id'] ?? null;
+        $amount  = (float) ($req['body']['amount'] ?? 0);
+
+        if (!$user_id) {
+            http_response_code(401);
+            return ['ok' => false, 'error' => 'User not authenticated'];
+        }
+
+        if ($amount <= 0) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Invalid top-up amount'];
+        }
+
+        $newBalance = User::addBalance($user_id, $amount);
+
+        if ($newBalance === null) {
+            http_response_code(500);
+            return ['ok' => false, 'error' => 'Failed to update balance'];
+        }
+        
+        $_SESSION['user']['balance'] = $newBalance;
+
+        return [
+            'ok' => true,
+            'data' => [
+                'new_balance' => $newBalance
+            ]
+        ];
+    }
+
     public function updatePassword($req): array
     {
         $user_id      = (int) $_SESSION['user']['user_id'] ?? null;
@@ -59,8 +91,21 @@ class ProfileController
         ];
     }
     
+    // [TODO]
     public function updateUsername($req): array
     {
         return [];
+    }
+    
+    public function setBalance($req): array
+    {
+        $new_balance = $req['body']['balance'];
+        
+        User::setBalance($new_balance);
+
+        return [
+            'ok' => true,
+            'new_balance' => $new_balance
+        ];
     }
 }

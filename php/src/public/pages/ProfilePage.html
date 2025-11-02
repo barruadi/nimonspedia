@@ -8,10 +8,10 @@
 
   <body>
     <main class="profile-page">
-      <!-- LEFT ILLUSTRATION / MARKETING -->
+      <!-- LEFT ILLUSTRATION -->
       <section class="profile-left">
         <div class="profile-illus">
-          <img src="/assets/profile-hero.png" class="hero-img" alt="Edit Profil" />
+          <img src="/uploads/auth/login-art.png" class="hero-img" alt="Edit Profil" />
         </div>
       </section>
 
@@ -27,18 +27,9 @@
             <div class="info-label">Nama</div>
             <div class="info-value">
               <span id="p-name" class="info-text"></span>
-              <button id="editNameBtn" class="link-edit">Ubah</button>
+              <button id="editNameBtn" class="link-edit" type="button">Ubah</button>
             </div>
           </div>
-
-          <!-- inline name edit form (starts hidden) -->
-          <form id="nameForm" class="edit-inline" style="display:none">
-            <input id="nameInput" class="inline-input" type="text" />
-            <div class="inline-actions">
-              <button type="button" id="cancelNameBtn" class="cancel-btn">Batal</button>
-              <button type="submit" class="save-btn">Simpan</button>
-            </div>
-          </form>
 
           <!-- ROW: EMAIL -->
           <div class="info-row">
@@ -48,29 +39,8 @@
             </div>
           </div>
 
-          <!-- CHANGE PASSWORD BUTTON (shows password box below when clicked) -->
-          <button id="changePwBtn" class="pw-btn">Ubah kata sandi</button>
-
-          <!-- password change form (hidden by default) -->
-          <form id="pwForm" class="pw-form" style="display:none">
-            <div class="pw-field">
-              <label>Password Lama</label>
-              <input id="oldPwInput" type="password" placeholder="Masukkan password lama" required />
-            </div>
-            <div class="pw-field">
-              <label>Password Baru</label>
-              <input id="newPwInput" type="password" placeholder="Masukkan password baru" required />
-            </div>
-            <div class="pw-field">
-              <label>Ulangi Password Baru</label>
-              <input id="newPwConfirmInput" type="password" placeholder="Ulangi password baru" required />
-            </div>
-
-            <div class="pw-actions">
-              <button type="button" id="cancelPwBtn" class="cancel-btn">Batal</button>
-              <button type="submit" class="save-btn">Simpan</button>
-            </div>
-          </form>
+          <!-- CHANGE PASSWORD (opens modal) -->
+          <button id="changePwBtn" class="pw-btn" type="button">Ubah kata sandi</button>
 
           <!-- error / status -->
           <div id="profile-error" class="error-msg" style="display:none"></div>
@@ -78,6 +48,51 @@
         </div>
       </section>
     </main>
+
+    <!-- ===== Modals ===== -->
+
+    <!-- Name Modal -->
+    <div id="nameModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
+        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
+        <h3 id="nameModalTitle" class="modal-title">Ubah Nama</h3>
+
+        <form id="nameForm" class="modal-form">
+          <label for="nameInput" class="modal-label">Nama baru</label>
+          <input id="nameInput" class="modal-input" type="text" placeholder="Masukkan nama" required />
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" data-close>Batal</button>
+            <button type="submit" class="save-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="pwModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pwModalTitle">
+        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
+        <h3 id="pwModalTitle" class="modal-title">Ubah Kata Sandi</h3>
+
+        <form id="pwForm" class="modal-form">
+          <label class="modal-label" for="oldPwInput">Password lama</label>
+          <input id="oldPwInput" class="modal-input" type="password" placeholder="Masukkan password lama" required />
+
+          <label class="modal-label" for="newPwInput">Password baru</label>
+          <input id="newPwInput" class="modal-input" type="password" placeholder="Masukkan password baru" required />
+
+          <label class="modal-label" for="newPwConfirmInput">Ulangi password baru</label>
+          <input id="newPwConfirmInput" class="modal-input" type="password" placeholder="Ulangi password baru" required />
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" data-close>Batal</button>
+            <button type="submit" class="save-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script type="module" src="/script/Profile.js"></script>
   </body>

@@ -35,12 +35,35 @@ class Application
         ];
     }
     
-    public function run(): void
+public function run(): void
     {   
-        $response = $this->router->dispatch($this->request());
+        $request = $this->request();
+        $response = $this->router->dispatch($request);
+        
+        if ($response === 'Not Found') {
+            $path = $request['path'] ?? '/';
+            
+            $isApiRequest = str_starts_with($path, '/api/') || 
+                            str_starts_with($path, '/secret/api/');
+            
+            if (!$isApiRequest) {
+                $extension = pathinfo($path, PATHINFO_EXTENSION);
+                
+                if (empty($extension)) {
+                    $spa_index = __DIR__ . '/../../public/index.html';
+                    
+                    if (file_exists($spa_index)) {
+                        http_response_code(200); 
+                        $this->emit(file_get_contents($spa_index));
+                        return; 
+                    }
+                }
+            }
+        }
+    
         $this->emit($response);
     }
-    
+
     private function emit($response): void 
     {
         if ($response === null) return;

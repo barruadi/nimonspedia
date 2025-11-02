@@ -22,6 +22,38 @@ const routes = {
     page: '/pages/ProfilePage.html',
     script: '/script/Profile.js',
   },
+  '/seller/dashboard': {
+    page: '/pages/DashboardPage.html',
+    script: '/script/Dashboard.js',
+  },
+  '/seller/products': {
+    page: '/pages/ProductManagementPage.html',
+    script: '/script/ProductManagement.js',
+  },
+  '/seller/products/add': {
+    page: '/pages/AddProductPage.html',
+    script: '/script/AddProduct.js',
+  },
+  '/seller/products/edit/:id': {
+    page: '/pages/EditProductPage.html',
+    script: '/script/EditProduct.js',
+  },
+  '/product/:id': {
+    page: '/pages/ProductDetailPage.html',
+    script: '/script/ProductDetail.js',
+  },
+  '/seller/orders': {
+      page: '/pages/OrderManagementPage.html',
+      script: '/script/OrderManagement.js',
+  },
+  '/store/:id': {
+    page: '/pages/StoreDetailPage.html',
+    script: '/script/StoreDetail.js',
+  },
+  '/orders': {
+    page: '/pages/OrderHistoryPage.html',
+    script: '/script/OrderHistory.js',
+  }
 };
 
 const app = document.getElementById('app');
@@ -33,21 +65,64 @@ function mountNavbar() {
     navbarRoot.appendChild(navEl);
   }
 }
+function refreshNavbar() {
+  navbarRoot.querySelector('app-navbar')?.refresh?.();
+}
+
+// Match dynamic routes
+function matchRoute(pathname) {
+  if (routes[pathname]) {
+    return { route: routes[pathname], params: {} };
+  }
+
+  for (const [pattern, route] of Object.entries(routes)) {
+    const regex = new RegExp('^' + pattern.replace(/:\w+/g, '([^/]+)') + '$');
+    const match = pathname.match(regex);
+    
+    if (match) {
+      const paramNames = (pattern.match(/:\w+/g) || []).map(p => p.substring(1));
+      
+      const params = {};
+      paramNames.forEach((name, index) => {
+        params[name] = match[index + 1];
+      });
+      
+      return { route, params };
+    }
+  }
+
+  return { route: routes['/'], params: {} };
+}
 
 async function render(pathname) {
-  const route = routes[pathname] || routes['/'];
+  const { route, params } = matchRoute(pathname);
 
   try {
-    const res = await fetch(route.page, { cache: 'no-store' });
+    const cacheBuster = Date.now();
+    const res = await fetch(`${route.page}?_=${cacheBuster}`, { 
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+    
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 
     const html = await res.text();
     app.innerHTML = html;
 
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    window.routeParams = params;
+
     if (route.script) {
       const modulePath = route.script.replace(/^\//, './');
-      await import(modulePath);
+      await import(`${modulePath}?_=${cacheBuster}`);
     }
+    
+    refreshNavbar();
+    
   } catch (e) {
     app.innerHTML = `
       <section style="padding:1rem">
@@ -61,10 +136,16 @@ function onClick(e) {
   const a = e.target.closest('a[data-nav]');
   if (!a) return;
   if (a.origin !== location.origin) return;
+  
+  const url = a.getAttribute('href');
 
+  if (!(new URL(url, location.origin).pathname in routes)) {
+    location.reload();
+    return;
+  }
+  
   e.preventDefault();
 
-  const url = a.getAttribute('href');
   history.pushState({}, '', url);
   render(url);
 }

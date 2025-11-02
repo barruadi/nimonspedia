@@ -1,0 +1,61 @@
+<section class="cart-page" style="max-width:900px;margin:1.5rem auto;padding:1rem;">
+  <h1 style="font-size:1.25rem;font-weight:600;margin:0 0 1rem;">
+    Your Cart
+  </h1>
+
+  <!-- container for auth errors / empty cart states -->
+  <div id="cart-status" style="margin-bottom:1rem;font-size:.9rem;color:#666;"></div>
+
+  <div class="cart-layout" style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+    <div>
+      <!-- Cart items table -->
+      <div id="cart-items" style="background:#fff;border:1px solid #ddd;border-radius:.5rem;padding:1rem;">
+        <!-- JS will render rows here -->
+        <div class="cart-loading" style="font-size:.9rem;color:#888;">Loading cart…</div>
+      </div>
+    </div>
+
+    <!-- Sidebar summary -->
+    <aside id="cart-summary" style="background:#fff;border:1px solid #ddd;border-radius:.5rem;padding:1rem;">
+      <h2 style="font-size:1rem;font-weight:600;margin:0 0 .75rem;">Summary</h2>
+
+      <div id="summary-content" style="font-size:.9rem;color:#333;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+          <span>Subtotal</span>
+          <span id="sum-subtotal">-</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;">
+          <span>Shipping</span>
+          <span id="sum-shipping">-</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid #ddd;padding-top:.5rem;">
+          <span>Total</span>
+          <span id="sum-total">-</span>
+        </div>
+      </div>
+
+      <button
+        id="go-checkout"
+        style="
+          margin-top:1rem;
+          width:100%;
+          background:#111;
+          color:#fff;
+          border:1px solid #111;
+          border-radius:.4rem;
+          padding:.75rem 1rem;
+          font-size:.9rem;
+          font-weight:500;
+          cursor:pointer;
+        "
+        disabled
+      >
+        Checkout
+      </button>
+
+      <p style="font-size:.75rem;color:#888;margin-top:.5rem;" id="checkout-hint">
+        You must be logged in to checkout.
+      </p>
+    </aside>
+  </div>
+</section>
