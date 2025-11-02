@@ -32,7 +32,8 @@ class LoginController
         
         if (!$user) {
             return [
-                'ok' => false
+                'ok' => false,
+                'error' => 'gagal login '
             ];
         }
         

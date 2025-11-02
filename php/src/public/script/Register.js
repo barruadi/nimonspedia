@@ -327,7 +327,7 @@ async function submitBuyer() {
     showError(res?.error?.message || 'Pendaftaran gagal');
     return;
   }
-  window.location.href = '/home';
+  window.location.href = '/products';
 }
 
 async function submitSeller() {
@@ -353,7 +353,8 @@ async function submitSeller() {
     showError(res?.error?.message || 'Pendaftaran gagal');
     return;
   }
-  window.location.href = '/home';
+  
+  window.location.href = '/seller/dashboard';
 }
 
 // --------------------------- INIT ---------------------------

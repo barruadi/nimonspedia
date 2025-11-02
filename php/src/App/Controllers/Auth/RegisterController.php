@@ -75,6 +75,9 @@ class RegisterController
             }
         }
         
+        // auto login
+        $_SESSION['user']      = $user;
+        
         return [
             'ok' => true,
             'user' => $user
