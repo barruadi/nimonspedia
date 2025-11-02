@@ -1,3 +1,80 @@
+<main class="profile-page">
+      <section class="profile-left">
+        <div class="profile-illus">
+          <img src="/uploads/auth/login-art.png" class="hero-img" alt="Edit Profil" />
+        </div>
+      </section>
+
+      <section class="profile-card" id="profile-root">
+        <div id="profile-loading" class="loading-row">Loading…</div>
+
+        <div id="profile-content" style="display:none">
+          <h2 class="card-title">Ubah Biodata Diri</h2>
+
+          <div class="info-row">
+            <div class="info-label">Nama</div>
+            <div class="info-value">
+              <span id="p-name" class="info-text"></span>
+              <button id="editNameBtn" class="link-edit" type="button">Ubah</button>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">Email</div>
+            <div class="info-value">
+              <span id="p-email" class="info-text"></span>
+            </div>
+          </div>
+
+          <button id="changePwBtn" class="pw-btn" type="button">Ubah kata sandi</button>
+
+          <div id="profile-error" class="error-msg" style="display:none"></div>
+          <div id="profile-success" class="success-msg" style="display:none"></div>
+        </div>
+      </section>
+
+    <div id="nameModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
+        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
+        <h3 id="nameModalTitle" class="modal-title">Ubah Nama</h3>
+
+        <form id="nameForm" class="modal-form">
+          <label for="nameInput" class="modal-label">Nama baru</label>
+          <input id="nameInput" class="modal-input" type="text" placeholder="Masukkan nama" required />
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" data-close>Batal</button>
+            <button type="submit" class="save-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="pwModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pwModalTitle">
+        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
+        <h3 id="pwModalTitle" class="modal-title">Ubah Kata Sandi</h3>
+
+        <form id="pwForm" class="modal-form">
+          <label class="modal-label" for="oldPwInput">Password lama</label>
+          <input id="oldPwInput" class="modal-input" type="password" placeholder="Masukkan password lama" required />
+
+          <label class="modal-label" for="newPwInput">Password baru</label>
+          <input id="newPwInput" class="modal-input" type="password" placeholder="Masukkan password baru" required />
+
+          <label class="modal-label" for="newPwConfirmInput">Ulangi password baru</label>
+          <input id="newPwConfirmInput" class="modal-input" type="password" placeholder="Ulangi password baru" required />
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" data-close>Batal</button>
+            <button type="submit" class="save-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+</main>
+
 <style>
 .profile-page {
   --green: #2f9d4a;
@@ -208,90 +285,3 @@
   }
 }
 </style>
-
-<main class="profile-page">
-      <!-- LEFT ILLUSTRATION -->
-      <section class="profile-left">
-        <div class="profile-illus">
-          <img src="/uploads/auth/login-art.png" class="hero-img" alt="Edit Profil" />
-        </div>
-      </section>
-
-      <!-- RIGHT CARD -->
-      <section class="profile-card" id="profile-root">
-        <div id="profile-loading" class="loading-row">Loading…</div>
-
-        <div id="profile-content" style="display:none">
-          <h2 class="card-title">Ubah Biodata Diri</h2>
-
-          <!-- ROW: NAME -->
-          <div class="info-row">
-            <div class="info-label">Nama</div>
-            <div class="info-value">
-              <span id="p-name" class="info-text"></span>
-              <button id="editNameBtn" class="link-edit" type="button">Ubah</button>
-            </div>
-          </div>
-
-          <!-- ROW: EMAIL -->
-          <div class="info-row">
-            <div class="info-label">Email</div>
-            <div class="info-value">
-              <span id="p-email" class="info-text"></span>
-            </div>
-          </div>
-
-          <!-- CHANGE PASSWORD (opens modal) -->
-          <button id="changePwBtn" class="pw-btn" type="button">Ubah kata sandi</button>
-
-          <!-- error / status -->
-          <div id="profile-error" class="error-msg" style="display:none"></div>
-          <div id="profile-success" class="success-msg" style="display:none"></div>
-        </div>
-      </section>
-
-    <!-- ===== Modals ===== -->
-
-    <!-- Name Modal -->
-    <div id="nameModal" class="modal" aria-hidden="true">
-      <div class="modal-backdrop" data-close></div>
-      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
-        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
-        <h3 id="nameModalTitle" class="modal-title">Ubah Nama</h3>
-
-        <form id="nameForm" class="modal-form">
-          <label for="nameInput" class="modal-label">Nama baru</label>
-          <input id="nameInput" class="modal-input" type="text" placeholder="Masukkan nama" required />
-          <div class="modal-actions">
-            <button type="button" class="cancel-btn" data-close>Batal</button>
-            <button type="submit" class="save-btn">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Password Modal -->
-    <div id="pwModal" class="modal" aria-hidden="true">
-      <div class="modal-backdrop" data-close></div>
-      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pwModalTitle">
-        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
-        <h3 id="pwModalTitle" class="modal-title">Ubah Kata Sandi</h3>
-
-        <form id="pwForm" class="modal-form">
-          <label class="modal-label" for="oldPwInput">Password lama</label>
-          <input id="oldPwInput" class="modal-input" type="password" placeholder="Masukkan password lama" required />
-
-          <label class="modal-label" for="newPwInput">Password baru</label>
-          <input id="newPwInput" class="modal-input" type="password" placeholder="Masukkan password baru" required />
-
-          <label class="modal-label" for="newPwConfirmInput">Ulangi password baru</label>
-          <input id="newPwConfirmInput" class="modal-input" type="password" placeholder="Ulangi password baru" required />
-
-          <div class="modal-actions">
-            <button type="button" class="cancel-btn" data-close>Batal</button>
-            <button type="submit" class="save-btn">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
-</main>
