@@ -133,6 +133,15 @@ class DashboardController
             return ['ok' => false, 'error' => 'Description max 500 chars'];
         }
 
+        // Check for duplicate store name
+        if (Store::storeNameExists($storeName, $store['store_id'])) {
+            http_response_code(400);
+            return [
+                'ok' => false,
+                'error' => 'Sudah ada toko lain dengan nama yang sama.'
+            ];
+        }
+
         // Prepare update data
         $updateData = [
             'store_name' => $storeName,

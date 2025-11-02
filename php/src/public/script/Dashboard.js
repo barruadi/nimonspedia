@@ -353,17 +353,9 @@ function initDashboardPage() {
             const logoFile = logoInput.files[0];
             if (logoFile) {
                 formData.append('logo', logoFile);
-                console.log('Logo file added:', logoFile.name, logoFile.size, 'bytes');
             }
 
-            console.log('Submitting store update...');
-            console.log('Store name:', formData.get('store_name'));
-            console.log('Description length:', quill ? quill.getText().trim().length : 0);
-            console.log('Has logo:', !!logoFile);
-
             const result = await api.post('/seller/store/update', formData);
-
-            console.log('Update result:', result);
 
             if (result && result.ok) {
                 showToast('Informasi toko berhasil diperbarui', 'Data telah disimpan', 'success');
