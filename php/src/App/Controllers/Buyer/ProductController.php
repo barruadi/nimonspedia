@@ -32,6 +32,17 @@ class ProductController
       
     public function showAllProducts(): void 
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if ($user['role'] === 'seller') {
+            header('location: /seller/dashboard');
+            exit;
+        }
+        
         $q         = isset($_GET['q']) ? trim($_GET['q']) : null;
         $category  = isset($_GET['category']) ? trim($_GET['category']) : null;
         $minPrice  = isset($_GET['min_price']) && $_GET['min_price'] !== ''

@@ -7,7 +7,7 @@ use App\Middlewares\{AuthMiddleware, RoleMiddleware};
 use App\Controllers\Buyer\{ProductController, CartController, CheckoutController, StoreController, OrderController};
 
 $auth = AuthMiddleware::requireAuth();
-$role = RoleMiddleware::allow(['seller']);
+$prohibitRole = RoleMiddleware::prohibit(['seller']);
 
 $router->get('/products', fn($req) => (new ProductController())->showAllProducts(), []);
 
