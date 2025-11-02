@@ -51,6 +51,13 @@ const passwordInput        = document.getElementById('passwordInput');
 const confirmPasswordInput = document.getElementById('confirmPasswordInput');
 const addressInput         = document.getElementById('address');
 
+// Password criteria elements (register)
+const rpLength = document.getElementById('rp-length');
+const rpUpper = document.getElementById('rp-upper');
+const rpLower = document.getElementById('rp-lower');
+const rpNumber = document.getElementById('rp-number');
+const rpSymbol = document.getElementById('rp-symbol');
+
 // Error box
 const errorBox = document.getElementById('errorBox');
 
@@ -126,7 +133,54 @@ function validateBaseFields() {
     showError('Password dan konfirmasi password tidak sama.');
     return false;
   }
+  // password policy check
+  const policy = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password),
+  };
+  if (!policy.length || !policy.upper || !policy.lower || !policy.number || !policy.symbol) {
+    showError('Password tidak memenuhi persyaratan.');
+    return false;
+  }
   return true;
+}
+
+function updateRegisterPasswordCriteria(password) {
+  const s = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password),
+  };
+  if (rpLength) rpLength.classList.toggle('valid', s.length); rpLength.classList.toggle('invalid', !s.length);
+  if (rpUpper) rpUpper.classList.toggle('valid', s.upper); rpUpper.classList.toggle('invalid', !s.upper);
+  if (rpLower) rpLower.classList.toggle('valid', s.lower); rpLower.classList.toggle('invalid', !s.lower);
+  if (rpNumber) rpNumber.classList.toggle('valid', s.number); rpNumber.classList.toggle('invalid', !s.number);
+  if (rpSymbol) rpSymbol.classList.toggle('valid', s.symbol); rpSymbol.classList.toggle('invalid', !s.symbol);
+  if (rpLength) { rpLength.classList.toggle('valid', s.length); rpLength.classList.toggle('invalid', !s.length); }
+  if (rpUpper)  { rpUpper.classList.toggle('valid', s.upper); rpUpper.classList.toggle('invalid', !s.upper); }
+  if (rpLower)  { rpLower.classList.toggle('valid', s.lower); rpLower.classList.toggle('invalid', !s.lower); }
+  if (rpNumber) { rpNumber.classList.toggle('valid', s.number); rpNumber.classList.toggle('invalid', !s.number); }
+  if (rpSymbol) { rpSymbol.classList.toggle('valid', s.symbol); rpSymbol.classList.toggle('invalid', !s.symbol); }
+}
+
+// simple loading helper for buttons
+function setButtonLoading(btn, isLoading) {
+  if (!btn) return;
+  if (isLoading) {
+    btn.dataset.origText = btn.textContent;
+    btn.textContent = 'Memuat...';
+    btn.disabled = true;
+    btn.classList.add('loading');
+  } else {
+    if (btn.dataset.origText) btn.textContent = btn.dataset.origText;
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
 }
 
 // --------------------------- QUILL LOADER (YOUR PATTERN) ---------------------------
@@ -329,6 +383,10 @@ async function submitBuyer() {
   const password  = passwordInput.value;
   const address   = addressInput.value;
 
+  // show tiny loading state for UX
+  setButtonLoading(submitBuyerBtn, true);
+  await new Promise(r => setTimeout(r, 700));
+
   const res = await api.post('/register', { 
     full_name, 
     email, 
@@ -337,6 +395,7 @@ async function submitBuyer() {
     role: 'buyer' 
   });
   if (!res || res.ok === false) {
+    setButtonLoading(submitBuyerBtn, false);
     showError(res?.error?.message || 'Pendaftaran gagal');
     return;
   }
@@ -362,8 +421,12 @@ async function submitSeller() {
   const logoFile = storeLogoInput.files[0];
   if (logoFile) fd.set('store_logo', logoFile);
 
+  setButtonLoading(submitSellerBtn, true);
+  await new Promise(r => setTimeout(r, 700));
+
   const res = await api.post('/register', fd);
   if (!res || res.ok === false) {
+    setButtonLoading(submitSellerBtn, false);
     showError(res?.error?.message || 'Pendaftaran gagal');
     return;
   }
@@ -439,4 +502,6 @@ function bindNav() {
   bindNav();
   bindPasswordReveal();
   bindLogoUpload();
+  // live update password criteria while typing
+  passwordInput?.addEventListener('input', (e) => updateRegisterPasswordCriteria(e.target.value || ''));
 })();

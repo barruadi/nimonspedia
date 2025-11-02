@@ -31,11 +31,29 @@ class RegisterController
             session_start();
         }
         
-        $name       = $req['body']['full_name'] ?? '';
-        $email      = $req['body']['email'] ?? '';
+        $name       = trim($req['body']['full_name'] ?? '');
+        $email      = trim($req['body']['email'] ?? '');
         $password   = $req['body']['password'] ?? '';
-        $address    = $req['body']['address'] ?? '';
+        $address    = trim($req['body']['address'] ?? '');
         $role       = $req['body']['role'] ?? 'buyer';
+
+        // Server-side validation
+        if (!self::isValidEmail($email)) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Invalid email format'];
+        }
+
+        if (!self::isValidPassword($password)) {
+            http_response_code(400);
+            return ['ok' => false, 'error' => 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol'];
+        }
+
+        // Prevent duplicate email
+        $exists = User::findByEmail($email);
+        if (!empty($exists)) {
+            http_response_code(409);
+            return ['ok' => false, 'error' => 'Email already registered'];
+        }
         
         
         $user = User::create($name, $email, $password, $address, $role);
@@ -50,7 +68,7 @@ class RegisterController
             $store_name  = $req['body']['store_name'] ?? '' ;
             $description = $req['body']['store_description'] ?? '' ;
             $logo_path   = $req['body']['logo_path'] ?? '' ;
-            
+
             // Handle file upload
             $imagePath = null;
             if (isset($_FILES['store_logo']) && $_FILES['store_logo']['error'] === UPLOAD_ERR_OK) {
@@ -183,5 +201,31 @@ class RegisterController
             'ok' => true,
             'path' => '/uploads/logo/' . $filename
         ];
+    }
+
+    /**
+     * Validate email format
+     */
+    private static function isValidEmail(string $email): bool
+    {
+        return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+    }
+
+    /**
+     * Validate password policy:
+     * - at least 8 chars
+     * - at least one uppercase
+     * - at least one lowercase
+     * - at least one digit
+     * - at least one non-alphanumeric (symbol)
+     */
+    private static function isValidPassword(string $password): bool
+    {
+        if (strlen($password) < 8) return false;
+        if (!preg_match('/[A-Z]/', $password)) return false;
+        if (!preg_match('/[a-z]/', $password)) return false;
+        if (!preg_match('/[0-9]/', $password)) return false;
+        if (!preg_match('/[^A-Za-z0-9]/', $password)) return false;
+        return true;
     }
 }
