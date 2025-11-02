@@ -594,6 +594,7 @@ body {
     animation: modalSlideIn 0.3s ease;
     max-height: 90vh;
     overflow-y: auto;
+    z-index: 10001;
 }
 
 .modal-small {
@@ -818,84 +819,6 @@ body {
     }
 }
 
-/* Toast */
-.toast {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 1rem;
-    position: fixed;
-    top: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 1rem 1.5rem;
-    background-color: #ffffff;
-    color: #111827;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    z-index: 20000;
-    max-width: 90%;
-    min-width: 320px;
-    animation: slideDown 0.3s ease;
-}
-
-.toast-icon {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-}
-
-.toast-message {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-}
-
-#toastPrimaryMessage {
-    color: #111827;
-    font-weight: 600;
-    font-size: 0.9375rem;
-}
-
-#toastSecondaryMessage {
-    color: #6b7280;
-    font-size: 0.8125rem;
-}
-
-.toast-close-btn {
-    padding: 0.5rem 1rem;
-    background-color: #10b981;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
-}
-
-.toast-close-btn:hover {
-    background-color: #059669;
-}
-
-.toast.error .toast-close-btn {
-    background-color: #ef4444;
-}
-
-.toast.error .toast-close-btn:hover {
-    background-color: #dc2626;
-}
-
-.toast-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    backdrop-filter: blur(1px);
-    z-index: 19000;
-    display: none;
-}
 
 @keyframes slideDown {
     from {
@@ -947,13 +870,5 @@ body {
 
     .order-actions {
         flex-wrap: wrap;
-    }
-
-    .toast {
-        top: 1rem;
-        left: 1rem;
-        right: 1rem;
-        transform: none;
-        min-width: 0;
     }
 }
