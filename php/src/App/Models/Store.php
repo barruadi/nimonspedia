@@ -249,6 +249,27 @@ class Store
         return $result ? (float)$result['balance'] : null;
     }
 
+    // Check if store name already exists (excluding logged in store)
+    public static function storeNameExists(string $storeName, ?int $excludeStoreId = null): bool
+    {
+        $db = Database::getInstance();
+        
+        $sql = "SELECT COUNT(*) as count FROM stores WHERE store_name = :store_name";
+        $params = ['store_name' => $storeName];
+        
+        // Exclude current store when updating
+        if ($excludeStoreId !== null) {
+            $sql .= " AND store_id != :store_id";
+            $params['store_id'] = $excludeStoreId;
+        }
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$result['count'] > 0;
+    }
+
     // Update store information
     public static function updateInfo(int $storeId, array $data): bool
     {
