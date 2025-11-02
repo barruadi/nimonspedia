@@ -149,4 +149,21 @@ class CartController
             'cart' => $snap
         ];
     }
+    
+    public function getCart(): array
+    {
+        $user_id = $_SESSION['user']['user_id'];
+        if (!$user_id) return ['ok'=>false,'error'=>'unauthorized'];
+
+        $items = Cart::getByUserId($user_id);
+        $summary = Cart::getSummary($user_id);
+
+        return [
+            'ok'=>true, 
+            'data'=> [
+                'items'=>$items,
+                'summary'=>$summary
+            ]
+        ];
+    }
 }

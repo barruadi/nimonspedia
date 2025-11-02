@@ -53,6 +53,10 @@ const routes = {
   '/orders': {
     page: '/pages/OrderHistoryPage.html',
     script: '/script/OrderHistory.js',
+  },
+  '/cart': {
+    page: '/pages/CartPage.html',
+    script: '/script/Cart.js',
   }
 };
 

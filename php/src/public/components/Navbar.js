@@ -91,7 +91,7 @@ class AppNavbar extends HTMLElement {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
 <a class="nav-link" href="/products" data-nav>Produk</a>
-              <a class="nav-link" href="/checkout" data-nav>Keranjang</a>
+              <a class="nav-link" href="/cart" data-nav>Keranjang</a>
               
               <div class="profile-dropdown">
                 <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
@@ -121,7 +121,7 @@ class AppNavbar extends HTMLElement {
       <nav class="app-nav">
         <div class="app-nav-inner">
           <a class="brand" href="/products" data-nav>
-            <div class="brand-icon">N</div>
+          <div class="brand-icon"></div>
             <div class="brand-text">Nimonspedia</div>
           </a>
           <div class="nav-actions">
