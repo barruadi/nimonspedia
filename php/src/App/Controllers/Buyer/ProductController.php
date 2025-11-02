@@ -39,9 +39,11 @@ class ProductController
 
         $user = $_SESSION['user'] ?? null;
         
-        if ($user['role'] === 'seller') {
-            header('location: /seller/dashboard');
-            exit;
+        if ($user) {   
+            if ($user['role'] === 'seller') {
+                header('location: /seller/dashboard');
+                exit;
+            }
         }
         
         $q         = isset($_GET['q']) ? trim($_GET['q']) : null;
