@@ -5,6 +5,8 @@ namespace App\Core;
 class Router
 {
     private array $routes = [];
+    private $notFoundHandler = null;
+    private $errorHandler = null;
 
     public function get(string $path, callable $callback, array $mw = []): self
     {
@@ -208,12 +210,25 @@ class Router
 
                 try { return $next($request); }
                 catch (\Throwable $e) {
-                    // if ($this->errorHandler) return ($this->errorHandler)($e, $request);
+                    if ($this->errorHandler) return ($this->errorHandler)($e, $request);
                     http_response_code(500); return 'Internal Server Error';
                 }
             }
         }
-        // if ($this->notFoundHandler) return ($this->notFoundHandler)($request);
+        
+        if ($this->notFoundHandler) return ($this->notFoundHandler)($request);
         http_response_code(404); return 'Not Found';
+    }
+    
+    public function setNotFoundHandler(callable $handler): self
+    {
+        $this->notFoundHandler = $handler;
+        return $this;
+    }
+
+    public function setErrorHandler(callable $handler): self
+    {
+        $this->errorHandler = $handler;
+        return $this;
     }
 }
