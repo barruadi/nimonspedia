@@ -158,16 +158,22 @@ class User {
         $db = Database::getInstance();
         $stmt = $db->prepare("
             UPDATE users 
-            SET balance = balance + :amount,
+            SET balance = :amount,
                 updated_at = NOW()
             WHERE user_id = :user_id
             AND (balance + :amount) >= 0
         ");
         
-        return $stmt->execute([
+        $stmt->execute([
             'user_id' => $userId,
             'amount' => $amount
         ]);
+        
+        $user = self::findById($userId);
+        unset($user['password_hash']);
+        $_SESSION['user']      = $user;
+
+        return true;
     }
 
     // Get user balance as integer
