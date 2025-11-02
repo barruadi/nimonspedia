@@ -119,42 +119,31 @@ class User {
         return $row_affected === 1;
     }
     
-    public static function setBalance(
-        int $new_balance,
-        int $user_id
-    ): bool
+    // Update balance
+    public static function updateBalance(int $userId, int $amount): bool
     {
-        $query = "
-            UPDATE users
-            SET balance = :balance
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            UPDATE users 
+            SET balance = balance + :amount,
+                updated_at = NOW()
             WHERE user_id = :user_id
-        ";
-            
-        $row_affected = Database::executeQuery($query, [
-            ':balance' => $new_balance,
-            ':user_id' => $user_id
+            AND (balance + :amount) >= 0
+        ");
+        
+        return $stmt->execute([
+            'user_id' => $userId,
+            'amount' => $amount
         ]);
-        
-        if ($row_affected === 1) {
-            $_SESSION['user']['balance'] = $new_balance;
-            return true;
-        }
-        
-        return false;
     }
-    
-    public static function getBalance(
-        int $user_id
-    ): int
+
+    // Get user balance as integer
+    public static function getBalance(int $userId): ?int
     {
-        $query = "
-            SELECT balance 
-            FROM users
-            WHERE user_id = :user_id
-        ";
-        
-        $row = Database::fetchOne($query, [':user_id' => $user_id]);
-        
-        return (int) $row['balance'];
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT balance FROM users WHERE user_id = :user_id");
+        $stmt->execute(['user_id' => $userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? (int)$result['balance'] : null;
     }
 }

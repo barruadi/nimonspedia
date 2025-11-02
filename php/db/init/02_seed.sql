@@ -34,22 +34,22 @@ BEGIN
   END LOOP;
 END$$;
 
--- USERS
+-- USERS (balance as BIGINT - integer in smallest currency unit)
 INSERT INTO users (email, password_hash, full_name, role, address, balance)
 VALUES
-  ('owner@gadgethub.example',  '$2b$12$placeholderhashseller1', 'Rina Pratama', 'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 2500.00),
-  ('owner@freshmart.example', '$2b$12$placeholderhashseller2', 'Budi Santoso', 'seller', 'Jl. Gatot Subroto No. 45, Bandung', 1750.00),
-  ('alice@example.com',        '$2b$12$placeholderhashbuyer1',  'Alice Wardhani', 'buyer', 'Jl. Merdeka No. 67, Surabaya', 500.00),
-  ('bob@example.com',          '$2b$12$placeholderhashbuyer2',  'Bob Saputra',    'buyer', 'Jl. Diponegoro No. 89, Yogyakarta', 1200.00)
+  ('owner@gadgethub.example',  '$2b$12$placeholderhashseller1', 'Rina Pratama', 'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 2500000),
+  ('owner@freshmart.example', '$2b$12$placeholderhashseller2', 'Budi Santoso', 'seller', 'Jl. Gatot Subroto No. 45, Bandung', 1750000),
+  ('alice@example.com',        '$2b$12$placeholderhashbuyer1',  'Alice Wardhani', 'buyer', 'Jl. Merdeka No. 67, Surabaya', 500000),
+  ('bob@example.com',          '$2b$12$placeholderhashbuyer2',  'Bob Saputra',    'buyer', 'Jl. Diponegoro No. 89, Yogyakarta', 1200000)
 ON CONFLICT (email) DO NOTHING;
 
--- STORES
+-- STORES (balance as BIGINT - integer in smallest currency unit)
 INSERT INTO stores (owner_id, store_name, description, logo_path, balance)
 SELECT u.user_id, s.store_name, s.description, s.logo, s.balance
 FROM (
   VALUES
-   ('owner@gadgethub.example','Gadget Hub','Electronics and accessories','/logos/gadgethub.png', 15000.00),
-   ('owner@freshmart.example','FreshMart','Daily groceries and fresh produce','/logos/freshmart.png', 8500.00)
+   ('owner@gadgethub.example','Gadget Hub','Electronics and accessories','/logos/gadgethub.png', 15000000),
+   ('owner@freshmart.example','FreshMart','Daily groceries and fresh produce','/logos/freshmart.png', 8500000)
 ) AS s(owner_email, store_name, description, logo, balance)
 JOIN users u ON u.email = s.owner_email
 ON CONFLICT (store_name) DO NOTHING;
@@ -69,7 +69,7 @@ VALUES
   ('Sports & Outdoors', 'Sports equipment and outdoor gear')
 ON CONFLICT (name) DO NOTHING;
 
--- PRODUCTS (updated with category_id)
+-- PRODUCTS (price as INTEGER - minimum 1000)
 WITH s AS (
   SELECT store_id, store_name FROM stores
 ),
@@ -81,42 +81,43 @@ SELECT s.store_id, c.category_id, p.name, p.description, p.price, p.stock, p.img
 FROM s
 CROSS JOIN c
 JOIN (
-  -- Gadget Hub products
+  -- Gadget Hub products (prices as integers >= 1000)
   SELECT 'Gadget Hub'::text AS store_name, 'Electronics'::text AS category_name, * FROM (
     VALUES
-      ('Wireless Mouse','2.4GHz ergonomic mouse',12.99,120,'/img/mouse.jpg'),
-      ('USB-C Charger 65W','PD fast charger',29.50,80,'/img/charger.jpg')
-  ) g(name,description,price,stock,img)
+      ('Wireless Mouse','2.4GHz ergonomic mouse', 129900, 120, '/img/mouse.jpg'),
+      ('USB-C Charger 65W','PD fast charger', 295000, 80, '/img/charger.jpg')
+  ) g(name, description, price, stock, img)
   UNION ALL
   SELECT 'Gadget Hub', 'Computers & Laptops', * FROM (
     VALUES
-      ('Mechanical Keyboard','RGB blue switch keyboard',59.90,60,'/img/keyboard.jpg')
-  ) g2(name,description,price,stock,img)
+      ('Mechanical Keyboard','RGB blue switch keyboard', 599000, 60, '/img/keyboard.jpg')
+  ) g2(name, description, price, stock, img)
   UNION ALL
   SELECT 'Gadget Hub', 'Audio & Video', * FROM (
     VALUES
-      ('Noise-Canceling Headphones','Over-ear ANC',129.00,35,'/img/headphones.jpg')
-  ) g3(name,description,price,stock,img)
+      ('Noise-Canceling Headphones','Over-ear ANC', 1290000, 35, '/img/headphones.jpg')
+  ) g3(name, description, price, stock, img)
   UNION ALL
-  -- FreshMart products
+  -- FreshMart products (prices as integers >= 1000)
   SELECT 'FreshMart', 'Fresh Produce', * FROM (
     VALUES
-      ('Organic Apples (1kg)','Crisp & sweet',3.99,200,'/img/apples.jpg')
-  ) f(name,description,price,stock,img)
+      ('Organic Apples (1kg)','Crisp & sweet', 39900, 200, '/img/apples.jpg')
+  ) f(name, description, price, stock, img)
   UNION ALL
   SELECT 'FreshMart', 'Dairy Products', * FROM (
     VALUES
-      ('Free-Range Eggs (10)','Large, Grade A',2.89,150,'/img/eggs.jpg'),
-      ('Whole Milk (1L)','Fresh dairy milk',1.39,180,'/img/milk.jpg')
-  ) f2(name,description,price,stock,img)
+      ('Free-Range Eggs (10)','Large, Grade A', 28900, 150, '/img/eggs.jpg'),
+      ('Whole Milk (1L)','Fresh dairy milk', 13900, 180, '/img/milk.jpg')
+  ) f2(name, description, price, stock, img)
   UNION ALL
   SELECT 'FreshMart', 'Beverages', * FROM (
     VALUES
-      ('Arabica Coffee Beans (500g)','Medium roast',8.49,90,'/img/coffee.jpg')
-  ) f3(name,description,price,stock,img)
+      ('Arabica Coffee Beans (500g)','Medium roast', 84900, 90, '/img/coffee.jpg')
+  ) f3(name, description, price, stock, img)
 ) p ON p.store_name = s.store_name AND p.category_name = c.category_name
 ON CONFLICT ON CONSTRAINT uq_products_store_name DO NOTHING;
 
+-- CATEGORY ITEMS (many-to-many relationship)
 WITH
 electronics AS (SELECT category_id FROM categories WHERE name = 'Electronics'),
 computers AS (SELECT category_id FROM categories WHERE name = 'Computers & Laptops'),
@@ -207,7 +208,7 @@ ON CONFLICT (cart_id, product_id) DO NOTHING;
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at)
-  SELECT u.user_id, s.store_id, 'approved', 0.00, u.address, NOW() + INTERVAL '2 days', NOW() - INTERVAL '6 hours'
+  SELECT u.user_id, s.store_id, 'approved', 0, u.address, NOW() + INTERVAL '2 days', NOW() - INTERVAL '6 hours'
   FROM users u CROSS JOIN stores s
   WHERE u.email='alice@example.com' AND s.store_name='Gadget Hub'
   ON CONFLICT DO NOTHING
@@ -225,7 +226,7 @@ ON CONFLICT DO NOTHING;
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address)
-  SELECT u.user_id, s.store_id, 'waiting_approval', 0.00, u.address
+  SELECT u.user_id, s.store_id, 'waiting_approval', 0, u.address
   FROM users u CROSS JOIN stores s
   WHERE u.email='alice@example.com' AND s.store_name='FreshMart'
   ON CONFLICT DO NOTHING
@@ -243,7 +244,7 @@ ON CONFLICT DO NOTHING;
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at)
-  SELECT u.user_id, s.store_id, 'on_delivery', 0.00, u.address, NOW() + INTERVAL '1 day', NOW() - INTERVAL '12 hours'
+  SELECT u.user_id, s.store_id, 'on_delivery', 0, u.address, NOW() + INTERVAL '1 day', NOW() - INTERVAL '12 hours'
   FROM users u CROSS JOIN stores s
   WHERE u.email='bob@example.com' AND s.store_name='Gadget Hub'
   ON CONFLICT DO NOTHING
@@ -258,7 +259,7 @@ ON CONFLICT DO NOTHING;
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at, received_at)
-  SELECT u.user_id, s.store_id, 'received', 0.00, u.address, NOW() - INTERVAL '3 days', NOW() - INTERVAL '4 days', NOW() - INTERVAL '1 day'
+  SELECT u.user_id, s.store_id, 'received', 0, u.address, NOW() - INTERVAL '3 days', NOW() - INTERVAL '4 days', NOW() - INTERVAL '1 day'
   FROM users u CROSS JOIN stores s
   WHERE u.email='bob@example.com' AND s.store_name='FreshMart'
   ON CONFLICT DO NOTHING
@@ -276,7 +277,7 @@ ON CONFLICT DO NOTHING;
 WITH
 o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, reject_reason, confirmed_at)
-  SELECT u.user_id, s.store_id, 'rejected', 0.00, u.address, 'Payment verification failed', NOW() - INTERVAL '2 days'
+  SELECT u.user_id, s.store_id, 'rejected', 0, u.address, 'Payment verification failed', NOW() - INTERVAL '2 days'
   FROM users u CROSS JOIN stores s
   WHERE u.email='alice@example.com' AND s.store_name='FreshMart'
   ON CONFLICT DO NOTHING
@@ -287,7 +288,7 @@ INSERT INTO order_items (order_id, product_id, price_at, qty)
 SELECT (SELECT order_id FROM o), (SELECT product_id FROM a), (SELECT price FROM a), 1
 ON CONFLICT DO NOTHING;
 
--- Update all order totals
+-- Update all order totals (subtotal is BIGINT, calculated automatically)
 UPDATE orders o
 SET total_amount = COALESCE(oi.sum_sub, 0), updated_at = NOW()
 FROM (

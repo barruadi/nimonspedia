@@ -110,8 +110,12 @@ class ProductManagementController
         $name = $req['body']['name'] ?? null;
         $description = $req['body']['description'] ?? '';
         $categoryId = $req['body']['category_id'] ?? null;
-        $price = $req['body']['price'] ?? null;
-        $stock = $req['body']['stock'] ?? 0;
+        $priceInput = $req['body']['price'] ?? null;
+        $stockInput = $req['body']['stock'] ?? 0;
+
+        // Convert to integer and validate
+        $price = is_numeric($priceInput) ? (int)$priceInput : 0;
+        $stock = is_numeric($stockInput) ? (int)$stockInput : 0;
 
         // Server-side validation
         if (!$name || strlen($name) > 200) {
@@ -129,7 +133,8 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Category required'];
         }
 
-        if (!$price || $price < 1000) {
+        // Price must be integer >= 1000
+        if ($price < 1000) {
             http_response_code(400);
             return ['ok' => false, 'error' => 'Price must be at least 1000'];
         }
@@ -516,8 +521,12 @@ class ProductManagementController
         $name = $req['body']['name'] ?? null;
         $description = $req['body']['description'] ?? '';
         $categoryId = $req['body']['category_id'] ?? null;
-        $price = $req['body']['price'] ?? null;
-        $stock = $req['body']['stock'] ?? 0;
+        $priceInput = $req['body']['price'] ?? null;
+        $stockInput = $req['body']['stock'] ?? 0;
+
+        // Convert to integer and validate
+        $price = is_numeric($priceInput) ? (int)$priceInput : 0;
+        $stock = is_numeric($stockInput) ? (int)$stockInput : 0;
 
         // Server-side validation
         if (!$name || strlen($name) > 200) {
@@ -535,7 +544,7 @@ class ProductManagementController
             return ['ok' => false, 'error' => 'Category required'];
         }
 
-        if (!$price || $price < 1000) {
+        if ($price < 1000) {
             http_response_code(400);
             return ['ok' => false, 'error' => 'Price must be at least 1000'];
         }
