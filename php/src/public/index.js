@@ -38,9 +38,13 @@ const routes = {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
   },
+  '/product/:id': {
+    page: '/pages/ProductDetailPage.html',
+    script: '/script/ProductDetail.js',
+  },
   '/seller/orders': {
-    page: '/pages/OrderManagementPage.html',
-    script: '/script/OrderManagement.js',
+      page: '/pages/OrderManagementPage.html',
+      script: '/script/OrderManagement.js',
   },
   '/store/:id': {
     page: '/pages/StoreDetailPage.html',
@@ -50,6 +54,9 @@ const routes = {
     page: '/pages/OrderHistoryPage.html',
     script: '/script/OrderHistory.js',
   },
+      page: '/pages/StoreDetailPage.html',
+      script: '/script/StoreDetail.js',
+  }
 };
 
 const app = document.getElementById('app');

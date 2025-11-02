@@ -96,7 +96,7 @@
     position: relative;
     text-decoration: none;
     color: inherit;
-    transition: box-shadow .12s ease;
+    transition: box-shadow .12s ease, filter .12s ease, opacity .12s ease;
   }
   .card:hover {
     box-shadow: 0 8px 24px rgba(0,0,0,.06);
@@ -107,6 +107,18 @@
     border-color: #ccc;
     color: #999;
   }
+
+  /* NEW: disabled state when user not logged in */
+  .card.disabled {
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #999;
+    opacity: .75;
+    filter: grayscale(1);
+    pointer-events: none; /* block all interactions inside card */
+  }
+  .card.disabled .btn-addcart { display: none; }
+  .card.disabled .btn-disabled { pointer-events: none; }
 
   .card img {
     width: 100%;
@@ -204,7 +216,9 @@
     gap: .5rem 1rem;
     margin-top: 2rem;
     font-size: .9rem;
+    align-items: center;
   }
+  .pagination__spacer { flex: 1 1 auto; } /* for right-aligning the per-page select on wide screens */
 
   .pagination a {
     background: #fff;
@@ -227,6 +241,19 @@
   .pagination .page-label {
     padding: .4rem .7rem;
     color: #444;
+  }
+
+  .per-page {
+    display: inline-flex;
+    gap: .4rem;
+    align-items: center;
+  }
+  .per-page select {
+    padding: .35rem .6rem;
+    border-radius: .4rem;
+    border: 1px solid #bbb;
+    background: #fff;
+    font-size: .85rem;
   }
 </style>
 </head>
@@ -253,7 +280,7 @@
       Kategori
       <select name="category" id="filter-category">
         <option value="">All</option>
-        <!-- TODO: render real categories from DB -->
+        <!-- [TODO]: render real categories from DB -->
         <option value="phone" <?= ($filters['category'] ?? '') === 'phone' ? 'selected' : '' ?>>Phone</option>
         <option value="laptop" <?= ($filters['category'] ?? '') === 'laptop' ? 'selected' : '' ?>>Laptop</option>
       </select>
@@ -314,12 +341,17 @@
           $storeId    = $p['store_id'] ?? null;
 
           $isOut = ($stock <= 0);
-          $cardClass = 'card' . ($isOut ? ' out-of-stock' : '');
+          $isDisabled = !$sessionUser;
+          $cardClass = 'card'
+            . ($isOut ? ' out-of-stock' : '')
+            . ($isDisabled ? ' disabled' : '');
+
           $detailUrl = "/product/$id";
           $storeUrl  = $storeId ? "/store/$storeId" : "#";
+          $pointer   = ($isOut || $isDisabled) ? 'none' : 'auto';
         ?>
         <article class="<?= $cardClass ?>">
-          <a href="<?= htmlspecialchars($detailUrl) ?>" style="text-decoration:none;color:inherit;pointer-events:<?= $isOut ? 'none' : 'auto' ?>;">
+          <a href="<?= htmlspecialchars($detailUrl) ?>" style="text-decoration:none;color:inherit;pointer-events:<?= $pointer ?>;">
             <?php if ($img): ?>
               <img src="<?= htmlspecialchars($img) ?>" alt="">
             <?php else: ?>
@@ -330,7 +362,7 @@
           </a>
 
           <div class="store">
-            <a href="<?= htmlspecialchars($storeUrl) ?>">
+            <a href="<?= htmlspecialchars($storeUrl) ?>" style="pointer-events:<?= $pointer ?>;">
               <?= htmlspecialchars($storeName) ?>
             </a>
           </div>
@@ -349,7 +381,7 @@
             <?php if ($isOut): ?>
               <span class="btn-disabled">Habis</span>
             <?php elseif (!$sessionUser): ?>
-              <a class="btn-disabled">Login to buy</a>
+              <span class="btn-disabled">Login to buy</span>
             <?php else: ?>
               <button class="btn-addcart" data-product-id="<?= $id ?>">Add to cart</button>
             <?php endif; ?>
@@ -363,7 +395,6 @@
   <!-- Pagination -->
   <nav class="pagination" id="pagination-bar">
     <?php
-      // keep filters in pagination links
       $baseQuery = [
         'q'         => $filters['q']         ?? '',
         'category'  => $filters['category']  ?? '',
@@ -376,31 +407,65 @@
         $q = http_build_query(array_filter($merged, fn($v) => $v !== '' && $v !== null));
         return '/products?' . $q;
       }
+
+      $current = (int)$pagination['page'];
+      $total   = (int)$pagination['totalPages'];
+      $window  = 2;
+
+      $makeLink = function($page, $label = null, $isActive = false, $disabled = false) use ($baseQuery) {
+        if ($disabled) return '<a aria-disabled="true">'.htmlspecialchars($label ?? $page).'</a>';
+        $label = $label ?? (string)$page;
+        $href  = buildUrl($page, $baseQuery);
+        return $isActive
+          ? '<a aria-disabled="true" style="font-weight:700;background:#111;color:#fff;border-color:#111;">'.htmlspecialchars($label).'</a>'
+          : '<a href="'.htmlspecialchars($href).'">'.htmlspecialchars($label).'</a>';
+      };
+
+      echo $pagination['hasPrev'] ? $makeLink($pagination['prevPage'], 'Prev') : $makeLink(1, 'Prev', false, true);
+      echo $makeLink(1, '1', $current === 1);
+
+      if ($current - $window > 2) {
+        echo '<span class="page-label">…</span>';
+      }
+
+      $start = max(2, $current - $window);
+      $end   = min($total - 1, $current + $window);
+      for ($p = $start; $p <= $end; $p++) {
+        echo $makeLink($p, (string)$p, $current === $p);
+      }
+
+      if ($current + $window < $total - 1) {
+        echo '<span class="page-label">…</span>';
+      }
+
+      if ($total > 1) {
+        echo $makeLink($total, (string)$total, $current === $total);
+      }
+
+      echo $pagination['hasNext'] ? $makeLink($pagination['nextPage'], 'Next') : $makeLink($total, 'Next', false, true);
+
+      $perPageCurrent = (int)$pagination['perPage'];
+      $perOptions = [4, 8, 12, 16, 20, 24, 28, 32, 48];
+      if (!in_array($perPageCurrent, $perOptions, true)) { $perOptions[] = $perPageCurrent; sort($perOptions); }
     ?>
 
-    <?php if ($pagination['hasPrev']): ?>
-      <a href="<?= buildUrl($pagination['prevPage'], $baseQuery) ?>">Prev</a>
-    <?php else: ?>
-      <a aria-disabled="true">Prev</a>
-    <?php endif; ?>
-
-    <span class="page-label">
-      Page <?= $pagination['page'] ?> of <?= $pagination['totalPages'] ?>
+    <span class="pagination__spacer"></span>
+    <span class="per-page">
+      <label for="per-page-select" style="font-size:.85rem;color:#444;">Items</label>
+      <select id="per-page-select">
+        <?php foreach ($perOptions as $opt): ?>
+          <option value="<?= $opt ?>" <?= $opt === $perPageCurrent ? 'selected' : '' ?>><?= $opt ?></option>
+        <?php endforeach; ?>
+      </select>
     </span>
-
-    <?php if ($pagination['hasNext']): ?>
-      <a href="<?= buildUrl($pagination['nextPage'], $baseQuery) ?>">Next</a>
-    <?php else: ?>
-      <a aria-disabled="true">Next</a>
-    <?php endif; ?>
   </nav>
+
 
 </main>
 
 <script>window.isLoggedIn = <?= $sessionUser ? 'true' : 'false' ?>;</script>
 
 <script type="module">
-
 import { api } from '/utils/api.js'; 
 // ------- helper: debounce -------
 function debounce(fn, delay = 500) {
@@ -419,7 +484,7 @@ function getCurrentQueryParams(pageOverride = null) {
   const maxP     = document.getElementById('filter-max').value;
 
   const grid     = document.getElementById('product-grid');
-  const perPage  = grid.dataset.perPage;
+  const perPage  = document.getElementById('per-page-select')?.value || grid.dataset.perPage;
 
   const params = new URLSearchParams();
   if (q)        params.set('q', q);
@@ -428,17 +493,13 @@ function getCurrentQueryParams(pageOverride = null) {
   if (maxP)     params.set('max_price', maxP);
   if (perPage)  params.set('per_page', perPage);
 
-  // if pagination changes (Prev/Next), we pass pageOverride
   if (pageOverride !== null) {
     params.set('page', pageOverride);
   } else {
-    // otherwise keep current page (default 1)
     params.set('page', grid.dataset.page || '1');
   }
 
-  // mark ajax mode so controller returns JSON
   params.set('ajax', '1');
-
   return params.toString();
 }
 
@@ -448,12 +509,12 @@ function renderProducts(json) {
   const meta = document.getElementById('results-meta');
   const pag  = document.getElementById('pagination-bar');
 
-  // update pagination data attributes
-  grid.dataset.page = json.pagination.page;
-  grid.dataset.perPage = json.pagination.perPage;
+  grid.dataset.page       = json.pagination.page;
+  grid.dataset.perPage    = json.pagination.perPage;
   grid.dataset.totalPages = json.pagination.totalPages;
 
-  // build product cards
+  const loggedOut = !window.isLoggedIn;
+
   if (!json.products.length) {
     grid.innerHTML = `
       <div class="empty-state">
@@ -471,29 +532,30 @@ function renderProducts(json) {
       const storeId   = p.store_id ?? null;
 
       const isOut = stock <= 0;
-      const cardClass = `card${isOut ? ' out-of-stock' : ''}`;
+      const disabled = loggedOut;
+      const cardClass = `card${isOut ? ' out-of-stock' : ''}${disabled ? ' disabled' : ''}`;
       const detailUrl = `/product/${id}`;
       const storeUrl  = storeId ? `/store/${storeId}` : '#';
+      const pointer   = (isOut || disabled) ? 'none' : 'auto';
 
-      // sessionUser is not available in JSON, so we can't know if user is logged in here
-      // We could embed a data-flag in window at initial render if needed.
-      // For now: just hide add-to-cart in JS render:
       let actionHtml;
       if (isOut) {
         actionHtml = `<span class="btn-disabled">Habis</span>`;
+      } else if (disabled) {
+        actionHtml = `<span class="btn-disabled">Login to buy</span>`;
       } else {
-        actionHtml = `<span class="btn-disabled">Add to cart (login req)</span>`;
+        actionHtml = `<button class="btn-addcart" data-product-id="${id}">Add to cart</button>`;
       }
 
       return `
         <article class="${cardClass}">
-          <a href="${detailUrl}" style="text-decoration:none;color:inherit;pointer-events:${isOut?'none':'auto'};">
+          <a href="${detailUrl}" style="text-decoration:none;color:inherit;pointer-events:${pointer};">
             <img src="${img ? img : '/placeholder.png'}" alt="">
             <div class="name">${name}</div>
           </a>
 
           <div class="store">
-            <a href="${storeUrl}">${storeName}</a>
+            <a href="${storeUrl}" style="pointer-events:${pointer};">${storeName}</a>
           </div>
 
           <div class="price">Rp ${Number(price).toLocaleString('id-ID')}</div>
@@ -511,39 +573,83 @@ function renderProducts(json) {
     }).join('');
   }
 
-  // update meta text
   meta.textContent =
     `Showing page ${json.pagination.page} of ${json.pagination.totalPages} — `
     + `${json.pagination.totalItems} total products`;
 
-  // rebuild pagination bar HTML using current filters
   const curParams = new URLSearchParams(window.location.search);
 
-  function makePageLink(pageNum, disabledText) {
-    if (!pageNum) {
-      return `<a aria-disabled="true">${disabledText}</a>`;
-    }
-    // rebuild URL for normal navigation (without ajax=1)
+  function makePageLink(pageNum, label) {
+    if (!pageNum) { return `<a aria-disabled="true">${label}</a>`; }
     const nonAjaxParams = new URLSearchParams(curParams);
     nonAjaxParams.set('page', pageNum);
     nonAjaxParams.delete('ajax');
     const url = `/products?` + nonAjaxParams.toString();
-    return `<a href="${url}">${disabledText}</a>`;
+    return `<a href="${url}">${label}</a>`;
   }
 
-  pag.innerHTML = `
-    ${json.pagination.hasPrev
-      ? makePageLink(json.pagination.prevPage, 'Prev')
-      : `<a aria-disabled="true">Prev</a>`
+  function buildNumberedPagination(p) {
+    const curParams = new URLSearchParams(window.location.search);
+    const link = (page, label = null, active = false, disabled = false) => {
+      if (disabled) return `<a aria-disabled="true">${label ?? page}</a>`;
+      if (active)   return `<a aria-disabled="true" style="font-weight:700;background:#111;color:#fff;border-color:#111;">${label ?? page}</a>`;
+      const nonAjax = new URLSearchParams(curParams);
+      nonAjax.set('page', page);
+      nonAjax.delete('ajax');
+      const url = `/products?` + nonAjax.toString();
+      return `<a href="${url}">${label ?? page}</a>`;
+    };
+
+    const { page: current, totalPages: total, hasPrev, prevPage, hasNext, nextPage, perPage } = p;
+
+    const windowSize = 2;
+    const first = 1, last = Math.max(1, total);
+
+    const parts = [];
+    parts.push(hasPrev ? link(prevPage, 'Prev') : link(first, 'Prev', false, true));
+
+    parts.push(link(first, '1', current === first));
+
+    if (current - windowSize > 2) parts.push('<span class="page-label">…</span>');
+
+    const start = Math.max(2, current - windowSize);
+    const end   = Math.min(last - 1, current + windowSize);
+    for (let i = start; i <= end; i++) {
+      parts.push(link(i, String(i), current === i));
     }
-    <span class="page-label">
-      Page ${json.pagination.page} of ${json.pagination.totalPages}
-    </span>
-    ${json.pagination.hasNext
-      ? makePageLink(json.pagination.nextPage, 'Next')
-      : `<a aria-disabled="true">Next</a>`
-    }
-  `;
+
+    if (current + windowSize < last - 1) parts.push('<span class="page-label">…</span>');
+
+    if (last > 1) parts.push(link(last, String(last), current === last));
+
+    parts.push(hasNext ? link(nextPage, 'Next') : link(last, 'Next', false, true));
+
+    const perOptions = [4, 8,12,16,20,24,28,32,48];
+    const perHtml = `
+      <span class="pagination__spacer"></span>
+      <span class="per-page">
+        <label for="per-page-select" style="font-size:.85rem;color:#444;">Items</label>
+        <select id="per-page-select">
+          ${perOptions.map(n => `<option value="${n}" ${Number(perPage)===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </span>
+    `;
+
+    return parts.join('') + perHtml;
+  }
+
+  pag.innerHTML = buildNumberedPagination(json.pagination);
+
+
+  document.getElementById('per-page-select')?.addEventListener('change', () => {
+    const params = getCurrentQueryParams(1);
+    refetchAndRender(params);
+  });
+
+  document.getElementById('per-page-select')?.addEventListener('change', () => {
+    const params = getCurrentQueryParams(1);
+    refetchAndRender(params);
+  });
 }
 
 async function addToCart(productId, qty = 1) {
@@ -553,12 +659,6 @@ async function addToCart(productId, qty = 1) {
       qty: 1
     });
 
-    // if (!res || res.ok === false) {
-    //   // not logged in
-    //   // window.location.href = '/login';
-    //   return;
-    // }
-
     console.log(res);
     if (!res || res.ok === false) {
       console.log(res);
@@ -566,13 +666,7 @@ async function addToCart(productId, qty = 1) {
       return;
     }
 
-    // success
     alert('Added to cart');
-
-    // optional: update a cart badge if you have one
-    // const count = json.items?.length ?? 0;
-    // document.getElementById('cart-count')?.replaceChildren(document.createTextNode(count));
-
   } catch (e) {
     console.error(e);
     alert('Network error. Please try again.');
@@ -591,7 +685,6 @@ async function refetchAndRender(paramsString) {
     const json = await res.json();
     renderProducts(json);
 
-    // Update URL (pushState) so filters are sharable
     const withoutAjax = paramsString.replace(/(&)?ajax=1(&)?/, '$1').replace(/ajax=1&?/, '');
     const newUrl = '/products?' + withoutAjax;
     history.replaceState(null, '', newUrl);
@@ -625,9 +718,7 @@ document.getElementById('product-grid').addEventListener('click', (e) => {
     return;
   }
 
-  // Optimistic UI (optional): disable briefly to prevent spam clicks
   btn.disabled = true;
-  console.log(pid);
   addToCart(pid, 1).finally(() => { btn.disabled = false; });
 });
 
@@ -635,17 +726,18 @@ document.getElementById('product-grid').addEventListener('click', (e) => {
 document.getElementById('pagination-bar').addEventListener('click', (e) => {
   const a = e.target.closest('a[href]');
   if (!a) return;
-
-  // If it's disabled, let it fall through
   if (a.getAttribute('aria-disabled') === 'true') return;
-
-  // Use AJAX instead of hard navigation
   e.preventDefault();
 
   const url = new URL(a.href, window.location.origin);
   const newPage = url.searchParams.get('page') || '1';
 
   const params = getCurrentQueryParams(newPage);
+  refetchAndRender(params);
+});
+
+document.getElementById('per-page-select')?.addEventListener('change', () => {
+  const params = getCurrentQueryParams(1);
   refetchAndRender(params);
 });
 </script>

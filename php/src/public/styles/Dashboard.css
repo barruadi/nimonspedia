@@ -74,6 +74,7 @@ body {
     border: 2px solid #10b981;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+    margin-bottom: 2rem;
 }
 
 .banner-icon {
@@ -105,6 +106,39 @@ body {
     margin: 0;
 }
 
+/* Rich text styling untuk description di banner */
+.banner-content p strong {
+    font-weight: 700;
+    color: #111827;
+}
+
+.banner-content p em {
+    font-style: italic;
+}
+
+.banner-content p u {
+    text-decoration: underline;
+}
+
+.banner-content p ol,
+.banner-content p ul {
+    margin: 0.25rem 0 0.25rem 1.5rem;
+    padding: 0;
+}
+
+.banner-content p li {
+    margin: 0.125rem 0;
+}
+
+.banner-content p a {
+    color: #10b981;
+    text-decoration: underline;
+}
+
+.banner-content p a:hover {
+    color: #059669;
+}
+
 .btn-edit-banner {
     padding: 0.5rem 1.25rem;
     background: #10b981;
@@ -128,6 +162,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     border: 2px solid #e5e7eb;
+    margin-bottom: 2rem;
 }
 
 .section-header {
@@ -325,6 +360,7 @@ body {
     border: 2px solid #e5e7eb;
     border-radius: 12px;
     overflow: hidden;
+    margin-bottom: 2rem;
 }
 
 .stat-card {
@@ -368,14 +404,15 @@ body {
 }
 
 .dashboard-illustration {
-    max-width: 100%;
+    max-width: 120%;
     height: auto;
+    transform: scale(1.2)
 }
 
 .actions-section {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.25rem;
 }
 
 .action-btn {
@@ -400,6 +437,17 @@ body {
 
 .action-btn:active {
     transform: translateY(0);
+}
+
+/* Export button */
+.action-btn-export {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    font-size: 0.9375rem;
+}
+
+.action-btn-export:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4);
 }
 
 /* Toast Notification */
@@ -499,6 +547,106 @@ body {
     }
 }
 
+/* Quill Editor */
+#editor {
+    background-color: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    min-height: 120px;
+    font-family: inherit;
+}
+
+/* Toolbar Quill */
+.ql-toolbar.ql-snow {
+    border: none;
+    border-bottom: 2px solid #e5e7eb;
+    border-radius: 8px 8px 0 0;
+    background-color: #f9fafb;
+    padding: 0.75rem 1rem;
+}
+
+/* Container editor Quill */
+.ql-container.ql-snow {
+    border: none;
+    border-radius: 0 0 8px 8px;
+    font-family: inherit;
+    font-size: 0.875rem;
+}
+
+/* Area editor Quill */
+.ql-editor {
+    min-height: 100px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    color: #111827;
+}
+
+/* Placeholder Quill */
+.ql-editor.ql-blank::before {
+    color: #9ca3af;
+    font-style: normal;
+    left: 1rem;
+    right: 1rem;
+}
+
+/* Focus state untuk Quill editor */
+#editor:focus-within {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Toolbar button styling */
+.ql-toolbar .ql-stroke {
+    stroke: #6b7280;
+}
+
+.ql-toolbar .ql-fill {
+    fill: #6b7280;
+}
+
+.ql-toolbar .ql-picker-label {
+    color: #6b7280;
+}
+
+/* Active/selected toolbar buttons */
+.ql-toolbar button:hover,
+.ql-toolbar button:focus,
+.ql-toolbar button.ql-active {
+    color: #10b981;
+}
+
+.ql-toolbar button:hover .ql-stroke,
+.ql-toolbar button:focus .ql-stroke,
+.ql-toolbar button.ql-active .ql-stroke {
+    stroke: #10b981;
+}
+
+.ql-toolbar button:hover .ql-fill,
+.ql-toolbar button:focus .ql-fill,
+.ql-toolbar button.ql-active .ql-fill {
+    fill: #10b981;
+}
+
+/* Dropdown picker */
+.ql-toolbar .ql-picker-label:hover,
+.ql-toolbar .ql-picker-label.ql-active {
+    color: #10b981;
+}
+
+.ql-toolbar .ql-picker-options {
+    background-color: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.ql-toolbar .ql-picker-item:hover {
+    color: #10b981;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .stats-grid {
@@ -516,6 +664,27 @@ body {
 
     .logo-upload-container {
         margin: 0 auto;
+    }
+    
+    .store-info-banner {
+        margin-bottom: 1.5rem;
+    }
+    
+    .edit-store-section {
+        margin-bottom: 1.5rem;
+    }
+    
+    .stats-grid {
+        margin-bottom: 1.5rem;
+    }
+
+    .export-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-illustration {
+        max-width: 100%;
+        transform: scale(1); /* Reset scale di tablet */
     }
 }
 
@@ -561,33 +730,12 @@ body {
         font-size: 0.9375rem;
     }
 
-    .store-info-banner {
-        flex-direction: column;
-        text-align: center;
+    .action-btn-export {
+        font-size: 0.875rem;
     }
 
-    .form-actions {
-        flex-direction: column;
-    }
-
-    .toast {
-        top: 1rem;
-        left: 1rem;
-        right: 1rem;
-        transform: none;
-        width: auto;
-        min-width: 0;
-        max-width: none;
-    }
-
-    @keyframes slideDown {
-        from {
-            transform: translateY(-100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+    .dashboard-illustration {
+        max-width: 90%;
+        transform: scale(1);
     }
 }

@@ -139,13 +139,6 @@
 </head>
 <body>
 
-<nav class="topnav">
-  <a href="/products">Browse</a>
-  <a href="/checkout">Cart</a>
-  <a href="/products">Dashboard</a>
-  <!-- You can also add logout if you want -->
-</nav>
-
 <main class="checkout-page">
 
   <!-- LEFT: Cart review -->
