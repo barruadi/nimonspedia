@@ -1,0 +1,42 @@
+:host {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(2px);
+    z-index: 11000; 
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+:host([open]) {
+    display: flex;
+    opacity: 1;
+}
+.loading-icon {
+    width: 280px;
+    height: 280px;
+    object-fit: contain;
+    margin-bottom: 2rem;
+    animation: floatAnimation 3s ease-in-out infinite;
+}
+.loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.75rem 0;
+}
+.loading-subtitle {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+}
+@keyframes floatAnimation {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}

@@ -1,4 +1,7 @@
 import { api } from '../utils/api.js';
+import { checkSellerAuth } from '../utils/sellerAuth.js';
+import { showToast } from '../utils/toast.js';
+import { showLoading, hideLoading } from '../utils/loading.js';
 
 function initProductManagementPage() {
     // Products Data
@@ -7,7 +10,6 @@ function initProductManagementPage() {
     let allCategories = [];
 
     // DOM Elements
-    const loadingState = document.getElementById('loadingState');
     const mainContent = document.getElementById('mainContent');
     const emptyState = document.getElementById('emptyState');
     const productGridContainer = document.getElementById('productGridContainer');
@@ -19,21 +21,24 @@ function initProductManagementPage() {
     let searchTerm = '';
 
     async function initPage() {
+        const isAuthorized = await checkSellerAuth();
+        if (!isAuthorized) return;
+
         try {
-            showLoading();
+            showLoading('Memuat Produk...', 'Mengambil data produk');
             console.log('Fetching products info...');
             const result = await api.get('/seller/products');
             console.log('Store products info response:', result);
 
             if (!result || !result.ok) {
                 console.warn('Store info request failed:', result);
-                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
-                setTimeout(() => window.location.href = '/login', 1500);
+                hideLoading();
+                showToast('Gagal memuat data', 'Terjadi kesalahan saat mengambil data', 'error');
                 return;
             }
 
             const data = result.data;
-            
+
             if (!data) {
                 throw new Error('No data returned from API');
             }
@@ -42,7 +47,7 @@ function initProductManagementPage() {
             store = data.store;
             products = data.products;
             console.log('Products loaded:', products.length);
-            
+
             await loadCategoriesFilter();
             renderProducts();
 
@@ -225,18 +230,10 @@ function initProductManagementPage() {
     return card;
 }
 
-    function showLoading() {
-        if (loadingState) loadingState.style.display = 'flex';
-        if (mainContent) mainContent.style.display = 'none';
-        if (emptyState) emptyState.style.display = 'none';
-    }
-
-    function hideLoading() {
-        if (loadingState) loadingState.style.display = 'none';
-    }
-
     function showMainContent() {
-        if (mainContent) mainContent.style.display = 'block';
+        if (mainContent) {
+            mainContent.style.display = 'block';
+        }
     }
 
     function hideMainContent() {
@@ -345,47 +342,6 @@ function initProductManagementPage() {
             clearTimeout(t);
             t = setTimeout(() => fn(...args), wait);
         };
-    }
-
-    // Toast Notification
-    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
-        const toast = document.getElementById('toast');
-        const backdrop = document.getElementById('toastBackdrop');
-        const primaryEl = document.getElementById('toastPrimaryMessage');
-        const secondaryEl = document.getElementById('toastSecondaryMessage');
-        const closeBtn = document.getElementById('toastCloseBtn');
-        
-        if (!toast || !primaryEl || !secondaryEl) {
-            console.error('Toast elements not found!');
-            return;
-        }
-        
-        primaryEl.textContent = primaryMessage;
-        secondaryEl.textContent = secondaryMessage;
-        toast.className = 'toast ' + type;
-        
-        if (backdrop) backdrop.style.display = 'block';
-        toast.style.display = 'flex';
-        
-        let autoHideTimer = setTimeout(hideToast, 5000);
-        
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                clearTimeout(autoHideTimer);
-                hideToast();
-            };
-        }
-        if (backdrop) {
-            backdrop.onclick = () => {
-                clearTimeout(autoHideTimer);
-                hideToast();
-            };
-        }
-
-        function hideToast() {
-            if (toast) toast.style.display = 'none';
-            if (backdrop) backdrop.style.display = 'none';
-        }
     }
 
     console.log('Initializing ProductManagement page...');

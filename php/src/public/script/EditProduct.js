@@ -1,13 +1,19 @@
 import { api } from '../utils/api.js';
+import { checkSellerAuth } from '../utils/sellerAuth.js';
+import { showToast } from '../utils/toast.js';
+import { showLoading, hideLoading } from '../utils/loading.js';
 
 console.log('EditProduct.js loaded');
 
-function initEditProductPage() {
+async function initEditProductPage() {
+    const isAuthorized = await checkSellerAuth();
+    if (!isAuthorized) return;
+
     console.log('DOM ready, initializing edit page...');
 
     // Get product ID from route params
     const productId = window.routeParams?.id;
-    
+
     if (!productId) {
         showToast('Product ID tidak ditemukan!', 'Kembali ke halaman produk...', 'error');
         setTimeout(() => window.location.href = '/seller/products', 1500);
@@ -203,13 +209,15 @@ function initEditProductPage() {
     // Load Product Data
     async function loadProductData() {
         try {
+            showLoading('Memuat Produk...', 'Mengambil data produk');
             console.log('Loading product data...');
-            
+
             const result = await api.get(`/seller/products/edit/${productId}`);
-            
+
             console.log('Product data response:', result);
-            
+
             if (!result || !result.ok) {
+                hideLoading();
                 throw new Error(result?.error || 'Failed to load product data');
             }
 
@@ -248,9 +256,13 @@ function initEditProductPage() {
             populateCategories(categories, product.category_id);
 
             console.log('Product data loaded successfully');
+            hideLoading();
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) mainContent.style.display = 'block';
 
         } catch (error) {
             console.error('Error loading product:', error);
+            hideLoading();
             showToast('Gagal memuat data produk!', error.message, 'error');
             setTimeout(() => window.location.href = '/seller/products', 2000);
         }
@@ -439,47 +451,6 @@ function initEditProductPage() {
             console.log('Cancel button clicked, going back to products');
             window.location.href = '/seller/products';
         });
-    }
-
-    // Toast Notification
-    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
-        const toast = document.getElementById('toast');
-        const backdrop = document.getElementById('toastBackdrop');
-        const primaryEl = document.getElementById('toastPrimaryMessage');
-        const secondaryEl = document.getElementById('toastSecondaryMessage');
-        const closeBtn = document.getElementById('toastCloseBtn');
-        
-        if (!toast || !primaryEl || !secondaryEl) {
-            console.error('Toast elements not found!');
-            return;
-        }
-        
-        primaryEl.textContent = primaryMessage;
-        secondaryEl.textContent = secondaryMessage;
-        toast.className = 'toast ' + type;
-        
-        if (backdrop) backdrop.style.display = 'block';
-        toast.style.display = 'flex';
-        
-        let autoHideTimer = setTimeout(hideToast, 5000);
-        
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                clearTimeout(autoHideTimer);
-                hideToast();
-            };
-        }
-        if (backdrop) {
-            backdrop.onclick = () => {
-                clearTimeout(autoHideTimer);
-                hideToast();
-            };
-        }
-
-        function hideToast() {
-            if (toast) toast.style.display = 'none';
-            if (backdrop) backdrop.style.display = 'none';
-        }
     }
 
     // Initialize everything

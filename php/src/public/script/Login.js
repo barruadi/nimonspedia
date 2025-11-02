@@ -1,4 +1,7 @@
 import { api } from "/utils/api.js";
+import { checkAlreadyLoggedIn } from "/utils/loginRedirect.js";
+
+checkAlreadyLoggedIn();
 
 const loginForm = document.getElementById("loginForm");
 const loginEmailInput = document.getElementById("loginEmail");
