@@ -152,7 +152,6 @@
     <!-- Fallback (no order info) -->
     <div class="card">
       <h1>Order Confirmed</h1>
-      <p class="muted">Your order was created, but we couldn't load the detail. You can review it from the Orders page.</p>
       <div class="actions">
         <a class="btn" href="/orders">View Orders</a>
         <a class="btn btn-secondary" href="/products">Keep shopping</a>

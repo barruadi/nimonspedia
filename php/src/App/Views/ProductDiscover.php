@@ -1,3 +1,17 @@
+<?php
+/** @var array $filters */
+/** @var array $pagination */
+/** @var array $products */
+/** @var array|null $sessionUser */
+/** @var string $title */
+
+// Fallbacks in case controller didn't provide them (safe to remove if you always set them)
+$title       = $title       ?? 'Products';
+$filters     = $filters     ?? [];
+$pagination  = $pagination  ?? ['page'=>1,'perPage'=>12,'totalPages'=>1,'totalItems'=>0,'hasPrev'=>false,'hasNext'=>false,'prevPage'=>null,'nextPage'=>null];
+$products    = $products    ?? [];
+$sessionUser = $sessionUser ?? null;
+?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -34,7 +48,7 @@
   }
   @media(min-width:600px){
     .filters {
-      grid-template-columns: 1fr 150px 150px 150px;
+      grid-template-columns: 1fr 300px 150px 150px;
       align-items: end;
     }
   }
@@ -45,7 +59,7 @@
     font-size: .8rem;
     color: #444;
   }
-  .filters input, .filters select {
+  .filters input, .filters select, .multi__button {
     padding: .5rem .6rem;
     border-radius: .4rem;
     border: 1px solid #bbb;
@@ -255,6 +269,37 @@
     background: #fff;
     font-size: .85rem;
   }
+
+  /* === MULTI SELECT DROPDOWN === */
+  .multi { position: relative; }
+  .multi__button {
+    width: 100%; text-align: left;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem; cursor: pointer;
+  }
+  .multi__label { font-size: .9rem; color:#222; }
+  .multi__count { font-size:.75rem; background:#111; color:#fff; border-radius:.4rem; padding:.15rem .4rem; }
+  .multi__chev { flex: 0 0 auto; }
+  .multi[data-open="true"] .multi__button { border-color:#888; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .multi__panel {
+    position: absolute; z-index: 50; inset-inline: 0; top: calc(100% + .35rem);
+    background:#fff; border:1px solid #ccc; border-radius:.5rem; box-shadow:0 10px 30px rgba(0,0,0,.08);
+    padding:.5rem; display:none;
+  }
+  .multi[data-open="true"] .multi__panel { display:block; }
+  .multi__options { max-height: 220px; overflow:auto; display:grid; gap:.25rem; padding:.25rem; }
+  .multi__option {
+    display:flex; align-items:center; gap:.5rem; padding:.35rem; border-radius:.35rem; cursor:pointer;
+  }
+  .multi__option:hover { background:#f7f7f7; }
+  .multi__option input { accent-color:#111; }
+  .multi__empty { color:#666; font-size:.85rem; padding:.5rem; }
+  .multi__actions {
+    display:flex; justify-content: space-between; gap:.5rem; padding:.35rem .25rem .15rem;
+  }
+  .multi__actions button {
+    border:1px solid #bbb; background:#fff; border-radius:.4rem; padding:.4rem .6rem; font-size:.85rem; cursor:pointer;
+  }
+  .multi__actions .multi__apply { background:#111; color:#fff; border-color:#111; }
 </style>
 </head>
 <body>
@@ -278,15 +323,31 @@
 
     <label>
       Kategori
-      <select
-        multiple
-        size="6"
-        name="category"
+      <!-- Hidden CSV stores selected category IDs -->
+      <input
+        type="hidden"
+        name="categories"
         id="filter-category"
-        data-selected-csv="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>"
-      >
-        <option disabled>Loading…</option>
-      </select>
+        value="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
+
+      <!-- Dropdown with checkboxes -->
+      <div class="multi" id="category-menu"
+           data-selected-csv="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
+        <button type="button" class="multi__button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="multi__label">Pilih kategori</span>
+          <span class="multi__count" hidden>0</span>
+          <svg class="multi__chev" width="16" height="16" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7l5 6 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        </button>
+        <div class="multi__panel" role="listbox" aria-multiselectable="true">
+          <div class="multi__options" id="category-options">
+            <div class="multi__empty">Loading…</div>
+          </div>
+          <div class="multi__actions">
+            <button type="button" class="multi__clear">Clear</button>
+            <button type="button" class="multi__apply">Apply</button>
+          </div>
+        </div>
+      </div>
     </label>
 
     <label>
@@ -315,17 +376,17 @@
   </section>
 
   <div class="results-meta" id="results-meta">
-    Showing page <?= $pagination['page'] ?> of <?= $pagination['totalPages'] ?> —
-    <?= $pagination['totalItems'] ?> total products
+    Showing page <?= (int)$pagination['page'] ?> of <?= (int)$pagination['totalPages'] ?> —
+    <?= (int)$pagination['totalItems'] ?> total products
   </div>
 
   <!-- Product Grid -->
   <section
     class="grid"
     id="product-grid"
-    data-page="<?= $pagination['page'] ?>"
-    data-total-pages="<?= $pagination['totalPages'] ?>"
-    data-per-page="<?= $pagination['perPage'] ?>"
+    data-page="<?= (int)$pagination['page'] ?>"
+    data-total-pages="<?= (int)$pagination['totalPages'] ?>"
+    data-per-page="<?= (int)$pagination['perPage'] ?>"
   >
 
     <?php if (empty($products)): ?>
@@ -335,10 +396,10 @@
     <?php else: ?>
       <?php foreach ($products as $p): ?>
         <?php
-          $id         = (int) $p['product_id'];
+          $id         = (int)($p['product_id'] ?? 0);
           $name       = $p['name'] ?? 'Untitled';
-          $price      = $p['price'] ?? 0;
-          $stock      = (int) $p['stock'];
+          $price      = (float)($p['price'] ?? 0);
+          $stock      = (int)($p['stock'] ?? 0);
           $img        = $p['image_path'] ?? '';
           $storeName  = $p['store_name'] ?? 'Unknown Store';
           $storeId    = $p['store_id'] ?? null;
@@ -398,12 +459,13 @@
   <!-- Pagination -->
   <nav class="pagination" id="pagination-bar">
     <?php
+      // NOTE: we persist 'categories' CSV in the URL, not 'category'
       $baseQuery = [
-        'q'         => $filters['q']         ?? '',
-        'category'  => $filters['category']  ?? '',
-        'min_price' => $filters['min_price'] ?? '',
-        'max_price' => $filters['max_price'] ?? '',
-        'per_page'  => $pagination['perPage'],
+        'q'           => $filters['q']           ?? '',
+        'categories'  => $filters['categories']  ?? ($filters['category'] ?? ''),
+        'min_price'   => $filters['min_price']   ?? '',
+        'max_price'   => $filters['max_price']   ?? '',
+        'per_page'    => $pagination['perPage'],
       ];
       function buildUrl($pageNum, $baseQuery) {
         $merged = array_merge($baseQuery, ['page' => $pageNum]);
@@ -424,7 +486,7 @@
           : '<a href="'.htmlspecialchars($href).'">'.htmlspecialchars($label).'</a>';
       };
 
-      echo $pagination['hasPrev'] ? $makeLink($pagination['prevPage'], 'Prev') : $makeLink(1, 'Prev', false, true);
+      echo !empty($pagination['hasPrev']) ? $makeLink($pagination['prevPage'], 'Prev') : $makeLink(1, 'Prev', false, true);
       echo $makeLink(1, '1', $current === 1);
 
       if ($current - $window > 2) {
@@ -445,7 +507,7 @@
         echo $makeLink($total, (string)$total, $current === $total);
       }
 
-      echo $pagination['hasNext'] ? $makeLink($pagination['nextPage'], 'Next') : $makeLink($total, 'Next', false, true);
+      echo !empty($pagination['hasNext']) ? $makeLink($pagination['nextPage'], 'Next') : $makeLink($total, 'Next', false, true);
 
       $perPageCurrent = (int)$pagination['perPage'];
       $perOptions = [4, 8, 12, 16, 20, 24, 28, 32, 48];
@@ -457,7 +519,7 @@
       <label for="per-page-select" style="font-size:.85rem;color:#444;">Items</label>
       <select id="per-page-select">
         <?php foreach ($perOptions as $opt): ?>
-          <option value="<?= $opt ?>" <?= $opt === $perPageCurrent ? 'selected' : '' ?>><?= $opt ?></option>
+          <option value="<?= (int)$opt ?>" <?= ((int)$opt === $perPageCurrent) ? 'selected' : '' ?>><?= (int)$opt ?></option>
         <?php endforeach; ?>
       </select>
     </span>
@@ -469,20 +531,46 @@
 <script>window.isLoggedIn = <?= $sessionUser ? 'true' : 'false' ?>;</script>
 
 <script type="module">
-import { api } from '/utils/api.js'; 
+import { api } from '/utils/api.js';
 
-function getSelectedValues(sel) {
-  return Array.from(sel?.selectedOptions ?? []).map(o => String(o.value));
-}
-function setSelectedValues(sel, values) {
-  const want = new Set(values.map(String));
-  Array.from(sel.options).forEach(opt => { opt.selected = want.has(String(opt.value)); });
-}
+/* --------------------- helpers ---------------------- */
 function parseCsv(str) {
-  return (str ?? '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
+  return (str ?? '').split(',').map(s => s.trim()).filter(Boolean);
+}
+function toCsv(arr) {
+  return (arr ?? []).map(String).filter(Boolean).join(',');
+}
+
+function getSelectedCategoryIdsFromMenu() {
+  return Array.from(document.querySelectorAll('#category-menu input[type="checkbox"]:checked'))
+    .map(cb => cb.value);
+}
+function setSelectedCategoryIdsInMenu(ids) {
+  const want = new Set((ids ?? []).map(String));
+  document.querySelectorAll('#category-menu input[type="checkbox"]').forEach(cb => {
+    cb.checked = want.has(String(cb.value));
+  });
+  updateCategoryBadge();
+}
+function updateCategoryHiddenInput() {
+  const hidden = document.getElementById('filter-category');
+  hidden.value = toCsv(getSelectedCategoryIdsFromMenu());
+}
+function updateCategoryBadge() {
+  const lbl = document.querySelector('#category-menu .multi__label');
+  const countEl = document.querySelector('#category-menu .multi__count');
+  const chosen = Array.from(document.querySelectorAll('#category-menu input[type="checkbox"]:checked'));
+  if (!chosen.length) {
+    lbl.textContent = 'Pilih kategori';
+    countEl.hidden = true;
+  } else if (chosen.length <= 2) {
+    lbl.textContent = chosen.map(c => c.dataset.name || c.value).join(', ');
+    countEl.hidden = true;
+  } else {
+    lbl.textContent = 'Kategori';
+    countEl.textContent = chosen.length;
+    countEl.hidden = false;
+  }
 }
 
 // ------- helper: debounce -------
@@ -494,78 +582,133 @@ function debounce(fn, delay = 500) {
   }
 }
 
+/* ------------------ categories loader ------------------ */
 async function loadCategories() {
-  const sel = document.getElementById('filter-category');
-  if (!sel) return;
+  const menu = document.getElementById('category-menu');
+  const optionsBox = document.getElementById('category-options');
+  if (!menu || !optionsBox) return;
 
-  // Preferred: URL ?categories=1,2,3 ; Fallbacks: ?category=1 or data-selected-csv
   const url = new URLSearchParams(window.location.search);
-  const urlCsv = url.get('categories');
-  const urlSingle = url.get('category');
-  const selectedCsv = urlCsv ?? urlSingle ?? sel.dataset.selectedCsv ?? '';
+  const urlCsv   = url.get('categories');
+  const urlSingle= url.get('category'); // legacy
+  const selectedCsv = urlCsv ?? urlSingle ?? menu.dataset.selectedCsv ?? '';
   const desired = parseCsv(selectedCsv);
 
   try {
-    // Expect: [{ category_id, name }]
+    // Expect typical shapes: array | {data: array} | {categories: array} | map
     const payload = await api.get('/categories');
-    // Normalize to array of {cat_id, name}
     let categories = [];
-    
-    if (Array.isArray(payload)) {
-      categories = payload;
-    } else if (Array.isArray(payload?.data)) {
-      categories = payload.data;
-    } else if (Array.isArray(payload?.categories)) {
-      categories = payload.categories;
-    } else if (payload && typeof payload === 'object') {
-      // If backend accidentally returned an object map like {"1":"Phone"}
-      const entries = Object.entries(payload)
-        .filter(([k]) => k !== 'ok' && k !== 'error' && k !== 'message'); // ignore meta keys
-      const looksLikeMap = entries.every(([, v]) => typeof v === 'string');
-      if (looksLikeMap) {
-        categories = entries.map(([cat_id, name]) => ({ cat_id, name }));
-      }
-    }
-    
-    if (!Array.isArray(categories)) {
-      console.error('Unexpected /categories payload:', payload);
-      throw new Error('Categories must be an array');
+    if (Array.isArray(payload)) categories = payload;
+    else if (Array.isArray(payload?.data)) categories = payload.data;
+    else if (Array.isArray(payload?.categories)) categories = payload.categories;
+    else if (payload && typeof payload === 'object') {
+      const entries = Object.entries(payload).filter(([k]) => !['ok','error','message'].includes(k));
+      const looksLikeMap = entries.every(([,v]) => typeof v === 'string');
+      if (looksLikeMap) categories = entries.map(([category_id, name]) => ({ category_id, name }));
     }
 
-    sel.innerHTML = categories.map(c =>
-      `<option value="${String(c.category_id)}">${c.name ?? `Category ${c.category_id}`}</option>`
-    ).join('');
+    if (!Array.isArray(categories)) throw new Error('Categories must be an array');
 
-    // If URL references categories that aren't in API (stale), append them so UI shows selection
+    if (!categories.length) {
+      optionsBox.innerHTML = `<div class="multi__empty">No categories</div>`;
+    } else {
+      optionsBox.innerHTML = categories.map(c => {
+        const id = String(c.category_id);
+        const name = c.name ?? `Category ${id}`;
+        return `
+          <label class="multi__option">
+            <input type="checkbox" value="${id}" data-name="${name}">
+            <span>${name}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    // include stale ids from URL if API no longer has them
     const have = new Set(categories.map(c => String(c.category_id)));
-    desired
-      .filter(v => !have.has(String(v)))
-      .forEach(v => {
-        const o = document.createElement('option');
-        o.value = String(v);
-        o.textContent = `(Unknown) ${v}`;
-        sel.appendChild(o);
-      });
+    desired.filter(v => !have.has(String(v))).forEach(v => {
+      const el = document.createElement('label');
+      el.className = 'multi__option';
+      el.innerHTML = `<input type="checkbox" value="${String(v)}" data-name="(Unknown) ${String(v)}">
+                      <span>(Unknown) ${String(v)}</span>`;
+      optionsBox.appendChild(el);
+    });
 
-    setSelectedValues(sel, desired);
+    setSelectedCategoryIdsInMenu(desired);
+    updateCategoryHiddenInput();
 
   } catch (err) {
     console.error('Failed to load /categories', err);
-    // Fallback static options if API fails
-    sel.innerHTML = `
-      <option value="phone">Phone</option>
-      <option value="laptop">Laptop</option>
+    // Fallback static options
+    optionsBox.innerHTML = `
+      <label class="multi__option">
+        <input type="checkbox" value="phone" data-name="Phone"><span>Phone</span>
+      </label>
+      <label class="multi__option">
+        <input type="checkbox" value="laptop" data-name="Laptop"><span>Laptop</span>
+      </label>
     `;
-    setSelectedValues(sel, desired.length ? desired : []);
+    setSelectedCategoryIdsInMenu(desired);
+    updateCategoryHiddenInput();
   }
 }
 loadCategories();
 
-// ------- build query string from current filters -------
+/* -------------- dropdown open/close + actions -------------- */
+(function initCategoryMenu(){
+  const menu = document.getElementById('category-menu');
+  if (!menu) return;
+  const btn = menu.querySelector('.multi__button');
+  const panel = menu.querySelector('.multi__panel');
+  const clearBtn = menu.querySelector('.multi__clear');
+  const applyBtn = menu.querySelector('.multi__apply');
+
+  function open()  { menu.dataset.open = "true";  btn.setAttribute('aria-expanded','true'); }
+  function close() { menu.dataset.open = "false"; btn.setAttribute('aria-expanded','false'); }
+
+  btn.addEventListener('click', () => {
+    const isOpen = menu.dataset.open === "true";
+    isOpen ? close() : open();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target)) close();
+  });
+
+  // live update label/count on check
+  menu.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      updateCategoryBadge();
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    updateCategoryBadge();
+  });
+
+  // apply writes hidden CSV and triggers filtering
+  const debouncedFilter = debounce(() => {
+    const params = getCurrentQueryParams(1);
+    refetchAndRender(params);
+  }, 500);
+
+  applyBtn.addEventListener('click', () => {
+    updateCategoryHiddenInput();
+    close();
+    debouncedFilter();
+  });
+
+  // keyboard support
+  panel.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { close(); btn.focus(); }
+  });
+})();
+
+/* --------------------- list interactions --------------------- */
 function getCurrentQueryParams(pageOverride = null) {
   const q        = document.getElementById('filter-q').value.trim();
-  const selCat   = document.getElementById('filter-category');
-  const categories = getSelectedValues(selCat); // NEW
+  const categoriesCsv = document.getElementById('filter-category').value; // CSV from hidden
   const minP     = document.getElementById('filter-min').value;
   const maxP     = document.getElementById('filter-max').value;
 
@@ -574,7 +717,7 @@ function getCurrentQueryParams(pageOverride = null) {
 
   const params = new URLSearchParams();
   if (q)        params.set('q', q);
-  if (categories.length) params.set('categories', categories.join(',')); // NEW (CSV)
+  if (categoriesCsv) params.set('categories', categoriesCsv);
   if (minP)     params.set('min_price', minP);
   if (maxP)     params.set('max_price', maxP);
   if (perPage)  params.set('per_page', perPage);
@@ -589,7 +732,6 @@ function getCurrentQueryParams(pageOverride = null) {
   return params.toString();
 }
 
-// ------- render products from JSON -------
 function renderProducts(json) {
   const grid = document.getElementById('product-grid');
   const meta = document.getElementById('results-meta');
@@ -665,35 +807,23 @@ function renderProducts(json) {
 
   const curParams = new URLSearchParams(window.location.search);
 
-  function makePageLink(pageNum, label) {
-    if (!pageNum) { return `<a aria-disabled="true">${label}</a>`; }
-    const nonAjaxParams = new URLSearchParams(curParams);
-    nonAjaxParams.set('page', pageNum);
-    nonAjaxParams.delete('ajax');
-    const url = `/products?` + nonAjaxParams.toString();
-    return `<a href="${url}">${label}</a>`;
+  function link(page, label = null, active = false, disabled = false) {
+    if (disabled) return `<a aria-disabled="true">${label ?? page}</a>`;
+    if (active)   return `<a aria-disabled="true" style="font-weight:700;background:#111;color:#fff;border-color:#111;">${label ?? page}</a>`;
+    const nonAjax = new URLSearchParams(curParams);
+    nonAjax.set('page', page);
+    nonAjax.delete('ajax');
+    const url = `/products?` + nonAjax.toString();
+    return `<a href="${url}">${label ?? page}</a>`;
   }
 
   function buildNumberedPagination(p) {
-    const curParams = new URLSearchParams(window.location.search);
-    const link = (page, label = null, active = false, disabled = false) => {
-      if (disabled) return `<a aria-disabled="true">${label ?? page}</a>`;
-      if (active)   return `<a aria-disabled="true" style="font-weight:700;background:#111;color:#fff;border-color:#111;">${label ?? page}</a>`;
-      const nonAjax = new URLSearchParams(curParams);
-      nonAjax.set('page', page);
-      nonAjax.delete('ajax');
-      const url = `/products?` + nonAjax.toString();
-      return `<a href="${url}">${label ?? page}</a>`;
-    };
-
     const { page: current, totalPages: total, hasPrev, prevPage, hasNext, nextPage, perPage } = p;
-
     const windowSize = 2;
     const first = 1, last = Math.max(1, total);
 
     const parts = [];
     parts.push(hasPrev ? link(prevPage, 'Prev') : link(first, 'Prev', false, true));
-
     parts.push(link(first, '1', current === first));
 
     if (current - windowSize > 2) parts.push('<span class="page-label">…</span>');
@@ -720,22 +850,19 @@ function renderProducts(json) {
         </select>
       </span>
     `;
-
     return parts.join('') + perHtml;
   }
 
   pag.innerHTML = buildNumberedPagination(json.pagination);
 
-
   document.getElementById('per-page-select')?.addEventListener('change', () => {
     const params = getCurrentQueryParams(1);
     refetchAndRender(params);
   });
 
-  document.getElementById('per-page-select')?.addEventListener('change', () => {
-    const params = getCurrentQueryParams(1);
-    refetchAndRender(params);
-  });
+  // sync category badge with current hidden CSV (e.g., when URL changes)
+  const currentCsv = document.getElementById('filter-category')?.value || '';
+  setSelectedCategoryIdsInMenu(parseCsv(currentCsv));
 }
 
 async function addToCart(productId, qty = 1) {
@@ -745,9 +872,8 @@ async function addToCart(productId, qty = 1) {
       qty: 1
     });
 
-    console.log(res);
     if (!res || res.ok === false) {
-      console.log(res);
+      alert(res?.message || 'Failed to add to cart.');
       return;
     }
 
@@ -758,7 +884,6 @@ async function addToCart(productId, qty = 1) {
   }
 }
 
-// ------- fetch new data with skeleton -------
 async function refetchAndRender(paramsString) {
   const grid = document.getElementById('product-grid');
   grid.classList.add('loading');
@@ -780,14 +905,20 @@ async function refetchAndRender(paramsString) {
   }
 }
 
-// ------- wire filter inputs (debounced search) -------
+/* ------- wire filter inputs (debounced search) ------- */
 const debouncedFilter = debounce(() => {
   const params = getCurrentQueryParams(1); // always go back to page 1 on filter
   refetchAndRender(params);
 }, 500);
 
 document.getElementById('filter-q').addEventListener('input', debouncedFilter);
-document.getElementById('filter-category').addEventListener('change', debouncedFilter);
+
+// Category menu uses Apply button; if you want instant apply, do it here instead:
+// document.getElementById('category-menu')?.addEventListener('change', () => {
+//   updateCategoryHiddenInput();
+//   debouncedFilter();
+// });
+
 document.getElementById('filter-min').addEventListener('input', debouncedFilter);
 document.getElementById('filter-max').addEventListener('input', debouncedFilter);
 
@@ -807,7 +938,7 @@ document.getElementById('product-grid').addEventListener('click', (e) => {
   addToCart(pid, 1).finally(() => { btn.disabled = false; });
 });
 
-// OPTIONAL: intercept pagination clicks for SPA-like page changes
+// Intercept pagination clicks for SPA-like page changes
 document.getElementById('pagination-bar').addEventListener('click', (e) => {
   const a = e.target.closest('a[href]');
   if (!a) return;
@@ -821,6 +952,7 @@ document.getElementById('pagination-bar').addEventListener('click', (e) => {
   refetchAndRender(params);
 });
 
+// Keep per-page select in sync (SSR initial render)
 document.getElementById('per-page-select')?.addEventListener('change', () => {
   const params = getCurrentQueryParams(1);
   refetchAndRender(params);
