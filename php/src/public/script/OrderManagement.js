@@ -115,7 +115,7 @@ function initOrderManagementPage() {
         const formattedDate = formatDate(order.created_at);
         const formattedTotal = formatPrice(order.total_amount);
 
-        // Get order items (you'll need to fetch this from backend)
+        // Get order items
         const items = order.items || [];
         const itemsHTML = items.slice(0, 2).map(item => `
             <div class="order-item">
@@ -237,7 +237,6 @@ function initOrderManagementPage() {
             return;
         }
 
-        // Multi-page case
         // First page button
         if (firstPageBtn) {
             firstPageBtn.disabled = currentPage === 1;
@@ -524,7 +523,7 @@ function initOrderManagementPage() {
     // Generate status history based on current status
     function getStatusHistory(currentStatus) {
         const statusFlows = {
-            'waiting_approval': null, // No history yet
+            'waiting_approval': null,
             'approved': `
                 <span class="order-status-badge status-waiting_approval" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Waiting Approval</span>
                 <span style="margin: 0 0.25rem; color: #9ca3af;">→</span>
@@ -727,6 +726,7 @@ function initOrderManagementPage() {
         }
     }
 
+    // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
         const backdrop = document.getElementById('toastBackdrop');

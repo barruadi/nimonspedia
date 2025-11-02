@@ -422,6 +422,7 @@ function initDashboardPage() {
         }
     }
 
+    // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
         const backdrop = document.getElementById('toastBackdrop');

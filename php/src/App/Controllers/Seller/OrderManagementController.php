@@ -155,6 +155,11 @@ class OrderManagementController
         try {
             $success = Order::rejectWithRefund($orderId, $rejectReason);
 
+            // Check if operation was successful
+            if (!$success) {
+                throw new Exception('Failed to reject order in database');
+            }
+
             http_response_code(200);
             return [
                 'ok' => true,

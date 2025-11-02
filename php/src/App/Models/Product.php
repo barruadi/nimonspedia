@@ -7,25 +7,13 @@ use PDO;
 
 class Product
 {
-    // Properties
-    public ?int $product_id = null;
-    public ?int $store_id = null;
-    public ?int $category_id = null;
-    public ?string $name = null;
-    public ?string $description = null;
-    public ?float $price = null;
-    public ?int $stock = null;
-    public ?string $image_path = null;
-    public ?string $created_at = null;
-    public ?string $updated_at = null;
-
     // Get database connection
     private static function getDB(): PDO
     {
         return Database::getInstance();
     }
 
-    // Find product by ID
+    // Get product by product ID
     public static function findById(int $productId): ?array
     {
         $db = self::getDB();
@@ -40,6 +28,7 @@ class Product
         return $result ?: null;
     }
 
+    // Get product details by ID
     public static function findDetailById(int $productId): ?array
     {
         $db = self::getDB();
@@ -58,6 +47,7 @@ class Product
         return $result ?: null;
     }
 
+    // Get all products by store ID
     public static function findByStoreId(int $storeId): array
     {
         $db = self::getDB();
@@ -108,7 +98,7 @@ class Product
             RETURNING product_id
         ");
         
-        // Ensure price is integer
+
         $price = is_numeric($data['price']) ? (int)$data['price'] : 0;
         
         $stmt->execute([
@@ -169,6 +159,7 @@ class Product
         return $stmt->execute($params);
     }
     
+    // Get total product quantity
     public static function countAll(): int
     {
         $db = self::getDB();
@@ -179,6 +170,7 @@ class Product
         return (int) ($row['total'] ?? 0);
     }
     
+    // Get products according to page offsets
     public static function getPerPage(int $limit, int $offset): array
     {
         $db = self::getDB();
@@ -198,6 +190,7 @@ class Product
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
+    // Get quantity of total filtered products
     public static function countFiltered(
         ?string $q,
         ?string $category,
@@ -250,6 +243,7 @@ class Product
         return (int) ($row['total'] ?? 0);
     }
     
+    // Get products according to filters
     public static function findFiltered(
         ?string $q,
         ?string $category,
@@ -264,25 +258,25 @@ class Product
         $where = [];
         $params = [];
     
-        // search by name (ILIKE for case-insensitive substring in Postgres)
+        // Search by name
         if ($q !== null && $q !== '') {
             $where[] = "name ILIKE :q";
             $params['q'] = '%' . $q . '%';
         }
     
-        // filter by category
+        // Filter by category
         if ($category !== null && $category !== '') {
             $where[] = "category_id = :cat";
             $params['cat'] = $category;
         }
     
-        // min price
+        // Min price
         if ($minPrice !== null) {
             $where[] = "price >= :minPrice";
             $params['minPrice'] = $minPrice;
         }
     
-        // max price
+        // Max price
         if ($maxPrice !== null) {
             $where[] = "price <= :maxPrice";
             $params['maxPrice'] = $maxPrice;
@@ -311,7 +305,7 @@ class Product
     
         $stmt = $db->prepare($sql);
     
-        // bind dynamic params
+        // Bind dynamic params
         foreach ($params as $key => $val) {
             $stmt->bindValue(':' . $key, $val);
         }
