@@ -2,8 +2,7 @@
 
 namespace App\Controllers\Seller;
 
-use App\Models\Store;
-use App\Models\Order;
+use App\Models\{Store, Order};
 use Exception;
 
 class OrderManagementController
@@ -155,6 +154,11 @@ class OrderManagementController
         // Reject order with refund
         try {
             $success = Order::rejectWithRefund($orderId, $rejectReason);
+
+            // Check if operation was successful
+            if (!$success) {
+                throw new Exception('Failed to reject order in database');
+            }
 
             http_response_code(200);
             return [

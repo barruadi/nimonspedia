@@ -14,8 +14,8 @@ $current_page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $items_per_page = isset($_GET['per_page']) ? max(1, (int)$_GET['per_page']) : 12;
 $search_query = $_GET['q'] ?? '';
 $category_filter = $_GET['category'] ?? '';
-$min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (float)$_GET['min_price'] : null;
-$max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (float)$_GET['max_price'] : null;
+$min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (int)$_GET['min_price'] : null;
+$max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (int)$_GET['max_price'] : null;
 
 // Filter products based on criteria
 $filtered_products = array_filter($products, function($p) use ($search_query, $category_filter, $min_price, $max_price) {

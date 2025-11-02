@@ -18,14 +18,6 @@ function initProductManagementPage() {
     const searchInput = document.getElementById('searchInput');
     let searchTerm = '';
 
-    function debounce(fn, wait = 300) {
-        let t;
-        return (...args) => {
-            clearTimeout(t);
-            t = setTimeout(() => fn(...args), wait);
-        };
-    }
-
     async function initPage() {
         try {
             showLoading();
@@ -118,8 +110,8 @@ function initProductManagementPage() {
                     valueB = (b.name || '').toLowerCase();
                     break;
                 case 'price':
-                    valueA = parseFloat(a.price) || 0;
-                    valueB = parseFloat(b.price) || 0;
+                    valueA = parseInt(a.price) || 0;
+                    valueB = parseInt(b.price) || 0;
                     break;
                 case 'stock':
                     valueA = parseInt(a.stock) || 0;
@@ -150,10 +142,10 @@ function initProductManagementPage() {
         
         if (!filteredProducts || filteredProducts.length === 0) {
             if (products.length === 0) {
-                // No products at all - show empty state
+                // No products suited to filters (show empty state)
                 showEmptyState();
             } else {
-                // Has products but filtered out - show message in main content
+                // Has products but filtered out (show message in main content)
                 hideLoading();
                 showMainContent();
                 hideEmptyState();
@@ -347,6 +339,15 @@ function initProductManagementPage() {
         searchInput.addEventListener('input', onSearch);
     }
 
+    function debounce(fn, wait = 300) {
+        let t;
+        return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), wait);
+        };
+    }
+
+    // Toast Notification
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
         const toast = document.getElementById('toast');
         const backdrop = document.getElementById('toastBackdrop');

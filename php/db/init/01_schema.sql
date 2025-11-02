@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   full_name      TEXT NOT NULL,
   role           user_role NOT NULL,
   address        TEXT,                                                 
-  balance        NUMERIC(12,2) NOT NULL DEFAULT 0.00 CHECK (balance >= 0),
+  balance        BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0), 
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS stores (
   store_name     TEXT NOT NULL UNIQUE,
   description    TEXT,
   logo_path      TEXT,
-  balance        NUMERIC(12,2) NOT NULL DEFAULT 0.00 CHECK (balance >= 0),
+  balance        BIGINT NOT NULL DEFAULT 0 CHECK (balance >= 0),
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS products (
   category_id    INTEGER REFERENCES categories(category_id) ON DELETE SET NULL,
   name           TEXT NOT NULL,
   description    TEXT,
-  price          NUMERIC(12,2) NOT NULL CHECK (price >= 0),
+  price          INTEGER NOT NULL CHECK (price >= 1000),
   stock          INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
   image_path     TEXT,
   is_deleted     BOOLEAN NOT NULL DEFAULT FALSE,
@@ -124,12 +124,12 @@ CREATE TABLE IF NOT EXISTS orders (
   buyer_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
   store_id         INTEGER NOT NULL REFERENCES stores(store_id) ON DELETE RESTRICT,
   status           order_status NOT NULL DEFAULT 'waiting_approval',
-  total_amount     NUMERIC(12,2) NOT NULL CHECK (total_amount >= 0),
-  shipping_address TEXT,                                                  --
+  total_amount     BIGINT NOT NULL CHECK (total_amount >= 0),
+  shipping_address TEXT,
   delivery_time    TIMESTAMPTZ,
   reject_reason    TEXT,
-  confirmed_at     TIMESTAMPTZ,                                           --
-  received_at      TIMESTAMPTZ,                                           --
+  confirmed_at     TIMESTAMPTZ,
+  received_at      TIMESTAMPTZ,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -146,9 +146,9 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_item_id  INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   order_id       INTEGER NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
   product_id     INTEGER NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
-  price_at       NUMERIC(12,2) NOT NULL CHECK (price_at >= 0),
+  price_at       INTEGER NOT NULL CHECK (price_at >= 1000),
   qty            INTEGER NOT NULL CHECK (qty >= 1),
-  subtotal       NUMERIC(14,2) GENERATED ALWAYS AS (price_at * qty) STORED
+  subtotal       BIGINT GENERATED ALWAYS AS (price_at * qty) STORED
 );
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);

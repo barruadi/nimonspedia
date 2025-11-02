@@ -7,15 +7,8 @@ use PDO;
 use PDOException;
 
 class Store
-{
-    public int    $store_id;
-    public int    $owner_id;
-    public string $store_name;
-    public string $description;
-    public string $logo_path;
-    public string $created_at;
-    public string $updated_at;
-    
+{    
+    // Get database connection
     private static function getDB(): PDO
     {
         return Database::getInstance();
@@ -37,6 +30,28 @@ class Store
         return $result ?: null;
     }
 
+    // Get store with full details by owner ID
+    public static function findByOwnerIdWithDetails(int $ownerId): ?array
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT 
+                store_id, 
+                store_name, 
+                description, 
+                logo_path,
+                balance,
+                created_at,
+                updated_at
+            FROM stores 
+            WHERE owner_id = :owner_id 
+            LIMIT 1
+        ");
+        $stmt->execute(['owner_id' => $ownerId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    // Find store by store ID
     public static function findById(int $storeId): ?array
     {
         $db = self::getDB();
@@ -52,6 +67,7 @@ class Store
         return $result ?: null;
     }
 
+    // Update store details
     public static function update(int $storeId, array $data): bool
     {
         $db = self::getDB();
@@ -86,6 +102,7 @@ class Store
         return $stmt->execute($params);
     }
     
+    // Create new store
     public static function create(
         int    $owner_id,
         string $store_name,
@@ -154,5 +171,132 @@ class Store
             'low_stock_products' => $lowStockProducts,
             'total_revenue' => $orderStats['total_revenue'],
         ];
+    }
+
+    // Get total product count for a store
+    public static function getTotalProductCount(int $storeId): int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as total
+            FROM products
+            WHERE store_id = :store_id
+            AND deleted_at IS NULL
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    }
+
+    // Get pending orders count for a store
+    public static function getPendingOrdersCount(int $storeId): int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COUNT(DISTINCT o.order_id) as total
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE p.store_id = :store_id
+            AND o.status IN ('waiting_approval', 'approved', 'on_delivery')
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    }
+
+    // Get low stock products count (< 10)
+    public static function getLowStockProductsCount(int $storeId): int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as total
+            FROM products
+            WHERE store_id = :store_id
+            AND stock < 10
+            AND stock > 0
+            AND deleted_at IS NULL
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    }
+
+    // Get total revenue for a store (completed orders only)
+    public static function getTotalRevenue(int $storeId): float
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COALESCE(SUM(oi.qty * oi.price_at), 0) as total_revenue
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE p.store_id = :store_id
+            AND o.status = 'received'
+        ");
+        $stmt->execute(['store_id' => $storeId]);
+        return (float)$stmt->fetch(PDO::FETCH_ASSOC)['total_revenue'];
+    }
+
+    // Get balance by owner ID
+    public static function getBalanceByOwnerId(int $ownerId): ?float
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT balance 
+            FROM stores 
+            WHERE owner_id = :owner_id
+        ");
+        $stmt->execute(['owner_id' => $ownerId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? (float)$result['balance'] : null;
+    }
+
+    // Check if store name already exists (excluding logged in store)
+    public static function storeNameExists(string $storeName, ?int $excludeStoreId = null): bool
+    {
+        $db = Database::getInstance();
+        
+        $sql = "SELECT COUNT(*) as count FROM stores WHERE store_name = :store_name";
+        $params = ['store_name' => $storeName];
+        
+        // Exclude current store when updating
+        if ($excludeStoreId !== null) {
+            $sql .= " AND store_id != :store_id";
+            $params['store_id'] = $excludeStoreId;
+        }
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)$result['count'] > 0;
+    }
+
+    // Update store information
+    public static function updateInfo(int $storeId, array $data): bool
+    {
+        $db = Database::getInstance();
+        
+        $sql = "
+            UPDATE stores 
+            SET 
+                store_name = :store_name,
+                description = :description,
+                updated_at = NOW()
+        ";
+
+        $params = [
+            'store_name' => $data['store_name'],
+            'description' => $data['description'],
+            'store_id' => $storeId,
+        ];
+
+        if (isset($data['logo_path'])) {
+            $sql .= ", logo_path = :logo_path";
+            $params['logo_path'] = $data['logo_path'];
+        }
+
+        $sql .= " WHERE store_id = :store_id";
+
+        $stmt = $db->prepare($sql);
+        return $stmt->execute($params);
     }
 }

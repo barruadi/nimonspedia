@@ -47,8 +47,12 @@ const routes = {
       script: '/script/OrderManagement.js',
   },
   '/store/:id': {
-      page: '/pages/StoreDetailPage.html',
-      script: '/script/StoreDetail.js',
+    page: '/pages/StoreDetailPage.html',
+    script: '/script/StoreDetail.js',
+  },
+  '/orders': {
+    page: '/pages/OrderHistoryPage.html',
+    script: '/script/OrderHistory.js',
   }
 };
 
