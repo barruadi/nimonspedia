@@ -159,9 +159,13 @@ class Cart
             return self::remove($userId, $productId);
         }
         $sql = "
-            UPDATE cart_items
-            SET qty = :qty, updated_at = NOW()
-            WHERE user_id = :uid AND product_id = :pid
+            UPDATE cart_items ci
+            SET qty = :qty,
+                updated_at = NOW()
+            FROM carts c
+            WHERE ci.cart_id  = c.cart_id
+            AND c.buyer_id  = :uid
+            AND ci.product_id = :pid;
         ";
         $stmt = self::db()->prepare($sql);
         return $stmt->execute(['qty' => $qty, 'uid' => $userId, 'pid' => $productId]);
@@ -170,8 +174,11 @@ class Cart
     public static function remove(int $userId, int $productId): bool
     {
         $stmt = self::db()->prepare("
-            DELETE FROM cart_items
-            WHERE user_id = :uid AND product_id = :pid
+            DELETE FROM cart_items ci
+            USING carts c
+            WHERE ci.cart_id   = c.cart_id
+            AND c.buyer_id   = :uid
+            AND ci.product_id = :pid;
         ");
         return $stmt->execute(['uid' => $userId, 'pid' => $productId]);
     }
@@ -400,7 +407,7 @@ class Cart
         *  - remove those items from user's cart
         * (Create orders/order_items here when you’re ready.)
         */
-    public static function finalizeOrderFromSelection(int $userId, array $sel, string $shippingAddress = "default"): array
+    public static function finalizeOrderFromSelection(int $userId, array $sel, string $shippingAddress): array
     {
         $db = self::db();
         $cartId = self::getCardByUserId($userId);

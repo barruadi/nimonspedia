@@ -112,18 +112,18 @@ class CartController
     
     public function removeProduct($req): array
     {
+        $user_id = $_SESSION['user']['user_id'];
         $product_id = (int) $req['body']['product_id'];
-        $qty = (int) $req['body']['qty'] ?? 1;
 
         // [ TODO ]: harusnya validasi product id valid atau ngga ke db
-        if ($product_id <= 0 || $qty === 0) {
+        if ($product_id <= 0) {
             return [
                 'ok' => false,
                 'error' => 'invalid params'
             ];
         }
         
-        $newQty = Cart::reduceProduct($product_id, $qty);
+        $newQty = Cart::remove($user_id, $product_id);
         return [
             'ok' => true,
             'newQty' => $newQty

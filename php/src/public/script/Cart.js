@@ -7,6 +7,7 @@ const elRemoveSel = document.getElementById('remove-selected');
 const elSumItems = document.getElementById('sum-items');
 const elSumPrice = document.getElementById('sum-price');
 const elBtnCheckout = document.getElementById('btn-checkout');
+const elTopbar = document.querySelector('#cart-left .topbar');
 
 let state = { items: [], selected: new Set() };
 
@@ -29,8 +30,12 @@ function render(){
     elSumItems.textContent = '0';
     elSumPrice.textContent = 'Rp 0';
     elCheckAll.checked = false;
+    if (elTopbar) elTopbar.style.display = 'none';
     return;
   }
+
+  if (elTopbar) elTopbar.style.display = '';
+  
   elEmpty.style.display = 'none';
 
   elList.innerHTML = state.items.map(i => `
@@ -93,7 +98,12 @@ async function setQty(inp, silent=false){
   const pid = Number(row.dataset.id);
   const qty = Math.max(1, Number(inp.value)||1);
   inp.value = qty;
-  const res = await api.post('/cart/set', { product_id: pid, qty });
+  
+  const res = await api.post('/cart/set', { 
+    product_id: pid, 
+    qty 
+  });
+  
   if (res?.ok === false && !silent) alert(res.error || 'Gagal memperbarui jumlah');
   await load();
 }

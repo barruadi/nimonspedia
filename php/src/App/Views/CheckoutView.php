@@ -49,7 +49,7 @@
         <form method="post" action="/checkout/submit">
           <div class="field">
             <label>Alamat Pengiriman</label>
-            <textarea name="address" rows="3" required></textarea>
+            <textarea name="address" rows="3"></textarea>
           </div>
           <button class="btn" type="submit">Buat Pesanan</button>
         </form>

@@ -58,7 +58,7 @@ class CheckoutController
         return;
     }
     
-    public function confirmOrder(): array
+    public function confirmOrder($req): array
     {
         if (!isset($_SESSION['user'])) {
             header('Location: /login');
@@ -81,9 +81,10 @@ class CheckoutController
             ];
         }
         
-        // $result = Order::createFromCartSelection($userId, $snapshot, "dsadsa"); 
+        // $addr = $req['body']['shipping_address'] ?? null;
+        $address = $_POST['address'] ?? null;
 
-        $ok = Cart::finalizeOrderFromSelection($userId, $sel, "dsadsa");
+        $ok = Cart::finalizeOrderFromSelection($userId, $sel, $address);
         
         if (!$ok['ok']) {
             $_SESSION['flash'] = $ok['error'] ?? 'Gagal checkout';
@@ -96,7 +97,7 @@ class CheckoutController
         
         
         // Set the balance
-        User::setBalance((int) floor($user_balance - $total), $userId);
+        User::updateBalance($userId, (int) floor($user_balance - $total));
 
         // 4. redirect
         header("Location: /checkout/success?order_id=".$userId);
