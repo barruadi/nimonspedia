@@ -23,6 +23,10 @@ class AppNavbar extends HTMLElement {
 
   disconnectedCallback() {
     window.removeEventListener('auth:changed', this._onAuth);
+    // Clean up document click listener
+    if (this._closeDropdown) {
+      document.removeEventListener('click', this._closeDropdown);
+    }
   }
 
   async refresh() {
@@ -46,21 +50,19 @@ class AppNavbar extends HTMLElement {
       <nav class="app-nav">
         <div class="app-nav-inner">
           <a class="brand" href="/products" data-nav>
-            <div class="brand-icon"></div>
-            <div class="brand-text">Nimonspedia</div>
           </a>
           <div class="nav-actions">
-            <span class="skeleton-pill" style="width:80px;height:28px;"></span>
-            <span class="skeleton-pill" style="width:120px;height:28px;"></span>
+            <span class="skeleton-pill" style="width:80px;height:28px;background:#e5e7eb;border-radius:999px;"></span>
+            <span class="skeleton-pill" style="width:90px;height:28px;background:#e5e7eb;border-radius:999px;"></span>
           </div>
         </div>
       </nav>
     `;
     this.wireSpaLinks();
   }
-
+  
   render() {
-    const s = this._session || { authenticated:false, user:null };
+    const s = this._session || { authenticated: false, user: null };
     const loggedIn = !!s.authenticated && !!s.user;
     const role = loggedIn ? (String(s.user.role || '').toLowerCase()) : 'guest';
     const name = (s.user?.name || '').trim() || 'Pengguna';
@@ -88,17 +90,30 @@ class AppNavbar extends HTMLElement {
     } else {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
-        <a class="nav-link" href="/products" data-nav>Produk</a>
-        <a class="nav-link" href="/checkout" data-nav title="Keranjang">
-          <span class="cart"></span>
-          ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
-        </a>
-        <span class="saldo">Saldo: <span class="val">${balance}</span></span>
-        <a class="profile-pill" href="/profile" data-nav>
-          <span class="dot"></span>
-          <span>Hi, ${this.escape(name.split(' ')[0])}</span>
-          <span class="caret"></span>
-        </a>
+<a class="nav-link" href="/products" data-nav>Produk</a>
+              <a class="nav-link" href="/checkout" data-nav>Keranjang</a>
+              
+              <div class="profile-dropdown">
+                <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
+                  <div class="avatar-circle">${initials}</div>
+                  <span class="profile-name">Hi, ${this.escape(name)}</span>
+                  <div class="dropdown-arrow"></div>
+                </button>
+                <div class="dropdown-menu" id="profile-dropdown">
+                  <a class="dropdown-item" href="/profile" data-nav data-dropdown-item>
+                    <div class="dropdown-icon icon-profile"></div>
+                    <span>Profil Saya</span>
+                  </a>
+                  <a class="dropdown-item" href="/orders" data-nav data-dropdown-item>
+                    <div class="dropdown-icon icon-orders"></div>
+                    <span>Pesanan Saya</span>
+                  </a>
+                  <button class="dropdown-item logout-item" type="button" id="logout-btn">
+                    <div class="dropdown-icon icon-logout"></div>
+                    <span>Keluar</span>
+                  </button>
+                </div>
+              </div>
       `;
     }
 
@@ -106,7 +121,7 @@ class AppNavbar extends HTMLElement {
       <nav class="app-nav">
         <div class="app-nav-inner">
           <a class="brand" href="/products" data-nav>
-            <div class="brand-icon"></div>
+            <div class="brand-icon">N</div>
             <div class="brand-text">Nimonspedia</div>
           </a>
           <div class="nav-actions">
@@ -117,7 +132,10 @@ class AppNavbar extends HTMLElement {
     `;
 
     this.wireSpaLinks();
-    if (loggedIn) this.wireLogout();
+    if (loggedIn) {
+      this.wireDropdown();
+      this.wireLogout();
+    }
   }
 
   wireSpaLinks() {
@@ -133,12 +151,54 @@ class AppNavbar extends HTMLElement {
     });
   }
 
+  wireDropdown() {
+    const trigger = this.querySelector('#profile-trigger');
+    const menu = this.querySelector('#profile-dropdown');
+    if (!trigger || !menu) return;
+
+    // Toggle dropdown on trigger click
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isActive = menu.classList.contains('active');
+      
+      if (isActive) {
+        menu.classList.remove('active');
+        trigger.classList.remove('active');
+      } else {
+        menu.classList.add('active');
+        trigger.classList.add('active');
+      }
+    });
+
+    // Close dropdown when clicking outside
+    this._closeDropdown = (e) => {
+      if (!this.contains(e.target)) {
+        menu.classList.remove('active');
+        trigger.classList.remove('active');
+      }
+    };
+    document.addEventListener('click', this._closeDropdown);
+
+    // Close dropdown when clicking menu items
+    menu.querySelectorAll('[data-dropdown-item]').forEach(item => {
+      item.addEventListener('click', () => {
+        menu.classList.remove('active');
+        trigger.classList.remove('active');
+      });
+    });
+  }
+
   wireLogout() {
     const btn = this.querySelector('#logout-btn');
     if (!btn) return;
+    
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      
       btn.disabled = true;
+      btn.textContent = 'Logging out...';
+      
       try {
         await api.post('/logout', {});
         notifyAuthChanged({ authenticated:false, user:null });
@@ -151,8 +211,8 @@ class AppNavbar extends HTMLElement {
       } catch (err) {
         console.error('Logout failed:', err);
         alert('Gagal logout. Coba lagi.');
-      } finally {
         btn.disabled = false;
+        btn.innerHTML = '<div class="dropdown-icon icon-logout"></div><span>Keluar</span>';
       }
     });
   }
@@ -171,8 +231,10 @@ class AppNavbar extends HTMLElement {
     }
   }
 
-  escape(s='') {
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  escape(s = '') {
+    return s.replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
   }
 }
 

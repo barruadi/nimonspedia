@@ -95,6 +95,41 @@ class Order
         return $result ?: null;
     }
 
+    public static function findByBuyerId(int $buyerId): array
+    {
+        $db = self::getDB();
+        
+        $stmt = $db->prepare("
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.store_id,
+                o.total_amount,
+                o.status,
+                o.shipping_address,       
+                o.delivery_time,
+                o.reject_reason,
+                o.confirmed_at,            
+                o.received_at,            
+                o.created_at,
+                o.updated_at,
+                s.store_name
+            FROM orders o
+            JOIN stores s ON o.store_id = s.store_id
+            WHERE o.buyer_id = :buyer_id
+            ORDER BY o.created_at DESC
+        ");
+        
+        $stmt->execute(['buyer_id' => $buyerId]);
+        $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($orders as &$order) {
+            $order['items'] = self::getOrderItems($order['order_id']);
+        }
+
+        return $orders;
+    }
+
     // Update order status to approved
     public static function approve(int $orderId): bool
     {
