@@ -93,18 +93,13 @@ class AppNavbar extends HTMLElement {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
           <a class="nav-link" href="/products" data-nav>Produk</a>
-          <a class="nav-link" href="/checkout" data-nav title="Keranjang">
+          <a class="nav-link" href="/cart" data-nav title="Keranjang">
             <span class="cart"></span>
             ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
           </a>
           <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
             Saldo: <span class="val">${balance}</span>
           </span>
-          <a class="profile-pill" href="/profile" data-nav>
-            <span class="dot"></span>
-            <span>Hi, ${this.escape(name.split(' ')[0])}</span>
-            <span class="caret"></span>
-          </a>
           <div class="profile-dropdown">
             <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
               <div class="avatar-circle">${initials}</div>
@@ -133,7 +128,7 @@ class AppNavbar extends HTMLElement {
       <nav class="app-nav">
         <div class="app-nav-inner">
           <a class="brand" href="/products" data-nav>
-            <div class="brand-icon">N</div>
+          <div class="brand-icon"></div>
             <div class="brand-text">Nimonspedia</div>
           </a>
           <div class="nav-actions">

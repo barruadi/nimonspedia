@@ -8,8 +8,17 @@ class LoginController
 {
     public static function show(): array
     {
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if ($user) {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Already login in'];
+        }
+        
         return [
             'ok' => true
         ];
@@ -32,7 +41,8 @@ class LoginController
         
         if (!$user) {
             return [
-                'ok' => false
+                'ok' => false,
+                'error' => 'gagal login '
             ];
         }
         

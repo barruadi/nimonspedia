@@ -20,15 +20,16 @@ class User {
         string $name,
         string $email,
         string $password,
+        string $address,
         string $role,
     ): array
     {
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
         $query = "
-            INSERT INTO users (email, password_hash, full_name, role)
-            VALUES (:email, :password_hash, :full_name, :role)
-            RETURNING user_id, email, full_name, role, balance, created_at, updated_at
+            INSERT INTO users (email, password_hash, full_name, role, address)
+            VALUES (:email, :password_hash, :full_name, :role, :address)
+            RETURNING user_id, email, full_name, role, address, balance, created_at, updated_at
         ";
 
         try {
@@ -39,6 +40,7 @@ class User {
                 ':password_hash' => $hash,
                 ':full_name'     => $name,
                 ':role'          => $role,
+                ':address'       => $address,
             ]);
 
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -54,7 +56,7 @@ class User {
     ): array
     {
         $query = "
-            SELECT user_id, email, password_hash, full_name, role, balance, created_at, updated_at
+            SELECT user_id, email, password_hash, full_name, role, address, balance, created_at, updated_at
             FROM users
             WHERE email = :email
             LIMIT 1
@@ -69,7 +71,7 @@ class User {
     ): array
     {
         $query = "
-            SELECT user_id, email, password_hash, full_name, role, balance, created_at, updated_at
+            SELECT user_id, email, password_hash, full_name, role, address, balance, created_at, updated_at
             FROM users
             WHERE user_id = :user_id
             LIMIT 1
@@ -156,16 +158,22 @@ class User {
         $db = Database::getInstance();
         $stmt = $db->prepare("
             UPDATE users 
-            SET balance = balance + :amount,
+            SET balance = :amount,
                 updated_at = NOW()
             WHERE user_id = :user_id
             AND (balance + :amount) >= 0
         ");
         
-        return $stmt->execute([
+        $stmt->execute([
             'user_id' => $userId,
             'amount' => $amount
         ]);
+        
+        $user = self::findById($userId);
+        unset($user['password_hash']);
+        $_SESSION['user']      = $user;
+
+        return true;
     }
 
     // Get user balance as integer

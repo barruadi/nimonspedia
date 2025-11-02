@@ -291,3 +291,105 @@
     max-width: none;
   }
 }
+
+/* ============ ADD-ONS (non-conflicting) ============ */
+
+/* Size the reveal icon image (your base already positions the button) */
+.register-page .reveal-btn .eye-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/* Seller: image upload UI */
+.register-page .image-upload-container {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-field);
+  padding: 1rem;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  background: #fff;
+}
+.register-page .image-upload-container.drag-over {
+  background: var(--green-bg);
+}
+.register-page .image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  color: #4b5563;
+}
+.register-page .image-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.register-page .image-preview img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: var(--radius-field);
+}
+.register-page .upload-actions {
+  margin-top: .5rem;
+  display: flex;
+  gap: .5rem;
+}
+.register-page .upload-btn {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 2px solid var(--green-bg);
+  font-weight: 700;
+  padding: .6rem .9rem;
+  border-radius: var(--radius-field);
+  cursor: pointer;
+}
+.register-page .secondary-btn { /* already exists, but this keeps consistent look if used inside upload actions */
+  border: 2px solid rgba(0,0,0,0.1);
+}
+
+/* Seller: form helpers */
+.register-page .form-group {
+  margin: .9rem 0;
+}
+.register-page .form-label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--text-label);
+}
+.register-page .form-input {
+  width: 100%;
+  padding: .75rem .75rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-field);
+  background: #fff;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: #000;
+}
+.register-page .help-row {
+  margin-top: .35rem;
+  font-size: .875rem;
+  color: #6b7280;
+  text-align: right;
+}
+.register-page .error-message {
+  display: block;
+  color: #b91c1c;
+  font-size: .85rem;
+  margin-top: .25rem;
+  min-height: 1.1em;
+}
+
+/* Quill container spacing (uses Quill's own styles for internals) */
+.register-page #storeEditor {
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-field);
+  min-height: 180px;
+}

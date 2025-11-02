@@ -4,7 +4,10 @@ namespace App\Controllers\Buyer;
 
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\SearchService;
 use App\Core\View;
+use App\Core\Database;
+use PDO;
 
 class ProductController
 {
@@ -30,6 +33,19 @@ class ProductController
       
     public function showAllProducts(): void 
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if ($user) {   
+            if ($user['role'] === 'seller') {
+                header('location: /seller/dashboard');
+                exit;
+            }
+        }
+        
         $q         = isset($_GET['q']) ? trim($_GET['q']) : null;
         $category  = isset($_GET['category']) ? trim($_GET['category']) : null;
         $minPrice  = isset($_GET['min_price']) && $_GET['min_price'] !== ''
@@ -46,11 +62,21 @@ class ProductController
 
         $offset = ($page - 1) * $perPage;
 
-        // 2. Query model
-        $totalItems = Product::countFiltered($q, $category, $minPrice, $maxPrice);
-        $products   = Product::findFiltered($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+        // Use advanced search if query exists, otherwise regular search
+        if (!empty($q)) {
+            // Advanced search with fuzzy matching and synonyms
+            $result = SearchService::search($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+            $products = $result['products'];
+            $totalItems = $result['total'];
+            
+            error_log("Advanced Search: '{$q}' expanded to [" . implode(', ', $result['expanded_terms']) . "], found {$totalItems} products");
+        } else {
+            // Regular search
+            $totalItems = Product::countFiltered($q, $category, $minPrice, $maxPrice);
+            $products   = Product::findFiltered($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+        }
 
-        // 3. Pagination math
+        // Pagination
         $totalPages = max(1, (int) ceil($totalItems / $perPage));
         if ($page > $totalPages) {
             $page = $totalPages;
@@ -67,9 +93,9 @@ class ProductController
             'nextPage'    => ($page < $totalPages) ? $page + 1 : null,
         ];
 
-        $title = "Browse Products";
+        $title = !empty($q) ? "Search: {$q}" : "Browse Products";
 
-        // 4. Support JSON for XHR updates (for debounce search, filters)
+        // AJAX response
         $wantsJson =
             isset($_GET['ajax']) && $_GET['ajax'] === '1' ||
             (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'fetch');
@@ -97,5 +123,28 @@ class ProductController
         ]);
         
         return;
+    }
+    
+    public function getAllCategories(): array
+    {
+        $db = Database::getInstance();
+        
+        $stmt = $db->query("
+            SELECT category_id, name
+            FROM categories
+        ");
+        
+        $cat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (!$cat) {
+            http_response_code(404);
+            echo "Terjadi keasalahan";
+            return [];
+        }
+
+        return [
+            'ok' => true,
+            'categories' => $cat
+        ];
     }
 }
