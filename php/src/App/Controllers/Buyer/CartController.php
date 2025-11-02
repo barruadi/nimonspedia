@@ -33,18 +33,26 @@ class CartController
             return ['ok' => false, 'error' => 'Produk tidak ditemukan'];
         }
 
-        if ($product['stock'] < $qty) {
-            http_response_code(400);
-            return ['ok' => false, 'error' => 'Stok produk tidak mencukupi'];
-        }
-
         try {
             $buyerId = $user['user_id'];
-
             $cart = Cart::findOrCreateByBuyerId($buyerId);
 
             if (!$cart || !isset($cart['cart_id'])) {
                 throw new \Exception('Gagal menemukan atau membuat keranjang untuk user ' . $buyerId);
+            }
+
+            $currentInCart = Cart::getCurrentQty($cart['cart_id'], $productId);
+            $newTotalQty = $currentInCart + $qty;
+            $stock = (int)$product['stock'];
+
+            if ($stock < $newTotalQty) {
+                http_response_code(400);
+                $remaining = $stock - $currentInCart;
+                $canAdd = $remaining > 0 ? $remaining : 0;
+                return [
+                    'ok' => false, 
+                    'error' => "Stok tidak mencukupi. Sisa stok: $stock. \nAnda sudah punya $currentInCart di keranjang. \nAnda hanya bisa menambah $canAdd item lagi."
+                ];
             }
 
             Cart::addItem($cart['cart_id'], $productId, $qty);

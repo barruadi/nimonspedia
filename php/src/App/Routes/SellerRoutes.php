@@ -1,7 +1,5 @@
 <?php
 
-use App\Core;
-use App\Core\Application;
 use App\Models\Category;
 use App\Middlewares\{AuthMiddleware, RoleMiddleware};
 use App\Controllers\Seller\{DashboardController, ProductManagementController, OrderManagementController, ExportController};
@@ -37,10 +35,9 @@ $router->group([
     });
 }); 
 
-// Public Endpoints (can be called from non-sellers)
-// GET /api/categories return Category list
+// Public Endpoint: GET /api/categories returns Category list
 $router->get('/api/categories', function() {
-    $Category = Category::getAll();
+    $Category = Category::findAll();
     
     http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');
