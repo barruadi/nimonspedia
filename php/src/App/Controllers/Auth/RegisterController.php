@@ -34,10 +34,11 @@ class RegisterController
         $name       = $req['body']['full_name'] ?? '';
         $email      = $req['body']['email'] ?? '';
         $password   = $req['body']['password'] ?? '';
+        $address    = $req['body']['address'] ?? '';
         $role       = $req['body']['role'] ?? 'buyer';
         
         
-        $user = User::create($name, $email, $password, $role);
+        $user = User::create($name, $email, $password, $address, $role);
         
         if ($user === null) {
             return [

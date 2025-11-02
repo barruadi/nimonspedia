@@ -49,6 +49,7 @@ const fullNameInput        = document.getElementById('fullNameInput');
 const emailInput           = document.getElementById('emailInput');
 const passwordInput        = document.getElementById('passwordInput');
 const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+const addressInput         = document.getElementById('address');
 
 // Error box
 const errorBox = document.getElementById('errorBox');
@@ -326,8 +327,15 @@ async function submitBuyer() {
   const full_name = fullNameInput.value.trim();
   const email     = emailInput.value.trim();
   const password  = passwordInput.value;
+  const address   = addressInput.value;
 
-  const res = await api.post('/register', { full_name, email, password, role: 'buyer' });
+  const res = await api.post('/register', { 
+    full_name, 
+    email, 
+    password, 
+    address,
+    role: 'buyer' 
+  });
   if (!res || res.ok === false) {
     showError(res?.error?.message || 'Pendaftaran gagal');
     return;
@@ -345,6 +353,7 @@ async function submitSeller() {
   fd.set('full_name', fullNameInput.value.trim());
   fd.set('email', emailInput.value.trim());
   fd.set('password', passwordInput.value);
+  fd.set('address', addressInput.value);
   fd.set('role', 'seller');
 
   fd.set('store_name', storeNameInput.value.trim());
