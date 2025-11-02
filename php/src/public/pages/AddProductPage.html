@@ -6,9 +6,12 @@
     <title>Add Product - Nimonspedia</title>
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
     <link rel="stylesheet" href="/styles/AddProduct.css">
+    <link rel="stylesheet" href="/styles/ToastNotification.css">
+    <link rel="stylesheet" href="/styles/LoadingComponent.css">
   </head>
   <body>
     <app-loading></app-loading>
+    <app-toast></app-toast>
 
     <div class="add-product-page" id="mainContent" style="display: none;">
       <!-- Left Side - Product Image Upload -->
@@ -152,5 +155,9 @@
         </div>
       </div>
     </div>
+
+    <script type="module" src="/components/ToastNotification.js"></script>
+    <script type="module" src="/components/LoadingComponent.js"></script>
+    <script type="module" src="/script/AddProduct.js" defer></script>
   </body>
 </html>

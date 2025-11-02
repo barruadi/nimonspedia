@@ -180,6 +180,38 @@ class Order
         return $order['status'] === self::STATUS_APPROVED;
     }
 
+    public static function canBeReceived(array $order): bool
+    {
+        if ($order['status'] !== self::STATUS_ON_DELIVERY) {
+            return false;
+        }
+
+        if (empty($order['delivery_time'])) {
+            return false;
+        }
+
+        $deliveryTime = strtotime($order['delivery_time']);
+        $now = time();
+
+        return $now >= $deliveryTime;
+    }
+
+    public static function markAsReceived(int $orderId): bool
+    {
+        $db = self::getDB();
+
+        $stmt = $db->prepare("
+            UPDATE orders
+            SET status = 'received',
+                received_at = NOW(),
+                updated_at = NOW()
+            WHERE order_id = :order_id
+            AND status = 'on_delivery'
+        ");
+
+        return $stmt->execute(['order_id' => $orderId]);
+    }
+
     // Get order details with items
     public static function findByIdWithItems(int $orderId): ?array
     {
