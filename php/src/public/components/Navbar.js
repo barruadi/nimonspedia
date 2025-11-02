@@ -84,36 +84,48 @@ class AppNavbar extends HTMLElement {
         <a class="nav-link" href="/seller/dashboard" data-nav>Dashboard</a>
         <a class="nav-link" href="/seller/products" data-nav>Produk</a>
         <a class="nav-link" href="/seller/orders" data-nav>Orders</a>
-        <span class="saldo">Saldo: <span class="val">${balance}</span></span>
+        <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
+          Saldo: <span class="val">${balance}</span>
+        </span>
         <button id="logout-btn" class="logout-btn" type="button">Logout</button>
       `;
     } else {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
-<a class="nav-link" href="/products" data-nav>Produk</a>
-              <a class="nav-link" href="/checkout" data-nav>Keranjang</a>
-              
-              <div class="profile-dropdown">
-                <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
-                  <div class="avatar-circle">${initials}</div>
-                  <span class="profile-name">Hi, ${this.escape(name)}</span>
-                  <div class="dropdown-arrow"></div>
-                </button>
-                <div class="dropdown-menu" id="profile-dropdown">
-                  <a class="dropdown-item" href="/profile" data-nav data-dropdown-item>
-                    <div class="dropdown-icon icon-profile"></div>
-                    <span>Profil Saya</span>
-                  </a>
-                  <a class="dropdown-item" href="/orders" data-nav data-dropdown-item>
-                    <div class="dropdown-icon icon-orders"></div>
-                    <span>Pesanan Saya</span>
-                  </a>
-                  <button class="dropdown-item logout-item" type="button" id="logout-btn">
-                    <div class="dropdown-icon icon-logout"></div>
-                    <span>Keluar</span>
-                  </button>
-                </div>
-              </div>
+          <a class="nav-link" href="/products" data-nav>Produk</a>
+          <a class="nav-link" href="/checkout" data-nav title="Keranjang">
+            <span class="cart"></span>
+            ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
+          </a>
+          <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
+            Saldo: <span class="val">${balance}</span>
+          </span>
+          <a class="profile-pill" href="/profile" data-nav>
+            <span class="dot"></span>
+            <span>Hi, ${this.escape(name.split(' ')[0])}</span>
+            <span class="caret"></span>
+          </a>
+          <div class="profile-dropdown">
+            <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
+              <div class="avatar-circle">${initials}</div>
+              <span class="profile-name">Hi, ${this.escape(name)}</span>
+              <div class="dropdown-arrow"></div>
+            </button>
+            <div class="dropdown-menu" id="profile-dropdown">
+              <a class="dropdown-item" href="/profile" data-nav data-dropdown-item>
+                <div class="dropdown-icon icon-profile"></div>
+                <span>Profil Saya</span>
+              </a>
+              <a class="dropdown-item" href="/orders" data-nav data-dropdown-item>
+                <div class="dropdown-icon icon-orders"></div>
+                <span>Pesanan Saya</span>
+              </a>
+              <button class="dropdown-item logout-item" type="button" id="logout-btn">
+                <div class="dropdown-icon icon-logout"></div>
+                <span>Keluar</span>
+              </button>
+            </div>
+          </div>
       `;
     }
 
@@ -132,9 +144,10 @@ class AppNavbar extends HTMLElement {
     `;
 
     this.wireSpaLinks();
-    if (loggedIn) {
-      this.wireDropdown();
+    if (loggedIn) { 
       this.wireLogout();
+      this.wireBalanceModal();
+      this.wireDropdown();
     }
   }
 
@@ -214,6 +227,16 @@ class AppNavbar extends HTMLElement {
         btn.disabled = false;
         btn.innerHTML = '<div class="dropdown-icon icon-logout"></div><span>Keluar</span>';
       }
+    });
+  }
+
+  wireBalanceModal() {
+    const trigger = this.querySelector('#saldo-trigger');
+    if (!trigger) return; 
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('open-top-up-modal'));
     });
   }
 

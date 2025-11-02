@@ -1,16 +1,15 @@
 import { api } from '../utils/api.js';
+import { checkSellerAuth } from '../utils/sellerAuth.js';
+import { showToast } from '../utils/toast.js';
+import { showLoading, hideLoading } from '../utils/loading.js';
 
 function initDashboardPage() {
-    // Dashboard Data
     let store = null;
     let stats = null;
 
-    // Quill Editor
     let quill = null;
     const MAX_DESCRIPTION_LENGTH = 500;
 
-    // DOM Elements
-    const loadingState = document.getElementById('loadingState');
     const mainContent = document.getElementById('mainContent');
     const storeInfoBanner = document.getElementById('storeInfoBanner');
     const bannerStoreName = document.getElementById('bannerStoreName');
@@ -36,16 +35,19 @@ function initDashboardPage() {
     const exportDataBtn = document.getElementById('exportDataBtn');
 
     async function initPage() {
+        const isAuthorized = await checkSellerAuth();
+        if (!isAuthorized) return;
+
         try {
-            showLoading();
+            showLoading('Memuat Dashboard...', 'Mengambil data toko');
             console.log('Fetching dashboard info...');
             const result = await api.get('/seller/dashboard');
             console.log('Dashboard info response:', result);
 
             if (!result || !result.ok) {
                 console.warn('Dashboard request failed:', result);
-                showToast('Unauthorized user!', 'Tolong login sebagai seller...', 'error');
-                setTimeout(() => window.location.href = '/login', 1500);
+                hideLoading();
+                showToast('Gagal memuat data', 'Terjadi kesalahan saat mengambil data', 'error');
                 return;
             }
 
@@ -68,12 +70,13 @@ function initDashboardPage() {
             initEditForm();
 
             hideLoading();
-            showMainContent();
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent) mainContent.style.display = 'block';
 
         } catch (error) {
             console.error('Error initializing Dashboard Page:', error);
-            showToast('Gagal memuat data dashboard', error.message, 'error');
             hideLoading();
+            showToast('Gagal memuat data dashboard', error.message, 'error');
         }
     }
 
@@ -335,21 +338,18 @@ function initDashboardPage() {
     async function handleStoreUpdate() {
         try {
             const formData = new FormData(storeInfoForm);
-            
-            // Validate description from Quill
+
             if (quill) {
                 const descText = quill.getText().trim();
-                
+
                 if (descText.length > MAX_DESCRIPTION_LENGTH) {
                     showToast('Deskripsi terlalu panjang', `Maksimal ${MAX_DESCRIPTION_LENGTH} karakter`, 'error');
                     return;
                 }
-                
-                // Set description from Quill
+
                 formData.set('description', quill.root.innerHTML);
             }
-            
-            // Add logo if selected
+
             const logoFile = logoInput.files[0];
             if (logoFile) {
                 formData.append('logo', logoFile);
@@ -359,103 +359,31 @@ function initDashboardPage() {
 
             if (result && result.ok) {
                 showToast('Informasi toko berhasil diperbarui', 'Data telah disimpan', 'success');
-                
-                // Update local data
+
                 store.store_name = formData.get('store_name');
                 store.description = formData.get('description');
-                
-                // Update banner
+
                 bannerStoreName.textContent = store.store_name;
-                
-                // Update banner description
+
                 if (store.description) {
                     bannerStoreDescription.innerHTML = store.description;
                 } else {
                     bannerStoreDescription.textContent = 'Belum ada deskripsi';
                 }
-                
-                // If logo changed, update preview
+
                 if (result.data && result.data.logo_path) {
                     store.logo_path = result.data.logo_path;
                     storeLogo.src = result.data.logo_path;
                 }
-                
-                // Hide form, show banner
+
                 hideEditForm();
-                
+
             } else {
                 throw new Error(result?.error || 'Gagal memperbarui informasi toko');
             }
         } catch (error) {
             console.error('Store update error:', error);
             showToast('Gagal memperbarui toko', error.message, 'error');
-        }
-    }
-
-    // Helper functions
-    function showLoading() {
-        if (loadingState) {
-            loadingState.style.display = 'flex';
-        }
-        if (mainContent) {
-            mainContent.style.display = 'none';
-        }
-    }
-
-    function hideLoading() {
-        if (loadingState) {
-            loadingState.style.display = 'none';
-        }
-    }
-
-    function showMainContent() {
-        if (mainContent) {
-            mainContent.style.display = 'block';
-        }
-    }
-
-    // Toast Notification
-    function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
-        const toast = document.getElementById('toast');
-        const backdrop = document.getElementById('toastBackdrop');
-        const primaryEl = document.getElementById('toastPrimaryMessage');
-        const secondaryEl = document.getElementById('toastSecondaryMessage');
-        const closeBtn = document.getElementById('toastCloseBtn');
-        
-        if (!toast || !primaryEl || !secondaryEl) {
-            console.error('Toast elements not found!');
-            return;
-        }
-        
-        // Set messages and type
-        primaryEl.textContent = primaryMessage;
-        secondaryEl.textContent = secondaryMessage;
-        toast.className = 'toast ' + type;
-        
-        // Show backdrop + toast
-        if (backdrop) backdrop.style.display = 'block';
-        toast.style.display = 'flex';
-        
-        // Auto hide after 5s
-        let autoHideTimer = setTimeout(hideToast, 5000);
-        
-        // Close handlers (button and backdrop click)
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                clearTimeout(autoHideTimer);
-                hideToast();
-            };
-        }
-        if (backdrop) {
-            backdrop.onclick = () => {
-                clearTimeout(autoHideTimer);
-                hideToast();
-            };
-        }
-
-        function hideToast() {
-            if (toast) toast.style.display = 'none';
-            if (backdrop) backdrop.style.display = 'none';
         }
     }
 

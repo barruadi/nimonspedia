@@ -96,6 +96,37 @@ class User {
         unset($user['password_hash']);
         return $user;
     }
+
+    public static function addBalance(int $user_id, float $amount): ?float
+    {
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $query = "
+            UPDATE users
+            SET balance = balance + :amount,
+                updated_at = NOW()
+            WHERE user_id = :user_id
+            RETURNING balance
+        ";
+        
+        try {
+            $pdo = Database::pdo();
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([
+                ':amount'   => $amount,
+                ':user_id'  => $user_id,
+            ]);
+
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ? (float)$row['balance'] : null;
+
+        } catch (PDOException $e) {
+            error_log("User::addBalance error: " . $e->getMessage());
+            return null;
+        }
+    }
     
     public static function updatePassword(
         string $new_password,

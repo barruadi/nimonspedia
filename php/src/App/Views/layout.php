@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title><?= htmlspecialchars($title ?? ''); ?></title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/styles/Navbar.css">
+  <link rel="stylesheet" href="/styles/BalanceModal.css">
+  
+  <link rel="stylesheet" href="/styles/LoadingComponent.css">
+  <link rel="preload" href="/uploads/loading/loading-icon.svg" as="image">
+  
   <script>
     window.__BOOT_SESSION__ = <?= json_encode([
       'authenticated' => (bool)$sessionUser,
@@ -13,6 +15,7 @@
         'name'  => $sessionUser['full_name'],
         'email' => $sessionUser['email'],
         'role'  => $sessionUser['role'],
+        'balance' => $sessionUser['balance'] ?? 0 
       ] : null
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
   </script>
@@ -26,9 +29,13 @@
   <main id="app" class="container">
     <?= $content  ?>
   </main>
-
-  <!-- load the web component once -->
+  
+  <balance-modal></balance-modal>
+  <app-toast></app-toast> 
+  
   <script type="module" src="/components/Navbar.js"></script>
-  <!--<script type="module" src="/index.js"></script>-->
-</body>
+  <script type="module" src="/components/BalanceModal.js"></script>
+  <script type="module" src="/components/ToastNotification.js"></script> 
+  <script type="module" src="/components/LoadingComponent.js"></script> 
+  </body>
 </html>

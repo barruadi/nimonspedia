@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="/styles/EditProduct.css">
   </head>
   <body>
-    <div class="add-product-page">
+    <app-loading></app-loading>
+
+    <div class="add-product-page" id="mainContent" style="display: none;">
       <!-- Left Side - Product Image Upload -->
       <div class="product-image-section">
         <div class="image-upload-container">
@@ -145,19 +147,6 @@
           </div>
         </form>
       </div>
-    </div>
-
-    <!-- Backdrop for toast -->
-    <div id="toastBackdrop" class="toast-backdrop" style="display:none;"></div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast" style="display: none;">
-      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
-      <div class="toast-message">
-        <div id="toastPrimaryMessage"></div>
-        <div id="toastSecondaryMessage"></div>
-      </div>
-      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
     </div>
 
     <!-- Edit Confirmation Modal -->
