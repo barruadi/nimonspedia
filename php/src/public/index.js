@@ -53,9 +53,6 @@ const routes = {
   '/orders': {
     page: '/pages/OrderHistoryPage.html',
     script: '/script/OrderHistory.js',
-  },
-      page: '/pages/StoreDetailPage.html',
-      script: '/script/StoreDetail.js',
   }
 };
 

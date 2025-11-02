@@ -50,8 +50,6 @@ class AppNavbar extends HTMLElement {
       <nav class="app-nav">
         <div class="app-nav-inner">
           <a class="brand" href="/products" data-nav>
-            <div class="brand-icon">N</div>
-            <div class="brand-text">Nimonspedia</div>
           </a>
           <div class="nav-actions">
             <span class="skeleton-pill" style="width:80px;height:28px;background:#e5e7eb;border-radius:999px;"></span>
@@ -96,9 +94,9 @@ class AppNavbar extends HTMLElement {
               <a class="nav-link" href="/checkout" data-nav>Keranjang</a>
               
               <div class="profile-dropdown">
-                <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(displayName)}">
+                <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
                   <div class="avatar-circle">${initials}</div>
-                  <span class="profile-name">Hi, ${this.escape(displayName)}</span>
+                  <span class="profile-name">Hi, ${this.escape(name)}</span>
                   <div class="dropdown-arrow"></div>
                 </button>
                 <div class="dropdown-menu" id="profile-dropdown">
