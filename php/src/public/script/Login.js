@@ -12,6 +12,11 @@ const ICONS = {
   hide: "/uploads/auth/closed-eye-icon.png",
 };
 
+const allow = api.get('/login');
+if (!allow || !allow.ok) {
+  window.location.href = '/products';
+}
+
 function showError(msg) {
   loginErrorBox.textContent = msg;
   loginErrorBox.style.display = "block";

@@ -10,6 +10,11 @@ const ICONS = {
   hide: "/uploads/auth/closed-eye-icon.png",
 };
 
+const allow = api.get('/register');
+if (!allow || !allow.ok) {
+  window.location.href = '/products';
+}
+
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_STORE_DESC = 1000;
