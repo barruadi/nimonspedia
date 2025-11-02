@@ -450,92 +450,6 @@ body {
     box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4);
 }
 
-/* Toast Notification */
-.toast {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 1rem;
-    position: fixed;
-    top: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 1rem 1.5rem;
-    background-color: #ffffff;
-    color: #111827;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 
-                0 4px 6px rgba(0, 0, 0, 0.1);
-    font-size: 0.875rem;
-    font-weight: 500;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-    z-index: 9999;
-    max-width: 90%;
-    width: auto;
-    min-width: 320px;
-    animation: slideDown 0.3s ease;
-}
-
-.toast-icon {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-}
-
-.toast-message {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-}
-
-#toastPrimaryMessage {
-    color: #111827;
-    font-weight: 600;
-    font-size: 0.9375rem;
-}
-
-#toastSecondaryMessage {
-    color: #6b7280;
-    font-size: 0.8125rem;
-}
-
-.toast-close-btn {
-    padding: 0.5rem 1rem;
-    background-color: #10b981;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-.toast-close-btn:hover {
-    background-color: #059669;
-}
-
-.toast.error .toast-close-btn {
-    background-color: #ef4444;
-}
-
-.toast.error .toast-close-btn:hover {
-    background-color: #dc2626;
-}
-
-/* Toast Backdrop (covers screen while toast visible) */
-.toast-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.35); 
-    backdrop-filter: blur(1px); 
-    z-index: 9980; 
-    display: none;
-}
-
 @keyframes slideDown {
     from {
         transform: translate(-50%, -100%);
@@ -687,7 +601,7 @@ body {
         transform: scale(1); /* Reset scale di tablet */
     }
 }
-
+ 
 @media (max-width: 640px) {
     .dashboard-page {
         padding: 1rem;
