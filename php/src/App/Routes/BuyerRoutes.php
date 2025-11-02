@@ -20,7 +20,7 @@ $router->group([
     'prefix' => '/api',
     'middlewares' => [$auth]
 ], function ($r) {
-    $r->post('/cart/add', fn($req) => (new CartController())->addProduct($req));
+    $r->post('/cart/add', fn($req) => (new CartController())->addItemToCart($req));
     $r->patch('/cart',    fn($req) => (new CartController())->setQuantity($req));
     $r->get('/cart',    fn($req) => (new CartController())->showCart());
     $r->get('/orders',  fn($req) => (new OrderController())->showHistory($req));

@@ -20,6 +20,7 @@ function initProductDetailPage() {
     const qtyInput = document.getElementById('qtyInput');
     const subtotalPrice = document.getElementById('subtotalPrice');
     const addToCartBtn = document.getElementById('addToCartBtn');
+    const cartMessage = document.getElementById('cartMessage');
 
     let currentProduct = null;
     
@@ -57,27 +58,37 @@ function initProductDetailPage() {
         productCategory.textContent = product.category_name || 'Kategori';
         productName.textContent = product.name;
         productPrice.textContent = formatCurrency(product.price);
-        productDescription.textContent = product.description;
+        productDescription.innerHTML = product.description;
 
         if (store) {
             storeName.textContent = store.store_name;
-            storeDescription.textContent = store.description;
+            if (storeDescription) {
+                storeDescription.innerHTML = store.description;
+            }
             if (storeLogo && store.logo_path) {
                 storeLogo.src = store.logo_path;
             }
         }
     }
 
-    function setupPurchaseBox(product) {
+function setupPurchaseBox(product) {
         const stock = parseInt(product.stock, 10);
         productStock.textContent = stock;
         qtyInput.max = stock;
         
-        updateSubtotal();
+        if (stock === 0) {
+            qtyInput.value = 0;
+            qtyInput.disabled = true;
+        } else {
+            qtyInput.value = 1; 
+            qtyInput.disabled = false;
+        }
+        
+        updateSubtotal(); 
 
         qtyDecrement.addEventListener('click', () => {
             let qty = parseInt(qtyInput.value, 10);
-            if (qty > 1) {
+            if (qty > 0) {
                 qtyInput.value = qty - 1;
                 updateSubtotal();
             }
@@ -85,6 +96,7 @@ function initProductDetailPage() {
 
         qtyIncrement.addEventListener('click', () => {
             let qty = parseInt(qtyInput.value, 10);
+            const stock = parseInt(currentProduct.stock, 10);
             if (qty < stock) {
                 qtyInput.value = qty + 1;
                 updateSubtotal();
@@ -93,40 +105,52 @@ function initProductDetailPage() {
         
         qtyInput.addEventListener('input', () => {
             let qty = parseInt(qtyInput.value, 10);
-            if (isNaN(qty) || qty < 1) {
-                qtyInput.value = 1;
+            const stock = parseInt(currentProduct.stock, 10);
+            
+            if (isNaN(qty) || qty < 0) {
+                qtyInput.value = 0;
             } else if (qty > stock) {
                 qtyInput.value = stock;
             }
             updateSubtotal();
         });
-        
-        if (stock === 0) {
-            qtyInput.value = 0;
-            qtyInput.disabled = true;
-            qtyDecrement.disabled = true;
-            qtyIncrement.disabled = true;
-            addToCartBtn.textContent = 'Stok Habis';
-            addToCartBtn.disabled = true;
-            subtotalPrice.textContent = '-';
-        }
     }
     
     function updateSubtotal() {
         const qty = parseInt(qtyInput.value, 10);
+        const stock = parseInt(currentProduct.stock, 10);
+        
+        if (isNaN(qty)) return;
+
         if (currentProduct && qty > 0) {
             const subtotal = currentProduct.price * qty;
             subtotalPrice.textContent = formatCurrency(subtotal);
-        } else if (currentProduct && currentProduct.stock === 0) {
-             subtotalPrice.textContent = '-';
         } else {
             subtotalPrice.textContent = formatCurrency(0);
         }
+        
+        qtyDecrement.disabled = (qty <= 0);
+        qtyIncrement.disabled = (qty >= stock);
+
+        if (stock === 0) {
+            addToCartBtn.textContent = 'Stok Habis';
+            addToCartBtn.disabled = true;
+        } else if (qty <= 0) {
+            addToCartBtn.textContent = 'Tambahkan ke Keranjang';
+            addToCartBtn.disabled = true;
+        } else {
+            addToCartBtn.textContent = 'Tambahkan ke Keranjang';
+            addToCartBtn.disabled = false;
+        }
     }
 
-    async function handleAddToCart() {
+async function handleAddToCart() {
         if (!currentProduct) return;
         
+        if (cartMessage) {
+            cartMessage.style.display = 'none';
+        }
+
         const qty = parseInt(qtyInput.value, 10);
         if (qty <= 0) return;
         
@@ -147,14 +171,16 @@ function initProductDetailPage() {
                 );
                 
                 addToCartBtn.textContent = 'Berhasil!';
-                document.dispatchEvent(new CustomEvent('cart-updated'));
+                if (window.notifyAuthChanged) {
+                    window.notifyAuthChanged(window.__BOOT_SESSION__);
+                }
 
                 setTimeout(() => {
                     addToCartBtn.textContent = 'Tambahkan ke Keranjang';
-                    addToCartBtn.disabled = false;
+                    updateSubtotal();
                 }, 2000);
             } else {
-                let errorMsg = 'Gagal menambahkan ke keranjang';
+                let errorMsg = 'Melewati batas stok, silahkan periksa keranjang Anda';
                 if (result && result.error) {
                     if (typeof result.error === 'string') {
                         errorMsg = result.error;
@@ -166,7 +192,14 @@ function initProductDetailPage() {
             }
 
         } catch (error) {
-            showToast(error.message, 'Gagal menambahkan produk', 'error');
+            showToast('Gagal menambahkan ke keranjang', 'Silakan cek pesan error di kartu', 'error');
+            
+            if (cartMessage) {
+                cartMessage.textContent = error.message;
+                cartMessage.className = 'cart-message error'; 
+                cartMessage.style.display = 'block';
+            }
+            
             addToCartBtn.disabled = false;
             addToCartBtn.textContent = 'Tambahkan ke Keranjang';
         }
@@ -240,5 +273,5 @@ function initProductDetailPage() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initProductDetailPage);
 } else {
-    setTimeout(initProductDetailPage, 50);
+    setTimeout(initProductDetailPage, 50); 
 }

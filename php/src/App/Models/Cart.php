@@ -34,6 +34,13 @@ class Cart
         return self::create($buyerId);
     }
     
+    public static function getCurrentQty(int $cartId, int $productId): int
+    {
+        $sql = "SELECT qty FROM cart_items WHERE cart_id = :cart_id AND product_id = :product_id";
+        $row = Database::fetchOne($sql, ['cart_id' => $cartId, 'product_id' => $productId]);
+        return $row ? (int)$row['qty'] : 0;
+    }
+    
     public static function addItem(int $cartId, int $productId, int $qty)
     {
         $sql = "
