@@ -239,7 +239,10 @@ async function initAddProductPage() {
     // Form Submission
     const form = document.getElementById('addProductForm');
     if (form) {
-        form.addEventListener('submit', async (e) => {
+        const cleanForm = form.cloneNode(true);
+        form.parentNode.replaceChild(cleanForm, form);
+        
+        cleanForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const formData = new FormData(e.target);
@@ -260,18 +263,23 @@ async function initAddProductPage() {
             try {
                 const result = await api.post('/seller/products/add', formData);
                 
-                if (result && result.ok) {
-                    showToast('Produk berhasil ditambahkan!', 'Yuk kembali ke toko!', 'success');
+                console.log('API Result:', result);
+                
+                if (result && result.ok === true) {
+                    console.log('Success! Redirecting...');
+                    showToast('Produk berhasil ditambahkan!', 'Yuk kembali ke toko...', 'success');
                     setTimeout(() => {
                         window.location.href = '/seller/products';
-                    }, 1500);
+                    }, 1500)
+                    
                 } else {
-                    const errorMsg = result?.error?.message || result?.error || 'Gagal menambahkan produk';
+                    console.error('API returned error:', result);
+                    const errorMsg = result?.error || 'Gagal menambahkan produk';
                     throw new Error(errorMsg);
                 }
                 
             } catch (error) {
-                console.error('Error submitting form:', error);
+                console.error('Exception caught:', error);
                 showToast('Gagal menambahkan produk!', error.message, 'error');
                 
                 submitBtn.disabled = false;
