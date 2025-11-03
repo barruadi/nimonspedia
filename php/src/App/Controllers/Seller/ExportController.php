@@ -40,6 +40,10 @@ class ExportController
                 throw new \Exception('Failed to generate CSV data');
             }
 
+            // Remove BOM if exists in the generated CSV
+            $bom = pack('H*','EFBBBF');
+            $csvData = preg_replace("/^$bom/", '', $csvData);
+
             // Return CSV as base64 for frontend to download
             $filename = "store_report_" . date('Y-m-d_His') . '.csv';
 
@@ -47,7 +51,7 @@ class ExportController
             return [
                 'ok' => true,
                 'data' => [
-                    'csv' => base64_encode("\xEF\xBB\xBF" . $csvData),
+                    'csv' => base64_encode($csvData),
                     'filename' => $filename
                 ]
             ];
