@@ -170,68 +170,139 @@ class SearchService
             $descLower = mb_strtolower($product['description'] ?? '');
             $catLower = mb_strtolower($product['category_name'] ?? '');
             
-            // 1. Exact match (highest score)
+            // Name Matching (Highest Priority)
+            
+            // 1.1 Exact match (highest score)
             if ($nameLower === $queryLower) {
                 $score += 100;
             } 
-            // 2. Starts with query
+            // 1.2 Starts with query
             elseif (mb_strpos($nameLower, $queryLower) === 0) {
                 $score += 80;
             }
-            // 3. Contains query anywhere in name
+            // 1.3 Contains query anywhere in name
             elseif (mb_strpos($nameLower, $queryLower) !== false) {
                 $score += 60;
             }
-            // 4. Fuzzy match on name
+            // 1.4 Fuzzy match on full name
             else {
-                // Check similarity with product name
                 $nameSimilarity = self::similarity($queryLower, $nameLower);
                 if ($nameSimilarity >= 0.7) {
                     $score += $nameSimilarity * 70; // Max 70 points for fuzzy match
                 }
-                
-                // Also check word-by-word similarity
-                $productWords = preg_split('/\s+/', $nameLower);
-                foreach ($productWords as $word) {
-                    if (mb_strlen($word) < 3) continue; // Skip short words
-                    
-                    $wordSimilarity = self::similarity($queryLower, $word);
-                    if ($wordSimilarity >= 0.5) {
-                        $score += $wordSimilarity * 50;
-                        break;
-                    }
-                }
             }
             
-            // 5. Description match
+            // 1.5 Word-by-word fuzzy matching in name
+            $productWords = preg_split('/\s+/', $nameLower);
+            $maxWordScore = 0;
+            foreach ($productWords as $word) {
+                if (mb_strlen($word) < 3) continue; // Skip short words
+                
+                $wordSimilarity = self::similarity($queryLower, $word);
+                if ($wordSimilarity >= 0.5) {
+                    $maxWordScore = max($maxWordScore, $wordSimilarity * 50);
+                }
+            }
+            $score += $maxWordScore;
+            
+            // Description Matching
+            
+            // 2.1 Exact match in description
             if (mb_strpos($descLower, $queryLower) !== false) {
                 $score += 30;
             }
+            // 2.2 Fuzzy match on description words
+            else {
+                $descWords = preg_split('/\s+/', $descLower);
+                $maxDescScore = 0;
+                
+                foreach ($descWords as $word) {
+                    if (mb_strlen($word) < 3) continue; // Skip short words
+                    
+                    // Check similarity with query
+                    $wordSimilarity = self::similarity($queryLower, $word);
+                    if ($wordSimilarity >= 0.6) { // Slightly higher threshold for description
+                        $maxDescScore = max($maxDescScore, $wordSimilarity * 25);
+                    }
+                }
+                
+                $score += $maxDescScore;
+            }
             
-            // 6. Category match
+            // 2.3 Multi-word fuzzy matching in description
+            // For queries with multiple words, check if description contains similar phrases
+            $queryWords = preg_split('/\s+/', $queryLower);
+            if (count($queryWords) > 1) {
+                $matchedWords = 0;
+                foreach ($queryWords as $qWord) {
+                    if (mb_strlen($qWord) < 3) continue;
+                    
+                    foreach ($descWords as $dWord) {
+                        if (mb_strlen($dWord) < 3) continue;
+                        
+                        if (self::similarity($qWord, $dWord) >= 0.7) {
+                            $matchedWords++;
+                            break;
+                        }
+                    }
+                }
+                
+                // Bonus for matching multiple words in description
+                if ($matchedWords > 1) {
+                    $score += ($matchedWords / count($queryWords)) * 20;
+                }
+            }
+            
+            // SECTION 3: Category Matching
+            
+            // 3.1 Exact match in category
             if (mb_strpos($catLower, $queryLower) !== false) {
                 $score += 40;
             }
+            // 3.2 Fuzzy match on category
+            else {
+                $catSimilarity = self::similarity($queryLower, $catLower);
+                if ($catSimilarity >= 0.6) {
+                    $score += $catSimilarity * 35;
+                }
+            }
             
-            // 7. Synonym match bonus
+            // Synonym Matching
+            
             foreach ($expandedTerms as $term) {
                 if ($term === $queryLower) continue;
                 
+                // Synonym match in name
                 if (mb_strpos($nameLower, $term) !== false) {
                     $score += 50;
                     break;
-                } elseif (mb_strpos($descLower, $term) !== false) {
+                } 
+                // Synonym match in description
+                elseif (mb_strpos($descLower, $term) !== false) {
                     $score += 30;
                     break;
-                } elseif (mb_strpos($catLower, $term) !== false) {
+                } 
+                // Synonym match in category
+                elseif (mb_strpos($catLower, $term) !== false) {
                     $score += 40;
                     break;
+                }
+                // Fuzzy synonym match in description
+                else {
+                    foreach ($descWords as $dWord) {
+                        if (mb_strlen($dWord) < 3) continue;
+                        
+                        if (self::similarity($term, $dWord) >= 0.7) {
+                            $score += 20;
+                            break 2;
+                        }
+                    }
                 }
             }
             
             // Only include products with score > 0
             if ($score > 0) {
-                $product['relevance_score'] = $score;
+                $product['relevance_score'] = round($score, 2);
                 $scoredProducts[] = $product;
             }
         }
