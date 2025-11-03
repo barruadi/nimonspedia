@@ -9,16 +9,72 @@ class SearchService
 {
     // Synonym mapping
     private static array $synonyms = [
-        'laptop' => ['notebook', 'macbook', 'lenovo', 'asus', 'acer', 'hp', 'dell', 'komputer'],
-        'hp' => ['handphone', 'smartphone', 'phone', 'iphone', 'samsung', 'xiaomi', 'oppo', 'vivo'],
-        'sepatu' => ['shoes', 'sneakers', 'sandal'],
-        'baju' => ['shirt', 'kaos', 'pakaian', 'kemeja'],
-        'celana' => ['jeans', 'pants', 'trousers'],
-        'tas' => ['bag', 'backpack', 'ransel'],
-        'kopi' => ['coffee'],
+        'laptop' => ['notebook', 'macbook', 'lenovo', 'asus', 'acer', 'hp', 'dell', 'komputer', 'computer'],
+        'mouse' => ['mice', 'tetikus', 'pointing device', 'logitech', 'wireless mouse'],
+        'keyboard' => ['papan ketik', 'mechanical keyboard', 'gaming keyboard', 'rgb keyboard'],
+        'speaker' => ['pengeras suara', 'audio', 'sound system', 'jbl', 'bluetooth speaker'],
+        'headphone' => ['headset', 'earphone', 'headphones', 'sony', 'noise canceling', 'anc'],
+        'earbuds' => ['earphone', 'tws', 'true wireless', 'wireless earbuds', 'in-ear'],
+        'microphone' => ['mic', 'mikrofon', 'condenser', 'usb mic', 'studio mic'],
+        'webcam' => ['camera', 'kamera web', 'web camera', 'video camera', 'hd camera'],
+        'hub' => ['port', 'usb hub', 'adapter', 'dongle', 'multi-port'],
+        'bulb' => ['lampu', 'led', 'smart bulb', 'smart light', 'philips'],
+        'mousepad' => ['alas mouse', 'gaming pad', 'mouse mat', 'desk pad'],
+        'hp' => ['handphone', 'smartphone', 'phone', 'iphone', 'samsung', 'xiaomi', 'oppo', 'vivo', 'ponsel', 'telepon'],
+        'case' => ['casing', 'cover', 'phone case', 'pelindung', 'protective case'],
+        'screen protector' => ['tempered glass', 'anti gores', 'screen guard', 'pelindung layar'],
+        'powerbank' => ['power bank', 'portable charger', 'battery bank', 'charger portabel'],
+        'charger' => ['charging', 'fast charging', 'adapter', 'pengisi daya'],
+        'apple' => ['apel', 'buah apel', 'fuji apple', 'malang apple'],
+        'banana' => ['pisang', 'buah pisang', 'cavendish'],
+        'tomato' => ['tomat', 'sayur tomat'],
+        'spinach' => ['bayam', 'sayur bayam', 'baby spinach'],
+        'egg' => ['telur', 'telor', 'free range eggs', 'eggs'],
+        'milk' => ['susu', 'dairy', 'whole milk', 'uht milk'],
+        'yogurt' => ['yoghurt', 'greek yogurt', 'yoghurt yunani'],
+        'cheese' => ['keju', 'cheddar', 'dairy'],
+        'kopi' => ['coffee', 'arabica', 'robusta', 'beans', 'biji kopi'],
+        'teh' => ['tea', 'green tea', 'matcha', 'teh hijau'],
+        'juice' => ['jus', 'orange juice', 'fresh juice', 'minuman'],
+        'water' => ['air', 'air mineral', 'mineral water', 'aqua'],
+        'organic' => ['organik', 'natural', 'fresh', 'segar'],
+        'fresh' => ['segar', 'baru', 'organic', 'natural'],
+        'baju' => ['shirt', 'kaos', 'pakaian', 'kemeja', 't-shirt', 'tshirt', 'clothing'],
+        'celana' => ['jeans', 'pants', 'trousers', 'denim', 'slim fit'],
+        'sepatu' => ['shoes', 'sneakers', 'footwear', 'alas kaki', 'canvas shoes'],
+        'tas' => ['bag', 'backpack', 'ransel', 'tote bag', 'leather bag'],
+        'belt' => ['ikat pinggang', 'sabuk', 'leather belt'],
+        'dress' => ['gaun', 'pakaian wanita', 'floral dress', 'summer dress'],
+        'cardigan' => ['sweater', 'outer', 'jaket tipis', 'knit cardigan'],
+        'sunglasses' => ['kacamata', 'kacamata hitam', 'aviator', 'eyewear'],
+        'polo' => ['polo shirt', 'kaos kerah', 'collared shirt'],
+        'formal' => ['formal wear', 'office wear', 'kemeja formal', 'professional'],
+        'wireless' => ['nirkabel', 'tanpa kabel', 'bluetooth', 'wifi'],
+        'gaming' => ['game', 'permainan', 'esports', 'gamer'],
+        'smart' => ['pintar', 'intelligent', 'iot', 'connected'],
+        'portable' => ['portabel', 'mobile', 'travel', 'compact'],
+        'premium' => ['berkualitas', 'high quality', 'luxury', 'mewah'],
+        'murah' => ['cheap', 'affordable', 'budget', 'economical', 'terjangkau'],
+        'mahal' => ['expensive', 'premium', 'luxury', 'high-end'],
+        'logitech' => ['logi', 'mouse logitech', 'keyboard logitech'],
+        'jbl' => ['speaker jbl', 'audio jbl', 'bluetooth jbl'],
+        'sony' => ['headphone sony', 'audio sony', 'electronics sony'],
+        'philips' => ['lampu philips', 'led philips', 'smart bulb philips'],
+        'leather' => ['kulit', 'genuine leather', 'leather material'],
+        'cotton' => ['katun', 'kapas', 'cotton material'],
+        'denim' => ['jeans material', 'celana jeans', 'denim fabric'],
+        'rgb' => ['led', 'colorful', 'multi-color', 'warna-warni'],
+        'large' => ['besar', 'big', 'xl', 'jumbo'],
+        'small' => ['kecil', 'mini', 'compact'],
+        'slim' => ['ramping', 'tipis', 'slim fit'],
+        'elektronik' => ['electronics', 'gadget', 'device', 'perangkat'],
+        'makanan' => ['food', 'groceries', 'bahan makanan'],
+        'minuman' => ['beverages', 'drinks', 'minuman'],
+        'pakaian' => ['clothing', 'fashion', 'apparel', 'garment'],
+        'aksesoris' => ['accessories', 'accessory', 'pelengkap'],
     ];
 
-    // Calculate Levenshtein distance (pure PHP)
+    // Calculate Levenshtein distance
     private static function levenshtein(string $s1, string $s2): int
     {
         $len1 = mb_strlen($s1);
@@ -170,68 +226,139 @@ class SearchService
             $descLower = mb_strtolower($product['description'] ?? '');
             $catLower = mb_strtolower($product['category_name'] ?? '');
             
-            // 1. Exact match (highest score)
+            // Name Matching (Highest Priority)
+            
+            // 1.1 Exact match (highest score)
             if ($nameLower === $queryLower) {
                 $score += 100;
             } 
-            // 2. Starts with query
+            // 1.2 Starts with query
             elseif (mb_strpos($nameLower, $queryLower) === 0) {
                 $score += 80;
             }
-            // 3. Contains query anywhere in name
+            // 1.3 Contains query anywhere in name
             elseif (mb_strpos($nameLower, $queryLower) !== false) {
                 $score += 60;
             }
-            // 4. Fuzzy match on name
+            // 1.4 Fuzzy match on full name
             else {
-                // Check similarity with product name
                 $nameSimilarity = self::similarity($queryLower, $nameLower);
                 if ($nameSimilarity >= 0.7) {
                     $score += $nameSimilarity * 70; // Max 70 points for fuzzy match
                 }
-                
-                // Also check word-by-word similarity
-                $productWords = preg_split('/\s+/', $nameLower);
-                foreach ($productWords as $word) {
-                    if (mb_strlen($word) < 3) continue; // Skip short words
-                    
-                    $wordSimilarity = self::similarity($queryLower, $word);
-                    if ($wordSimilarity >= 0.5) {
-                        $score += $wordSimilarity * 50;
-                        break;
-                    }
-                }
             }
             
-            // 5. Description match
+            // 1.5 Word-by-word fuzzy matching in name
+            $productWords = preg_split('/\s+/', $nameLower);
+            $maxWordScore = 0;
+            foreach ($productWords as $word) {
+                if (mb_strlen($word) < 3) continue; // Skip short words
+                
+                $wordSimilarity = self::similarity($queryLower, $word);
+                if ($wordSimilarity >= 0.5) {
+                    $maxWordScore = max($maxWordScore, $wordSimilarity * 50);
+                }
+            }
+            $score += $maxWordScore;
+            
+            // Description Matching
+            
+            // 2.1 Exact match in description
             if (mb_strpos($descLower, $queryLower) !== false) {
                 $score += 30;
             }
+            // 2.2 Fuzzy match on description words
+            else {
+                $descWords = preg_split('/\s+/', $descLower);
+                $maxDescScore = 0;
+                
+                foreach ($descWords as $word) {
+                    if (mb_strlen($word) < 3) continue; // Skip short words
+                    
+                    // Check similarity with query
+                    $wordSimilarity = self::similarity($queryLower, $word);
+                    if ($wordSimilarity >= 0.6) { // Slightly higher threshold for description
+                        $maxDescScore = max($maxDescScore, $wordSimilarity * 25);
+                    }
+                }
+                
+                $score += $maxDescScore;
+            }
             
-            // 6. Category match
+            // 2.3 Multi-word fuzzy matching in description
+            // For queries with multiple words, check if description contains similar phrases
+            $queryWords = preg_split('/\s+/', $queryLower);
+            if (count($queryWords) > 1) {
+                $matchedWords = 0;
+                foreach ($queryWords as $qWord) {
+                    if (mb_strlen($qWord) < 3) continue;
+                    
+                    foreach ($descWords as $dWord) {
+                        if (mb_strlen($dWord) < 3) continue;
+                        
+                        if (self::similarity($qWord, $dWord) >= 0.7) {
+                            $matchedWords++;
+                            break;
+                        }
+                    }
+                }
+                
+                // Bonus for matching multiple words in description
+                if ($matchedWords > 1) {
+                    $score += ($matchedWords / count($queryWords)) * 20;
+                }
+            }
+            
+            // SECTION 3: Category Matching
+            
+            // 3.1 Exact match in category
             if (mb_strpos($catLower, $queryLower) !== false) {
                 $score += 40;
             }
+            // 3.2 Fuzzy match on category
+            else {
+                $catSimilarity = self::similarity($queryLower, $catLower);
+                if ($catSimilarity >= 0.6) {
+                    $score += $catSimilarity * 35;
+                }
+            }
             
-            // 7. Synonym match bonus
+            // Synonym Matching
+            
             foreach ($expandedTerms as $term) {
                 if ($term === $queryLower) continue;
                 
+                // Synonym match in name
                 if (mb_strpos($nameLower, $term) !== false) {
                     $score += 50;
                     break;
-                } elseif (mb_strpos($descLower, $term) !== false) {
+                } 
+                // Synonym match in description
+                elseif (mb_strpos($descLower, $term) !== false) {
                     $score += 30;
                     break;
-                } elseif (mb_strpos($catLower, $term) !== false) {
+                } 
+                // Synonym match in category
+                elseif (mb_strpos($catLower, $term) !== false) {
                     $score += 40;
                     break;
+                }
+                // Fuzzy synonym match in description
+                else {
+                    foreach ($descWords as $dWord) {
+                        if (mb_strlen($dWord) < 3) continue;
+                        
+                        if (self::similarity($term, $dWord) >= 0.7) {
+                            $score += 20;
+                            break 2;
+                        }
+                    }
                 }
             }
             
             // Only include products with score > 0
             if ($score > 0) {
-                $product['relevance_score'] = $score;
+                $product['relevance_score'] = round($score, 2);
                 $scoredProducts[] = $product;
             }
         }

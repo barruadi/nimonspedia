@@ -125,7 +125,7 @@ function initOrderManagementPage() {
         const items = order.items || [];
         const itemsHTML = items.slice(0, 2).map(item => `
             <div class="order-item">
-                <img src="${item.image_path || '/images/placeholder.png'}" alt="${escapeHtml(item.product_name)}" class="order-item-image">
+                <img src="${item.image_path || '/images/placeholder.png'}" alt="${escapeHtml(item.product_name)}" class="order-item-image" loading="lazy"/>
                 <div class="order-item-details">
                     <div class="order-item-name">${escapeHtml(item.product_name)}</div>
                     <div class="order-item-price">${item.qty} x ${formatPrice(item.price_at)}</div>
@@ -485,7 +485,7 @@ function initOrderManagementPage() {
                     <div class="detail-section-title">Produk</div>
                     ${order.items.map(item => `
                         <div class="order-item">
-                            <img src="${item.image_path || '/images/placeholder.png'}" alt="${escapeHtml(item.product_name)}" class="order-item-image">
+                            <img src="${item.image_path || '/images/placeholder.png'}" alt="${escapeHtml(item.product_name)}" class="order-item-image" loading="lazy"/>
                             <div class="order-item-details">
                                 <div class="order-item-name">${escapeHtml(item.product_name)}</div>
                                 <div class="order-item-price">${item.qty} x ${formatPrice(item.price_at)} = ${formatPrice(item.subtotal)}</div>

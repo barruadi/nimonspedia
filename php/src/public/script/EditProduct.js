@@ -353,13 +353,11 @@ async function initEditProductPage() {
         console.log('Image changed:', imageChanged);
         
         try {
-            // Only add image if changed
             if (imageChanged && productImageInput?.files[0]) {
                 formData.set('image', productImageInput.files[0]);
                 console.log('Image file added:', productImageInput.files[0].name);
             }
             
-            // Log FormData contents
             console.log('FormData contents:');
             for (let [key, value] of formData.entries()) {
                 if (value instanceof File) {
@@ -374,10 +372,11 @@ async function initEditProductPage() {
             console.log('API response:', result);
             
             if (result && result.ok) {
-                showToast('Produk berhasil diperbarui!', 'Kembali ke halaman produk...', 'success');
+                showToast('Produk berhasil diperbarui!', 'Yuk kembali ke toko...', 'success');
                 setTimeout(() => {
                     window.location.href = '/seller/products';
                 }, 1500);
+                
             } else {
                 throw new Error(result?.error || 'Gagal memperbarui produk');
             }
