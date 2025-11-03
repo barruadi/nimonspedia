@@ -20,7 +20,7 @@
           <input type="file" id="productImage" accept="image/*" hidden />
           
           <div id="imagePreviewContainer" class="image-preview" style="display: none;">
-            <img id="imagePreview" src="" alt="Product Preview" />
+            <img id="imagePreview" src="" alt="Product Preview" loading="lazy"/>
           </div>
           
           <div id="imagePlaceholder" class="image-placeholder">
@@ -147,7 +147,7 @@
     <!-- Cancel Confirmation Modal -->
     <div id="cancelModalBackdrop" class="modal-backdrop" style="display:none;">
       <div id="cancelConfirmationModal" class="modal">
-        <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" />
+        <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" loading="lazy"/>
         <div class="confirmation-text">Batal menambahkan produk? Perubahan tidak akan tersimpan.</div>
         <div class="confirmation-buttons">
           <button type="button" id="cancelModalCancelBtn" class="btn-modal-cancel">Lanjut</button>
