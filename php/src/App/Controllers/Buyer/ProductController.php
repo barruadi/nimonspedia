@@ -4,7 +4,10 @@ namespace App\Controllers\Buyer;
 
 use App\Models\Product;
 use App\Models\Store;
+use App\Services\SearchService;
 use App\Core\View;
+use App\Core\Database;
+use PDO;
 
 class ProductController
 {
@@ -30,8 +33,33 @@ class ProductController
       
     public function showAllProducts(): void 
     {
-        $q         = isset($_GET['q']) ? trim($_GET['q']) : null;
-        $category  = isset($_GET['category']) ? trim($_GET['category']) : null;
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if ($user) {   
+            if ($user['role'] === 'seller') {
+                header('location: /seller/dashboard');
+                exit;
+            }
+        }
+        
+        $q = isset($_GET['q']) ? trim($_GET['q']) : null;
+    
+        // always-array categories
+        $categories = [];
+        if (isset($_GET['categories'])) {
+            $raw = $_GET['categories'];
+            if (is_array($raw)) {
+                $categories = $raw;
+            } else {
+                $categories = explode(',', (string)$raw);
+            }
+            $categories = array_values(array_filter(array_map(fn($v) => trim((string)$v), $categories), fn($v) => $v !== ''));
+        }
+    
         $minPrice  = isset($_GET['min_price']) && $_GET['min_price'] !== ''
             ? (float) $_GET['min_price'] : null;
         $maxPrice  = isset($_GET['max_price']) && $_GET['max_price'] !== ''
@@ -46,11 +74,19 @@ class ProductController
 
         $offset = ($page - 1) * $perPage;
 
-        // 2. Query model
-        $totalItems = Product::countFiltered($q, $category, $minPrice, $maxPrice);
-        $products   = Product::findFiltered($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+        // Use advanced search if query exists, otherwise regular search
+        if (!empty($q)) {
+            $result = SearchService::search($q, $categories, $minPrice, $maxPrice, $perPage, $offset);
+            $products = $result['products'];
+            $totalItems = $result['total'];
+            
+            error_log("Advanced Search: '{$q}' expanded to [" . implode(', ', $result['expanded_terms']) . "], found {$totalItems} products");
+        } else {
+            $totalItems = Product::countFiltered($q, $categories, $minPrice, $maxPrice);
+            $products   = Product::findFiltered($q, $categories, $minPrice, $maxPrice, $perPage, $offset);
+        }
 
-        // 3. Pagination math
+        // Pagination
         $totalPages = max(1, (int) ceil($totalItems / $perPage));
         if ($page > $totalPages) {
             $page = $totalPages;
@@ -67,9 +103,7 @@ class ProductController
             'nextPage'    => ($page < $totalPages) ? $page + 1 : null,
         ];
 
-        $title = "Browse Products";
-
-        // 4. Support JSON for XHR updates (for debounce search, filters)
+        $title = !empty($q) ? "Search: {$q}" : "Browse Products";
         $wantsJson =
             isset($_GET['ajax']) && $_GET['ajax'] === '1' ||
             (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'fetch');
@@ -89,7 +123,8 @@ class ProductController
             'pagination'  => $pagination,
             'filters'     => [
                 'q'         => $q,
-                'category'  => $category,
+                // keep key name 'category' but value is now the array
+                'category'  => $categories,
                 'min_price' => $minPrice,
                 'max_price' => $maxPrice,
             ],
@@ -97,5 +132,29 @@ class ProductController
         ]);
         
         return;
+    }
+
+    
+    public function getAllCategories(): array
+    {
+        $db = Database::getInstance();
+        
+        $stmt = $db->query("
+            SELECT category_id, name
+            FROM categories
+        ");
+        
+        $cat = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (!$cat) {
+            http_response_code(404);
+            echo "Terjadi keasalahan";
+            return [];
+        }
+
+        return [
+            'ok' => true,
+            'categories' => $cat
+        ];
     }
 }

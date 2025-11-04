@@ -164,7 +164,11 @@ class Product
     {
         $db = self::getDB();
         
-        $stmt = $db->query("SELECT COUNT(*) AS total FROM products");
+        $stmt = $db->query("
+            SELECT COUNT(*) AS total 
+            FROM products 
+            WHERE is_deleted <> TRUE
+        ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return (int) ($row['total'] ?? 0);
@@ -178,6 +182,7 @@ class Product
         $stmt = $db->prepare("
             SELECT product_id, name, price, stock, image_path
             FROM products
+            WHERE is_deleted <> TRUE
             ORDER BY product_id DESC
             LIMIT :limit OFFSET :offset
         ");
@@ -193,14 +198,14 @@ class Product
     // Get quantity of total filtered products
     public static function countFiltered(
         ?string $q,
-        ?string $category,
+        array $categories = [],
         ?float $minPrice,
         ?float $maxPrice
     ): int
     {
         $db = self::getDB();
     
-        $where = [];
+        $where = ['is_deleted <> TRUE'];
         $params = [];
     
         if ($q !== null && $q !== '') {
@@ -208,9 +213,20 @@ class Product
             $params['q'] = '%' . $q . '%';
         }
     
-        if ($category !== null && $category !== '') {
-            $where[] = "category_id = :cat";
-            $params['cat'] = $category;
+        // categories as array of IDs
+        $categories = array_values(array_filter(array_map(
+            fn($v) => (string)$v !== '' ? (int)$v : null,
+            (array)$categories
+        ), fn($v) => $v !== null));
+    
+        if (!empty($categories)) {
+            $ph = [];
+            foreach ($categories as $i => $catId) {
+                $k = "cat{$i}";
+                $ph[] = ":{$k}";
+                $params[$k] = $catId;
+            }
+            $where[] = "category_id IN (" . implode(', ', $ph) . ")";
         }
     
         if ($minPrice !== null) {
@@ -223,10 +239,7 @@ class Product
             $params['maxPrice'] = $maxPrice;
         }
     
-        $whereSql = '';
-        if (!empty($where)) {
-            $whereSql = 'WHERE ' . implode(' AND ', $where);
-        }
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
     
         $stmt = $db->prepare("
             SELECT COUNT(*) AS total
@@ -246,7 +259,7 @@ class Product
     // Get products according to filters
     public static function findFiltered(
         ?string $q,
-        ?string $category,
+        array $categories = [],
         ?float $minPrice,
         ?float $maxPrice,
         int $limit,
@@ -255,37 +268,41 @@ class Product
     {
         $db = self::getDB();
     
-        $where = [];
+        $where = ['p.is_deleted <> TRUE'];
         $params = [];
     
-        // Search by name
         if ($q !== null && $q !== '') {
-            $where[] = "name ILIKE :q";
+            $where[] = "p.name ILIKE :q";
             $params['q'] = '%' . $q . '%';
         }
     
-        // Filter by category
-        if ($category !== null && $category !== '') {
-            $where[] = "category_id = :cat";
-            $params['cat'] = $category;
+        // categories as array of IDs
+        $categories = array_values(array_filter(array_map(
+            fn($v) => (string)$v !== '' ? (int)$v : null,
+            (array)$categories
+        ), fn($v) => $v !== null));
+    
+        if (!empty($categories)) {
+            $ph = [];
+            foreach ($categories as $i => $catId) {
+                $k = "cat{$i}";
+                $ph[] = ":{$k}";
+                $params[$k] = $catId;
+            }
+            $where[] = "p.category_id IN (" . implode(', ', $ph) . ")";
         }
     
-        // Min price
         if ($minPrice !== null) {
-            $where[] = "price >= :minPrice";
+            $where[] = "p.price >= :minPrice";
             $params['minPrice'] = $minPrice;
         }
     
-        // Max price
         if ($maxPrice !== null) {
-            $where[] = "price <= :maxPrice";
+            $where[] = "p.price <= :maxPrice";
             $params['maxPrice'] = $maxPrice;
         }
     
-        $whereSql = '';
-        if (!empty($where)) {
-            $whereSql = 'WHERE ' . implode(' AND ', $where);
-        }
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
     
         $sql = "
             SELECT
@@ -295,6 +312,7 @@ class Product
                 p.stock,
                 p.image_path,
                 p.store_id,
+                p.is_deleted,
                 s.store_name
             FROM products p
             JOIN stores s ON s.store_id = p.store_id
@@ -305,7 +323,6 @@ class Product
     
         $stmt = $db->prepare($sql);
     
-        // Bind dynamic params
         foreach ($params as $key => $val) {
             $stmt->bindValue(':' . $key, $val);
         }

@@ -169,10 +169,12 @@ async function handleAddToCart() {
                     'Yuk, lanjut belanja atau langsung ke checkout~',
                     'success'
                 );
-                
+
                 addToCartBtn.textContent = 'Berhasil!';
+
+                // Refresh navbar to update cart badge count
                 if (window.notifyAuthChanged) {
-                    window.notifyAuthChanged(window.__BOOT_SESSION__);
+                    window.notifyAuthChanged();
                 }
 
                 setTimeout(() => {

@@ -70,42 +70,53 @@ class AppNavbar extends HTMLElement {
     const balance = this.formatIDR(Number(s.user?.balance ?? 0));
     const cartCount = Number(s.user?.cartCount ?? 0);
 
+    // Determine logo link based on role
+    const logoLink = (role === 'seller') ? '/seller/dashboard' : '/products';
+
     let rightHTML = '';
+    let mobileMenuHTML = '';
 
     if (!loggedIn) {
       // --- Guest (not logged in) ---
       rightHTML = `
-        <a class="nav-link hide-sm" href="/login" data-nav>Login</a>
-        <a class="register-btn" href="/register" data-nav>Daftar</a>
+        <a class="nav-link hide-mobile" href="/login" data-nav>Login</a>
+        <a class="register-btn hide-mobile" href="/register" data-nav>Daftar</a>
+      `;
+      mobileMenuHTML = `
+        <a class="mobile-menu-item" href="/login" data-nav data-mobile-item>Login</a>
+        <a class="mobile-menu-item" href="/register" data-nav data-mobile-item>Daftar</a>
       `;
     } else if (role === 'seller') {
       // --- Seller view (Dashboard, Produk, Orders, Saldo, Logout) ---
       rightHTML = `
-        <a class="nav-link" href="/seller/dashboard" data-nav>Dashboard</a>
-        <a class="nav-link" href="/seller/products" data-nav>Produk</a>
-        <a class="nav-link" href="/seller/orders" data-nav>Orders</a>
-        <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
+        <a class="nav-link hide-mobile" href="/seller/dashboard" data-nav>Dashboard</a>
+        <a class="nav-link hide-mobile" href="/seller/products" data-nav>Produk</a>
+        <a class="nav-link hide-mobile" href="/seller/orders" data-nav>Orders</a>
+        <span class="saldo seller-saldo hide-mobile">
           Saldo: <span class="val">${balance}</span>
         </span>
-        <button id="logout-btn" class="logout-btn" type="button">Logout</button>
+        <button id="logout-btn" class="logout-btn hide-mobile" type="button">Logout</button>
+      `;
+      mobileMenuHTML = `
+        <a class="mobile-menu-item" href="/seller/dashboard" data-nav data-mobile-item>Dashboard</a>
+        <a class="mobile-menu-item" href="/seller/products" data-nav data-mobile-item>Produk</a>
+        <a class="mobile-menu-item" href="/seller/orders" data-nav data-mobile-item>Orders</a>
+        <div class="mobile-menu-item mobile-saldo seller-mobile-saldo">
+          Saldo: <span class="val">${balance}</span>
+        </div>
+        <button class="mobile-menu-item mobile-logout" id="logout-btn-mobile" type="button">Logout</button>
       `;
     } else {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
-          <a class="nav-link" href="/products" data-nav>Produk</a>
-          <a class="nav-link" href="/checkout" data-nav title="Keranjang">
+          <a class="nav-link cart-link hide-mobile" href="/cart" data-nav title="Keranjang">
             <span class="cart"></span>
             ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
           </a>
-          <span class="saldo" id="saldo-trigger" title="Top Up Saldo">
+          <span class="saldo buyer-saldo hide-mobile" id="saldo-trigger" title="Top Up Saldo">
             Saldo: <span class="val">${balance}</span>
           </span>
-          <a class="profile-pill" href="/profile" data-nav>
-            <span class="dot"></span>
-            <span>Hi, ${this.escape(name.split(' ')[0])}</span>
-            <span class="caret"></span>
-          </a>
-          <div class="profile-dropdown">
+          <div class="profile-dropdown hide-mobile">
             <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
               <div class="avatar-circle">${initials}</div>
               <span class="profile-name">Hi, ${this.escape(name)}</span>
@@ -127,26 +138,49 @@ class AppNavbar extends HTMLElement {
             </div>
           </div>
       `;
+      mobileMenuHTML = `
+        <a class="mobile-menu-item" href="/cart" data-nav data-mobile-item>
+          <span>Keranjang</span>
+          ${cartCount > 0 ? `<span class="cart-badge-mobile">${cartCount}</span>` : ''}
+        </a>
+        <div class="mobile-menu-item mobile-saldo buyer-mobile-saldo" id="saldo-trigger-mobile">
+          Saldo: <span class="val">${balance}</span>
+        </div>
+        <a class="mobile-menu-item" href="/profile" data-nav data-mobile-item>Profil Saya</a>
+        <a class="mobile-menu-item" href="/orders" data-nav data-mobile-item>Pesanan Saya</a>
+        <button class="mobile-menu-item mobile-logout" id="logout-btn-mobile" type="button">Keluar</button>
+      `;
     }
 
     this.innerHTML = `
       <nav class="app-nav">
         <div class="app-nav-inner">
-          <a class="brand" href="/products" data-nav>
-            <div class="brand-icon">N</div>
+          <a class="brand" href="${logoLink}" data-nav>
+            <div class="brand-icon"></div>
             <div class="brand-text">Nimonspedia</div>
           </a>
           <div class="nav-actions">
             ${rightHTML}
+            <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Menu">
+              <span class="hamburger-line"></span>
+              <span class="hamburger-line"></span>
+              <span class="hamburger-line"></span>
+            </button>
           </div>
+        </div>
+        <div class="mobile-menu" id="mobile-menu">
+          ${mobileMenuHTML}
         </div>
       </nav>
     `;
 
     this.wireSpaLinks();
-    if (loggedIn) { 
+    this.wireHamburger();
+    if (loggedIn) {
       this.wireLogout();
-      this.wireBalanceModal();
+      if (role === 'buyer') {
+        this.wireBalanceModal();
+      }
       this.wireDropdown();
     }
   }
@@ -158,9 +192,45 @@ class AppNavbar extends HTMLElement {
         if (a.origin !== location.origin) return;
         e.preventDefault();
         const href = a.getAttribute('href');
+
+        // Close mobile menu if item is clicked
+        if (a.hasAttribute('data-mobile-item')) {
+          const mobileMenu = this.querySelector('#mobile-menu');
+          const hamburgerBtn = this.querySelector('#hamburger-btn');
+          if (mobileMenu) mobileMenu.classList.remove('active');
+          if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+        }
+
         history.pushState({}, '', href);
         window.render(href);
       });
+    });
+  }
+
+  wireHamburger() {
+    const btn = this.querySelector('#hamburger-btn');
+    const menu = this.querySelector('#mobile-menu');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isActive = menu.classList.contains('active');
+
+      if (isActive) {
+        menu.classList.remove('active');
+        btn.classList.remove('active');
+      } else {
+        menu.classList.add('active');
+        btn.classList.add('active');
+      }
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!this.contains(e.target)) {
+        menu.classList.remove('active');
+        btn.classList.remove('active');
+      }
     });
   }
 
@@ -202,41 +272,54 @@ class AppNavbar extends HTMLElement {
   }
 
   wireLogout() {
-    const btn = this.querySelector('#logout-btn');
-    if (!btn) return;
-    
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      btn.disabled = true;
-      btn.textContent = 'Logging out...';
-      
-      try {
-        await api.post('/logout', {});
-        notifyAuthChanged({ authenticated:false, user:null });
-        if (window.render) {
-          history.pushState({}, '', '/login');
-          window.render('/login');
-        } else {
-          location.href = '/login';
+    const btns = this.querySelectorAll('#logout-btn, #logout-btn-mobile');
+    if (!btns.length) return;
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.textContent = 'Logging out...';
+
+        try {
+          await api.post('/logout', {});
+          notifyAuthChanged({ authenticated:false, user:null });
+          if (window.render) {
+            history.pushState({}, '', '/login');
+            window.render('/login');
+          } else {
+            location.href = '/login';
+          }
+        } catch (err) {
+          console.error('Logout failed:', err);
+          alert('Gagal logout. Coba lagi.');
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
         }
-      } catch (err) {
-        console.error('Logout failed:', err);
-        alert('Gagal logout. Coba lagi.');
-        btn.disabled = false;
-        btn.innerHTML = '<div class="dropdown-icon icon-logout"></div><span>Keluar</span>';
-      }
+      });
     });
   }
 
   wireBalanceModal() {
-    const trigger = this.querySelector('#saldo-trigger');
-    if (!trigger) return; 
+    const triggers = this.querySelectorAll('#saldo-trigger, #saldo-trigger-mobile');
+    if (!triggers.length) return;
 
-    trigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.dispatchEvent(new CustomEvent('open-top-up-modal'));
+    triggers.forEach(trigger => {
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('open-top-up-modal'));
+
+        // Close mobile menu if clicking from mobile
+        if (trigger.id === 'saldo-trigger-mobile') {
+          const mobileMenu = this.querySelector('#mobile-menu');
+          const hamburgerBtn = this.querySelector('#hamburger-btn');
+          if (mobileMenu) mobileMenu.classList.remove('active');
+          if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+        }
+      });
     });
   }
 

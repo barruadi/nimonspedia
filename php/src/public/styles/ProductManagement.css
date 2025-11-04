@@ -137,7 +137,7 @@ body {
 }
 
 .filter-select {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
     border: 2px solid #e5e7eb;
     border-radius: 30px;
     font-size: 0.9375rem;
@@ -145,6 +145,13 @@ body {
     background-color: white;
     cursor: pointer;
     transition: border-color 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center; 
+    background-size: 1rem;
 }
 
 .filter-select:focus {
@@ -381,79 +388,6 @@ body {
     backdrop-filter: blur(1px);
     z-index: 9980;
     display: none;
-}
-
-/* Toast Notification */
-.toast {
-    position: fixed;
-    top: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    border-radius: 12px;
-    padding: 1rem 1.5rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    display: none;
-    align-items: center;
-    gap: 1rem;
-    min-width: 320px;
-    max-width: 500px;
-    z-index: 9999;
-    animation: slideDown 0.3s ease;
-}
-
-.toast.error {
-    border-left: 4px solid #ef4444;
-}
-
-.toast.success {
-    border-left: 4px solid #10b981;
-}
-
-.toast-icon {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-}
-
-.toast-message {
-    flex: 1;
-}
-
-#toastPrimaryMessage {
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 0.25rem;
-}
-
-#toastSecondaryMessage {
-    font-size: 0.875rem;
-    color: #6b7280;
-}
-
-.toast-close-btn {
-    background-color: #10b981;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
-}
-
-.toast-close-btn:hover {
-    background-color: #059669;
-}
-
-.toast.error .toast-close-btn {
-    background-color: #ef4444;
-}
-
-.toast.error .toast-close-btn:hover {
-    background-color: #dc2626;
 }
 
 @keyframes slideDown {
