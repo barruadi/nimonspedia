@@ -11,7 +11,17 @@
   </head>
   <body>
     <app-loading></app-loading>
-    <app-toast></app-toast>
+    
+    <!-- Toast Notification -->
+    <div id="toastBackdrop" class="toast-backdrop"></div>
+    <div id="toast" class="toast">
+      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
+      <div class="toast-message">
+        <div id="toastPrimaryMessage"></div>
+        <div id="toastSecondaryMessage"></div>
+      </div>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
+    </div>
 
     <div class="dashboard-page">
         <!-- Main Content - Shown after data has been successfully loaded -->
@@ -147,7 +157,6 @@
         </div>
     </div>
 
-    <script type="module" src="/components/ToastNotification.js"></script>
     <script type="module" src="/components/LoadingComponent.js"></script>
     <script type="module" src="/script/Dashboard.js" defer></script>
   </body>
