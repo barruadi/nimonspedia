@@ -172,6 +172,23 @@ class AppNavbar extends HTMLElement {
           ${mobileMenuHTML}
         </div>
       </nav>
+
+      <!-- Logout Confirmation Modal -->
+      <div class="logout-modal-overlay" id="logout-modal-overlay">
+        <div class="logout-modal">
+          <div class="logout-modal-content">
+            <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation" class="logout-modal-image">
+            <div class="logout-modal-text">
+              <h3>Konfirmasi Logout</h3>
+              <p>Apakah Anda yakin ingin keluar?</p>
+            </div>
+          </div>
+          <div class="logout-modal-actions">
+            <button class="logout-modal-btn logout-modal-cancel" id="logout-modal-cancel">Tidak</button>
+            <button class="logout-modal-btn logout-modal-confirm" id="logout-modal-confirm">Ya, Logout</button>
+          </div>
+        </div>
+      </div>
     `;
 
     this.wireSpaLinks();
@@ -273,20 +290,50 @@ class AppNavbar extends HTMLElement {
 
   wireLogout() {
     const btns = this.querySelectorAll('#logout-btn, #logout-btn-mobile');
-    if (!btns.length) return;
+    const modal = this.querySelector('#logout-modal-overlay');
+    const confirmBtn = this.querySelector('#logout-modal-confirm');
+    const cancelBtn = this.querySelector('#logout-modal-cancel');
 
+    if (!btns.length || !modal) return;
+
+    // Show modal when logout button clicked
     btns.forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modal.classList.add('active');
+      });
+    });
+
+    // Cancel logout - close modal
+    const closeModal = () => {
+      modal.classList.remove('active');
+    };
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeModal);
+    }
+
+    // Close modal when clicking overlay
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Confirm logout - actually logout
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const originalHTML = btn.innerHTML;
-        btn.disabled = true;
-        btn.textContent = 'Logging out...';
+        const originalHTML = confirmBtn.innerHTML;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Logging out...';
 
         try {
           await api.post('/logout', {});
-          notifyAuthChanged({ authenticated:false, user:null });
+          notifyAuthChanged({ authenticated: false, user: null });
           if (window.render) {
             history.pushState({}, '', '/login');
             window.render('/login');
@@ -296,11 +343,12 @@ class AppNavbar extends HTMLElement {
         } catch (err) {
           console.error('Logout failed:', err);
           alert('Gagal logout. Coba lagi.');
-          btn.disabled = false;
-          btn.innerHTML = originalHTML;
+          confirmBtn.disabled = false;
+          confirmBtn.innerHTML = originalHTML;
+          closeModal();
         }
       });
-    });
+    }
   }
 
   wireBalanceModal() {
