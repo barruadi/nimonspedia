@@ -128,14 +128,99 @@ $canCheckout = $canCheckout ?? true; // server-side rule; JS will enable if temp
           </div>
         <?php endif; ?>
 
-        <form method="post" action="/checkout/submit" style="margin-top:16px">
-          <input type="hidden" name="address" value="<?= htmlspecialchars($address) ?>">
+        <form method="post" action="/checkout/submit" style="margin-top:16px" id="checkout-form">
+          <!-- hidden field updated by modal (TEMPORARY address) -->
+          <input type="hidden" name="address" id="hidden-address" value="<?= htmlspecialchars($address) ?>">
           <button class="btn" type="submit" id="checkout-btn" <?= $canCheckout ? '' : 'disabled' ?>>Checkout</button>
         </form>
       </aside>
     </div>
   </div>
 
+  <!-- ===== Modal: Alamat Sementara (SATU FIELD) ===== -->
+  <div class="modal-backdrop" id="addr-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addr-title">
+      <header>
+        <h2 id="addr-title">Ubah Alamat (Sementara)</h2>
+        <button class="close" type="button" id="addr-close" aria-label="Tutup">×</button>
+      </header>
+      <form id="addr-form">
+        <div class="body">
+          <div class="field">
+            <label for="addr-text">Alamat</label>
+            <textarea id="addr-text" placeholder="Tulis alamat lengkap untuk pengiriman..."><?= htmlspecialchars($address) ?></textarea>
+          </div>
+          <div class="error" id="addr-error" hidden>Mohon isi alamat.</div>
+        </div>
+        <footer>
+          <button type="button" class="btn-secondary" id="addr-cancel">Batal</button>
+          <button type="submit" class="btn-primary" id="addr-apply">Pakai Alamat Ini</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal logic -->
+  <script>
+  (function(){
+    const openBtn    = document.getElementById('btn-change-address');
+    const backdrop   = document.getElementById('addr-backdrop');
+    const closeBtn   = document.getElementById('addr-close');
+    const cancelBtn  = document.getElementById('addr-cancel');
+    const form       = document.getElementById('addr-form');
+    const addrField  = document.getElementById('addr-text');
+    const errEl      = document.getElementById('addr-error');
+
+    const addrTextEl = document.getElementById('address-text');
+    const hiddenAddr = document.getElementById('hidden-address');
+    const checkoutBtn= document.getElementById('checkout-btn');
+
+    function openModal(){
+      // Prefill from current display if textarea empty
+      if (!addrField.value && addrTextEl.textContent.trim() && addrTextEl.textContent.trim() !== 'Belum ada alamat') {
+        addrField.value = addrTextEl.textContent.trim();
+      }
+      backdrop.setAttribute('aria-hidden','false');
+      setTimeout(() => addrField.focus(), 0);
+      document.addEventListener('keydown', escClose);
+      backdrop.addEventListener('click', clickOutsideClose);
+    }
+    function closeModal(){
+      backdrop.setAttribute('aria-hidden','true');
+      document.removeEventListener('keydown', escClose);
+      backdrop.removeEventListener('click', clickOutsideClose);
+      errEl.hidden = true;
+    }
+    function escClose(e){ if (e.key === 'Escape') closeModal(); }
+    function clickOutsideClose(e){ if (e.target === backdrop) closeModal(); }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      const val = addrField.value.trim();
+      if (!val) {
+        errEl.hidden = false;
+        addrField.focus();
+        return;
+      }
+      errEl.hidden = true;
+
+      // Update UI and hidden field (temporary address, no DB change)
+      addrTextEl.textContent = val;
+      hiddenAddr.value = val;
+
+      // Enable checkout if we now have an address
+      if (hiddenAddr.value.trim()) checkoutBtn.removeAttribute('disabled');
+
+      closeModal();
+    });
+  })();
+  </script>
+
+  <!-- Balance refresh + top-up trigger -->
   <script type="module">
     import { api } from '/utils/api.js';
 
@@ -174,13 +259,8 @@ $canCheckout = $canCheckout ?? true; // server-side rule; JS will enable if temp
         const afterBalanceEl = document.getElementById('after-balance');
         const checkoutBtn = document.getElementById('checkout-btn');
 
-        if (currentBalanceEl) {
-          currentBalanceEl.textContent = rupiah(newBalance);
-        }
-
-        if (afterBalanceEl) {
-          afterBalanceEl.textContent = rupiah(afterBalance);
-        }
+        if (currentBalanceEl) currentBalanceEl.textContent = rupiah(newBalance);
+        if (afterBalanceEl)   afterBalanceEl.textContent   = rupiah(afterBalance);
 
         // Enable/disable checkout button based on balance
         if (checkoutBtn) {
@@ -189,9 +269,7 @@ $canCheckout = $canCheckout ?? true; // server-side rule; JS will enable if temp
 
             // Hide warning if exists
             const warningDiv = topupTrigger?.parentElement;
-            if (warningDiv) {
-              warningDiv.style.display = 'none';
-            }
+            if (warningDiv) warningDiv.style.display = 'none';
           } else {
             checkoutBtn.disabled = true;
           }
