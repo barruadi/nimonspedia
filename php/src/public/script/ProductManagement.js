@@ -194,6 +194,7 @@ function initProductManagementPage() {
             <img 
                 src="${product.image_path || '/images/placeholder.png'}" 
                 alt="${escapeHtml(product.name)}"
+                loading="lazy"
             >
         </div>
         <div class="product-card-content">

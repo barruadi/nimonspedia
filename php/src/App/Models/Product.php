@@ -164,7 +164,11 @@ class Product
     {
         $db = self::getDB();
         
-        $stmt = $db->query("SELECT COUNT(*) AS total FROM products");
+        $stmt = $db->query("
+            SELECT COUNT(*) AS total 
+            FROM products 
+            WHERE is_deleted <> TRUE
+        ");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return (int) ($row['total'] ?? 0);
@@ -178,6 +182,7 @@ class Product
         $stmt = $db->prepare("
             SELECT product_id, name, price, stock, image_path
             FROM products
+            WHERE is_deleted <> TRUE
             ORDER BY product_id DESC
             LIMIT :limit OFFSET :offset
         ");
@@ -200,7 +205,7 @@ class Product
     {
         $db = self::getDB();
     
-        $where = [];
+        $where = ['is_deleted <> TRUE'];
         $params = [];
     
         if ($q !== null && $q !== '') {
@@ -223,10 +228,7 @@ class Product
             $params['maxPrice'] = $maxPrice;
         }
     
-        $whereSql = '';
-        if (!empty($where)) {
-            $whereSql = 'WHERE ' . implode(' AND ', $where);
-        }
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
     
         $stmt = $db->prepare("
             SELECT COUNT(*) AS total
@@ -255,37 +257,34 @@ class Product
     {
         $db = self::getDB();
     
-        $where = [];
+        $where = ['p.is_deleted <> TRUE'];
         $params = [];
     
         // Search by name
         if ($q !== null && $q !== '') {
-            $where[] = "name ILIKE :q";
+            $where[] = "p.name ILIKE :q";
             $params['q'] = '%' . $q . '%';
         }
     
         // Filter by category
         if ($category !== null && $category !== '') {
-            $where[] = "category_id = :cat";
+            $where[] = "p.category_id = :cat";
             $params['cat'] = $category;
         }
     
         // Min price
         if ($minPrice !== null) {
-            $where[] = "price >= :minPrice";
+            $where[] = "p.price >= :minPrice";
             $params['minPrice'] = $minPrice;
         }
     
         // Max price
         if ($maxPrice !== null) {
-            $where[] = "price <= :maxPrice";
+            $where[] = "p.price <= :maxPrice";
             $params['maxPrice'] = $maxPrice;
         }
     
-        $whereSql = '';
-        if (!empty($where)) {
-            $whereSql = 'WHERE ' . implode(' AND ', $where);
-        }
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
     
         $sql = "
             SELECT
@@ -295,6 +294,7 @@ class Product
                 p.stock,
                 p.image_path,
                 p.store_id,
+                p.is_deleted,
                 s.store_name
             FROM products p
             JOIN stores s ON s.store_id = p.store_id
