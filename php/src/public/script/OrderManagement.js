@@ -714,46 +714,42 @@ function initOrderManagementPage() {
     }
 
     // Handle reject
-    confirmReject.addEventListener('click', async () => {
+    const newConfirmReject = confirmReject.cloneNode(true);
+    confirmReject.parentNode.replaceChild(newConfirmReject, confirmReject);
+
+    newConfirmReject.addEventListener('click', async () => {
         const reason = rejectReason.value.trim();
         if (!reason) {
             showToast('Alasan penolakan wajib diisi', '', 'error');
             return;
         }
 
-        // Disable button saat loading
-        confirmReject.disabled = true;
-        confirmReject.textContent = 'Memproses...';
+        newConfirmReject.disabled = true;
+        newConfirmReject.textContent = 'Memproses...';
 
         try {
             const result = await api.put(`/seller/orders/reject/${selectedOrderId}`, {
                 reject_reason: reason
             });
 
-            // Hide modal after API call
-            rejectModal.style.display = 'none';
-            const tempOrderId = selectedOrderId;
-            selectedOrderId = null;
-
             if (!result.ok) {
-                showToast('Gagal reject order', result.error || 'Terjadi kesalahan', 'error');
-                return;
+                throw new Error(result.error || 'Terjadi kesalahan');
             }
 
-            showToast('Order berhasil ditolak', 'Balance buyer telah dikembalikan');
-            await initPage(); // Refresh data
-            
-        } catch (error) {
-            // Hide modal even on catch error
             rejectModal.style.display = 'none';
             selectedOrderId = null;
+            showToast('Order berhasil ditolak', 'Balance buyer telah dikembalikan', 'success');
+            await initPage();
             
+        } catch (error) {
             console.error('Error rejecting order:', error);
+            rejectModal.style.display = 'none';
+            selectedOrderId = null;
             showToast('Gagal reject order', error.message, 'error');
+            
         } finally {
-            // Reenable button
-            confirmReject.disabled = false;
-            confirmReject.textContent = 'Tolak Order';
+            newConfirmReject.disabled = false;
+            newConfirmReject.textContent = 'Tolak Order';
         }
     });
 
