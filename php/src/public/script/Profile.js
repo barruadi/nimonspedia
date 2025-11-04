@@ -122,7 +122,7 @@ import { api } from '/utils/api.js';
     if (saveBtn) saveBtn.disabled = true;
 
     try {
-      const updateRes = await api.patch('/me', { full_name: newName });
+      const updateRes = await api.post('/profile/change-username', { full_name: newName });
 
       if (!updateRes || updateRes.ok === false) {
         showError(updateRes?.error?.message || 'Gagal memperbarui nama.');
@@ -178,7 +178,7 @@ import { api } from '/utils/api.js';
     if (saveBtn) saveBtn.disabled = true;
 
     try {
-      const pwRes = await api.patch('/profile/change-password', {
+      const pwRes = await api.post('/profile/change-password', {
         old_password: oldPw,
         new_password: newPw
       });
