@@ -17,8 +17,10 @@ Aplikasi ini dibangun menggunakan **PHP murni** untuk server-side dan **HTML, CS
 
 ## Daftar Requirement
 
-  - **Docker**
-  - **Docker Compose**
+  - **[Docker](https://docs.docker.com/get-docker/)**
+  - **[Docker Compose](https://docs.docker.com/compose/install/)**
+
+Pastikan Docker dan Docker Compose sudah terinstal di sistem Anda. Klik link untuk panduan instalasi resmi jika diperlukan.
 
 -----
 
@@ -29,7 +31,6 @@ Aplikasi ini dibangun menggunakan **PHP murni** untuk server-side dan **HTML, CS
     git clone https://github.com/Labpro-22/milestone-1-tugas-besar-if-3110-web-based-development-k01-08.git
     cd milestone-1-tugas-besar-if-3110-web-based-development-k01-08
     ```
-2.  Pastikan Docker sudah ter-install dan berjalan di sistem Anda.
 
 -----
 
