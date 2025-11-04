@@ -20,16 +20,16 @@
 
     /* Left: groups */
     .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-    .all { display:flex; align-items:center; gap:8px; }
+    .all { display:flex; align-items:center; gap:8px; font-size:14px; }
     .all input { width:16px; height:16px; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer; border:1px solid transparent; background:#fff; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; background:#fff; }
     .btn-outline { border-color: var(--border); }
     .btn-green { background: var(--green); color:#fff; border-color: var(--green); }
     .btn-green:hover { background: var(--green-700); border-color: var(--green-700); }
     .btn[disabled]{ opacity:.5; cursor:not-allowed; }
 
     .group { margin-bottom:18px; }
-    .group .head { display:flex; align-items:center; gap:10px; font-weight:700; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .group .head { display:flex; align-items:center; gap:10px; font-weight:600; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
     .group .head input { width:16px; height:16px; }
     .group .box { border:1px solid var(--border); border-radius:12px; margin-top:10px; background:#fff; overflow:hidden; }
 
@@ -40,11 +40,11 @@
     .title { font-weight:600; font-size:14px; margin-bottom:6px; }
     .muted { color: var(--muted); font-size: 12px; }
     .right { display:flex; align-items:center; gap:16px; }
-    .price { font-weight:800; white-space:nowrap; min-width:110px; text-align:right; }
+    .price { font-weight:700; font-size:14px; white-space:nowrap; min-width:110px; text-align:right; }
 
     .qty { display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:999px; padding:6px 10px; }
-    .qty .btn-qty { width:24px; height:24px; border-radius:999px; display:grid; place-items:center; background:#fff; border:1px solid var(--border); cursor:pointer; }
-    .qty .inp-qty { width:28px; text-align:center; border:none; background:transparent; font-weight:600; }
+    .qty .btn-qty { width:24px; height:24px; border-radius:999px; display:grid; place-items:center; background:#fff; border:1px solid var(--border); cursor:pointer; font-size:14px; }
+    .qty .inp-qty { width:28px; text-align:center; border:none; background:transparent; font-weight:600; font-size:14px; }
     .qty .inp-qty::-webkit-outer-spin-button, .qty .inp-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
     .rm { border:none; background:transparent; cursor:pointer; color:#9ca3af; display:grid; place-items:center; width:32px; height:32px; }
@@ -56,11 +56,11 @@
     .empty p { margin:0 0 14px; color: var(--muted); }
 
     /* Right: summary */
-    .sum h3 { margin:0 0 12px; font-size:20px; }
+    .sum h3 { margin:0 0 12px; font-size:16px; }
     .sum .box { background:#f9fafb; border:1px solid var(--border); border-radius:12px; padding:14px; }
     .summary-lines { margin-bottom:10px; }
-    .sum-row { display:flex; justify-content:space-between; margin:8px 0; color: var(--muted); }
-    .sum-row.total { color:#111; font-weight:800; font-size:22px; }
+    .sum-row { display:flex; justify-content:space-between; margin:8px 0; color: var(--muted); font-size:14px; }
+    .sum-row.total { color:#111; font-weight:800; font-size:16px; }
 
     /* Loading skeleton on left list */
     .skeleton { position: relative; }

@@ -2,7 +2,7 @@
 
 http_response_code(404);
 
-$logoPath = __DIR__ . '/../../public/uploads/assets/not_found.png';
+$logoPath = '/uploads/assets/not_found.png';
 $homeUrl  = '/products';
 $title    = '404 Not Found';
 ?>

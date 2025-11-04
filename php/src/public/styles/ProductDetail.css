@@ -209,6 +209,12 @@ body {
     color: #9CA3AF;
     cursor: not-allowed;
 }
+.btn-add-to-cart.btn-disabled-guest {
+    background: #f5f5f5;
+    color: #999;
+    border: 1px solid #e5e5e5;
+    cursor: not-allowed;
+}
 .cart-message {
     font-size: 0.875rem;
     text-align: center;

@@ -13,16 +13,27 @@ asort($categories);
 $current_page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $items_per_page = isset($_GET['per_page']) ? max(1, (int)$_GET['per_page']) : 12;
 $search_query = $_GET['q'] ?? '';
-$category_filter = $_GET['category'] ?? '';
+
+// Support multiple categories
+$categoriesParam = isset($_GET['categories']) ? trim($_GET['categories']) :
+                   (isset($_GET['category']) ? trim($_GET['category']) : '');
+$category_filters = [];
+if ($categoriesParam !== '') {
+    $category_filters = array_filter(
+        array_map('trim', explode(',', $categoriesParam)),
+        fn($c) => $c !== ''
+    );
+}
+
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (int)$_GET['min_price'] : null;
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (int)$_GET['max_price'] : null;
 
 // Filter products based on criteria
-$filtered_products = array_filter($products, function($p) use ($search_query, $category_filter, $min_price, $max_price) {
+$filtered_products = array_filter($products, function($p) use ($search_query, $category_filters, $min_price, $max_price) {
     // Search filter
     if ($search_query && stripos($p['name'], $search_query) === false) return false;
-    // Category filter
-    if ($category_filter && $p['category_id'] != $category_filter) return false;
+    // Category filter (multiple)
+    if (!empty($category_filters) && !in_array($p['category_id'], $category_filters)) return false;
     // Price filters
     if ($min_price !== null && $p['price'] < $min_price) return false;
     if ($max_price !== null && $p['price'] > $max_price) return false;
@@ -48,7 +59,7 @@ function buildQueryString($params) {
 
 $base_params = [
     'q' => $search_query,
-    'category' => $category_filter,
+    'categories' => $categoriesParam,
     'min_price' => $min_price,
     'max_price' => $max_price,
     'per_page' => $items_per_page
@@ -93,26 +104,48 @@ $base_params = [
             
             <label>
                 Kategori
-                <select name="category" id="filter-category">
-                    <option value="">Semua Produk</option>
-                    <?php foreach ($categories as $id => $name): ?>
-                        <option value="<?= $id ?>" <?= $category_filter == $id ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($name) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <!-- Hidden CSV stores selected category IDs -->
+                <input type="hidden" name="categories" id="filter-category" value="<?= htmlspecialchars($categoriesParam) ?>">
+                <!-- Dropdown with checkboxes -->
+                <div class="multi" id="category-menu" data-selected-csv="<?= htmlspecialchars($categoriesParam) ?>">
+                    <button type="button" class="multi__button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="multi__label">Pilih kategori</span>
+                        <span class="multi__count" hidden>0</span>
+                        <svg class="multi__chev" width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
+                            <path d="M5 7l5 6 5-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="multi__panel" role="listbox" aria-multiselectable="true">
+                        <div class="multi__options" id="category-options">
+                            <?php if (empty($categories)): ?>
+                                <div class="multi__empty">Tidak ada kategori</div>
+                            <?php else: ?>
+                                <?php foreach ($categories as $id => $name): ?>
+                                    <label class="multi__option">
+                                        <input type="checkbox" value="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>" <?= in_array($id, $category_filters) ? 'checked' : '' ?>>
+                                        <span><?= htmlspecialchars($name) ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="multi__actions">
+                            <button type="button" class="multi__clear">Clear</button>
+                            <button type="button" class="multi__apply">Apply</button>
+                        </div>
+                    </div>
+                </div>
             </label>
             
             <label>
                 Harga Minimal
-                <input type="number" min="0" name="min_price" id="filter-min" 
+                <input type="number" min="0" step="1000" name="min_price" id="filter-min"
                        placeholder="Harga Minimal"
                        value="<?= $min_price !== null ? $min_price : '' ?>">
             </label>
-            
+
             <label>
                 Harga Maksimal
-                <input type="number" min="0" name="max_price" id="filter-max" 
+                <input type="number" min="0" step="1000" name="max_price" id="filter-max"
                        placeholder="Harga Maksimal"
                        value="<?= $max_price !== null ? $max_price : '' ?>">
             </label>
@@ -147,7 +180,7 @@ $base_params = [
                     $priceFormatted = 'Rp ' . number_format($price, 0, ',', '.');
                 ?>
                     <article class="<?= $cardClass ?>">
-                        <a href="<?= $detailUrl ?>" style="text-decoration:none;color:inherit;<?= $isOut ? 'pointer-events:none;' : '' ?>">
+                        <a href="<?= $detailUrl ?>" style="text-decoration:none;color:inherit;">
                             <img src="<?= $img ?: '/images/placeholder.png' ?>" alt="<?= htmlspecialchars($name) ?>">
                             <div class="name"><?= htmlspecialchars($name) ?></div>
                         </a>
@@ -163,7 +196,7 @@ $base_params = [
                             <?php if ($isOut): ?>
                                 <span class="btn-disabled">Habis</span>
                             <?php elseif (!isset($_SESSION['user'])): ?>
-                                <a href="/login" class="btn-disabled" style="text-decoration:none;">Login to buy</a>
+                                <span class="btn-disabled">Login to buy</span>
                             <?php else: ?>
                                 <button class="btn-addcart" data-product-id="<?= $id ?>">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -319,53 +352,130 @@ $base_params = [
 
     redirectSellerToDashboard();
 
-    (function() {
-        const lastFocusId = sessionStorage.getItem('lastActiveFilterId');
-        if (lastFocusId) {
-            const el = document.getElementById(lastFocusId);
-            if (el) {
-                el.focus(); // Kembalikan fokus
-                
-                if (typeof el.setSelectionRange === 'function') {
-                    const len = el.value.length;
-                    el.setSelectionRange(len, len);
-                }
-                
-                sessionStorage.removeItem('lastActiveFilterId');
-            }
+    // ========== Helper Functions ==========
+    function parseCsv(str) {
+        return (str ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    }
+    function toCsv(arr) {
+        return (arr ?? []).map(String).filter(Boolean).join(',');
+    }
+    function debounce(fn, delay = 500) {
+        let t;
+        return (...args) => {
+            clearTimeout(t);
+            t = setTimeout(() => fn(...args), delay);
+        };
+    }
+
+    // ========== Multi-Category Menu Helpers ==========
+    function getSelectedCategoryIdsFromMenu() {
+        return Array.from(document.querySelectorAll('#category-menu input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+    }
+    function setSelectedCategoryIdsInMenu(ids) {
+        const want = new Set((ids ?? []).map(String));
+        document.querySelectorAll('#category-menu input[type="checkbox"]').forEach(cb => {
+            cb.checked = want.has(String(cb.value));
+        });
+        updateCategoryBadge();
+    }
+    function updateCategoryHiddenInput() {
+        const hidden = document.getElementById('filter-category');
+        if (hidden) {
+            hidden.value = toCsv(getSelectedCategoryIdsFromMenu());
         }
+    }
+    function updateCategoryBadge() {
+        const lbl = document.querySelector('#category-menu .multi__label');
+        const countEl = document.querySelector('#category-menu .multi__count');
+        const chosen = Array.from(document.querySelectorAll('#category-menu input[type="checkbox"]:checked'));
+        if (!chosen.length) {
+            lbl.textContent = 'Pilih kategori';
+            countEl.hidden = true;
+        } else if (chosen.length <= 2) {
+            lbl.textContent = chosen.map(c => c.dataset.name || c.value).join(', ');
+            countEl.hidden = true;
+        } else {
+            lbl.textContent = 'Kategori';
+            countEl.textContent = chosen.length;
+            countEl.hidden = false;
+        }
+    }
+
+    // Initialize category selections on page load
+    const menu = document.getElementById('category-menu');
+    if (menu) {
+        const currentCsv = document.getElementById('filter-category')?.value || '';
+        setSelectedCategoryIdsInMenu(parseCsv(currentCsv));
+    }
+
+    // ========== Category Menu Open/Close + Actions ==========
+    (function initCategoryMenu(){
+        const menu = document.getElementById('category-menu');
+        if (!menu) return;
+        const btn = menu.querySelector('.multi__button');
+        const panel = menu.querySelector('.multi__panel');
+        const clearBtn = menu.querySelector('.multi__clear');
+        const applyBtn = menu.querySelector('.multi__apply');
+
+        function open()  { menu.dataset.open = "true";  btn.setAttribute('aria-expanded','true'); }
+        function close() { menu.dataset.open = "false"; btn.setAttribute('aria-expanded','false'); }
+
+        btn.addEventListener('click', () => {
+            const isOpen = menu.dataset.open === "true";
+            isOpen ? close() : open();
+        });
+        document.addEventListener('click', (e) => { if (!menu.contains(e.target)) close(); });
+        menu.addEventListener('change', (e) => {
+            if (e.target.matches('input[type="checkbox"]')) updateCategoryBadge();
+        });
+        clearBtn.addEventListener('click', () => {
+            menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateCategoryBadge();
+            updateCategoryHiddenInput();
+            close();
+            submitFilterForm();
+        });
+
+        applyBtn.addEventListener('click', () => {
+            updateCategoryHiddenInput();
+            close();
+            submitFilterForm();
+        });
+
+        panel.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { close(); btn.focus(); }
+        });
     })();
 
-    const navbarRoot = document.getElementById('navbar-root');
-
-    // Add to Cart Function
+    // ========== Add to Cart Function with Event Delegation ==========
     async function addToCart(productId, qty = 1, btn) {
-        const session = navbarRoot.querySelector('app-navbar')?._session;
-        if (!session?.authenticated) {
+        if (!window.isLoggedIn) {
             window.location.href = '/login';
             return;
         }
-        
+
         const originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span style="display:flex;align-items:center;gap:0.5rem;justify-content:center;">Loading...</span>';
-        
+
         try {
             const res = await api.post('/cart/add', {
                 product_id: Number(productId),
                 qty: qty
             });
-            
+
             if (!res || res.ok === false) {
                 throw new Error(res?.error?.message || 'Gagal menambahkan ke keranjang');
             }
-            
+
             btn.innerHTML = '<span style="display:flex;align-items:center;gap:0.5rem;justify-content:center;">✓ Ditambahkan</span>';
-            
+
+            // Refresh navbar to update cart badge count
             if (window.notifyAuthChanged) {
-                window.notifyAuthChanged(session);
+                window.notifyAuthChanged();
             }
-            
+
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
@@ -378,7 +488,8 @@ $base_params = [
         }
     }
 
-    document.getElementById('productGrid')?.addEventListener('click', (e) => {
+    // Use event delegation on document body to handle all add to cart clicks
+    document.body.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-addcart');
         if (!btn) return;
         e.preventDefault();
@@ -387,29 +498,42 @@ $base_params = [
         addToCart(pid, 1, btn);
     });
 
+    // ========== Filter Form Submission ==========
+    function submitFilterForm() {
+        const filterForm = document.getElementById('filters-form');
+        if (!filterForm) return;
+
+        let pageHiddenInput = filterForm.querySelector('input[name="page"]');
+        if (!pageHiddenInput) {
+            pageHiddenInput = document.createElement('input');
+            pageHiddenInput.type = 'hidden';
+            pageHiddenInput.name = 'page';
+            filterForm.appendChild(pageHiddenInput);
+        }
+        pageHiddenInput.value = '1';
+
+        filterForm.submit();
+    }
+
+    // Debounced filter submission for text/number inputs
     const filterForm = document.getElementById('filters-form');
-    const filterInputs = filterForm.querySelectorAll('input, select');
-    
-    let debounceTimer;
-    filterInputs.forEach(input => {
-        if (input.name === 'per_page') return; 
-        
-        input.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                
-                sessionStorage.setItem('lastActiveFilterId', input.id);
+    if (filterForm) {
+        const debouncedSubmit = debounce(() => submitFilterForm(), 500);
 
-                let pageHiddenInput = filterForm.querySelector('input[name="page"]');
-                if (!pageHiddenInput) {
-                     pageHiddenInput = document.createElement('input');
-                     pageHiddenInput.type = 'hidden';
-                     pageHiddenInput.name = 'page';
-                     filterForm.appendChild(pageHiddenInput);
-                }
-                pageHiddenInput.value = '1';
+        // Listen to search and price inputs
+        const searchInput = document.getElementById('filter-q');
+        const minPriceInput = document.getElementById('filter-min');
+        const maxPriceInput = document.getElementById('filter-max');
 
-                filterForm.submit();
-            }, 500); // 500ms debounce
-        });
-    });
+        if (searchInput) {
+            searchInput.addEventListener('input', debouncedSubmit);
+        }
+        if (minPriceInput) {
+            minPriceInput.addEventListener('input', debouncedSubmit);
+        }
+        if (maxPriceInput) {
+            maxPriceInput.addEventListener('input', debouncedSubmit);
+        }
+    }
+
+    </script>
