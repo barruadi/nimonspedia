@@ -15,6 +15,11 @@ $sessionUser = $sessionUser ?? null;
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
+/* --- Reset --- */
+* {
+  box-sizing: border-box;
+}
+
 /* --- Page Layout --- */
 .store-detail-page {
   max-width: 1200px;
@@ -151,17 +156,6 @@ $sessionUser = $sessionUser ?? null;
   color: #999;
 }
 .card.out-of-stock:hover { transform: none; box-shadow: none; }
-.card.disabled {
-  background: #f9f9f9;
-  border-color: #e5e5e5;
-  color: #999;
-  opacity: .7;
-  filter: grayscale(1);
-  pointer-events: none;
-}
-.card.disabled:hover { transform: none; box-shadow: none; }
-.card.disabled .btn-addcart { display: none; }
-.card.disabled .btn-disabled { pointer-events: none; }
 
 .card img {
   width: 100%;
@@ -228,6 +222,9 @@ $sessionUser = $sessionUser ?? null;
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btn-addcart { background: #03ac0e; color: #fff; }
 .btn-addcart:hover:not(:disabled) {
@@ -407,14 +404,14 @@ $sessionUser = $sessionUser ?? null;
     <label>
       Min Price
       <input
-        type="number" min="0" name="min_price" id="filter-min"
+        type="number" min="0" step="1000" name="min_price" id="filter-min"
         value="<?= htmlspecialchars($filters['min_price'] ?? '') ?>" placeholder="0">
     </label>
 
     <label>
       Max Price
       <input
-        type="number" min="0" name="max_price" id="filter-max"
+        type="number" min="0" step="1000" name="max_price" id="filter-max"
         value="<?= htmlspecialchars($filters['max_price'] ?? '') ?>" placeholder="5000000">
     </label>
   </section>
@@ -443,11 +440,12 @@ $sessionUser = $sessionUser ?? null;
           $storeName  = $p['store_name'] ?? 'Unknown Store';
           $storeId    = $p['store_id'] ?? null;
           $isOut      = ($stock <= 0);
-          $isDisabled = !$sessionUser;
-          $cardClass  = 'card' . ($isOut ? ' out-of-stock' : '') . ($isDisabled ? ' disabled' : '');
+          $isGuest    = !$sessionUser;
+          $cardClass  = 'card' . ($isOut ? ' out-of-stock' : '');
           $detailUrl  = "/product/$id";
           $storeUrl   = $storeId ? "/store/$storeId" : "#";
-          $pointer    = ($isOut || $isDisabled) ? 'none' : 'auto';
+          // Guest users can still click products to view details
+          $pointer    = 'auto';
         ?>
         <article class="<?= $cardClass ?>">
           <a href="<?= htmlspecialchars($detailUrl) ?>"
@@ -475,7 +473,7 @@ $sessionUser = $sessionUser ?? null;
           <div class="actions">
             <?php if ($isOut): ?>
               <span class="btn-disabled">Habis</span>
-            <?php elseif (!$sessionUser): ?>
+            <?php elseif ($isGuest): ?>
               <span class="btn-disabled">Login to buy</span>
             <?php else: ?>
               <button class="btn-addcart" data-product-id="<?= $id ?>">
@@ -725,17 +723,19 @@ loadCategories();
   clearBtn.addEventListener('click', () => {
     menu.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     updateCategoryBadge();
-  });
-
-  const debouncedFilter = debounce(() => {
+    updateCategoryHiddenInput();
+    close();
+    // Apply filter immediately after clearing
     const params = getCurrentQueryParams(1);
     refetchAndRender(params);
-  }, 500);
+  });
 
   applyBtn.addEventListener('click', () => {
     updateCategoryHiddenInput();
     close();
-    debouncedFilter();
+    // Apply filter immediately (no debounce needed for explicit button click)
+    const params = getCurrentQueryParams(1);
+    refetchAndRender(params);
   });
 
   panel.addEventListener('keydown', (e) => {
@@ -801,17 +801,18 @@ function renderProducts(json) {
       const storeName = p.store_name ?? 'Unknown Store';
       const storeId   = p.store_id ?? null;
 
-      const isOut   = stock <= 0;
-      const disabled = loggedOut;
-      const cardClass = `card${isOut ? ' out-of-stock' : ''}${disabled ? ' disabled' : ''}`;
+      const isOut     = stock <= 0;
+      const isGuest   = loggedOut;
+      const cardClass = `card${isOut ? ' out-of-stock' : ''}`;
       const detailUrl = `/product/${id}`;
       const storeUrl  = storeId ? `/store/${storeId}` : '#';
-      const pointer   = (isOut || disabled) ? 'none' : 'auto';
+      // Guest users can still click products to view details
+      const pointer   = 'auto';
 
       let actionHtml;
       if (isOut) {
         actionHtml = `<span class="btn-disabled">Habis</span>`;
-      } else if (disabled) {
+      } else if (isGuest) {
         actionHtml = `<span class="btn-disabled">Login to buy</span>`;
       } else {
         actionHtml = `<button class="btn-addcart" data-product-id="${id}">

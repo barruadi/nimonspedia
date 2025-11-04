@@ -23,26 +23,40 @@ function initProductDetailPage() {
     const cartMessage = document.getElementById('cartMessage');
 
     let currentProduct = null;
-    
+    let isUserLoggedIn = false;
+
+    async function checkAuthStatus() {
+        try {
+            const result = await api.get('/me');
+            isUserLoggedIn = result && result.authenticated === true;
+        } catch (error) {
+            isUserLoggedIn = false;
+        }
+    }
+
     async function loadProductData() {
         const productId = window.routeParams?.id;
-        
+
         if (!productId) {
             showError('Halaman produk tidak ditemukan.');
             return;
         }
-        
+
         try {
             showLoading();
+
+            // Check auth status first
+            await checkAuthStatus();
+
             const result = await api.get(`/product/${productId}`);
-            
+
             if (result && result.ok) {
                 currentProduct = result.data.product;
                 const store = result.data.store;
-                
+
                 renderProduct(currentProduct, store);
                 setupPurchaseBox(currentProduct);
-                
+
                 hideLoading();
             } else {
                 showError(result?.error || 'Gagal memuat data produk.');
@@ -75,16 +89,26 @@ function setupPurchaseBox(product) {
         const stock = parseInt(product.stock, 10);
         productStock.textContent = stock;
         qtyInput.max = stock;
-        
+
+        // If user is not logged in, disable all purchase controls
+        if (!isUserLoggedIn) {
+            qtyInput.value = 0;
+            qtyInput.disabled = true;
+            qtyDecrement.disabled = true;
+            qtyIncrement.disabled = true;
+            updateSubtotal();
+            return; // Don't add event listeners for guests
+        }
+
         if (stock === 0) {
             qtyInput.value = 0;
             qtyInput.disabled = true;
         } else {
-            qtyInput.value = 1; 
+            qtyInput.value = 1;
             qtyInput.disabled = false;
         }
-        
-        updateSubtotal(); 
+
+        updateSubtotal();
 
         qtyDecrement.addEventListener('click', () => {
             let qty = parseInt(qtyInput.value, 10);
@@ -102,11 +126,11 @@ function setupPurchaseBox(product) {
                 updateSubtotal();
             }
         });
-        
+
         qtyInput.addEventListener('input', () => {
             let qty = parseInt(qtyInput.value, 10);
             const stock = parseInt(currentProduct.stock, 10);
-            
+
             if (isNaN(qty) || qty < 0) {
                 qtyInput.value = 0;
             } else if (qty > stock) {
@@ -119,7 +143,7 @@ function setupPurchaseBox(product) {
     function updateSubtotal() {
         const qty = parseInt(qtyInput.value, 10);
         const stock = parseInt(currentProduct.stock, 10);
-        
+
         if (isNaN(qty)) return;
 
         if (currentProduct && qty > 0) {
@@ -128,19 +152,27 @@ function setupPurchaseBox(product) {
         } else {
             subtotalPrice.textContent = formatCurrency(0);
         }
-        
+
         qtyDecrement.disabled = (qty <= 0);
         qtyIncrement.disabled = (qty >= stock);
 
-        if (stock === 0) {
+        // If user is not logged in, show "Login to buy" button
+        if (!isUserLoggedIn) {
+            addToCartBtn.textContent = 'Login to buy';
+            addToCartBtn.disabled = true;
+            addToCartBtn.classList.add('btn-disabled-guest');
+        } else if (stock === 0) {
             addToCartBtn.textContent = 'Stok Habis';
             addToCartBtn.disabled = true;
+            addToCartBtn.classList.remove('btn-disabled-guest');
         } else if (qty <= 0) {
             addToCartBtn.textContent = 'Tambahkan ke Keranjang';
             addToCartBtn.disabled = true;
+            addToCartBtn.classList.remove('btn-disabled-guest');
         } else {
             addToCartBtn.textContent = 'Tambahkan ke Keranjang';
             addToCartBtn.disabled = false;
+            addToCartBtn.classList.remove('btn-disabled-guest');
         }
     }
 
