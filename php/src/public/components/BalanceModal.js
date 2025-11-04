@@ -113,7 +113,12 @@ class BalanceModal extends HTMLElement {
             notifyAuthChanged(oldSession);
         }
       }
-      
+
+      // Dispatch event for other components to listen (e.g., checkout page)
+      window.dispatchEvent(new CustomEvent('balance:updated', {
+        detail: { newBalance: res.data.new_balance }
+      }));
+
       this.close();
 
     } catch (err) {

@@ -87,6 +87,7 @@ class RegisterController
             try {
                 
                 $store = Store::create($user['user_id'], $store_name, $description, $imagePath);
+                $_SESSION['user']      = $user;
                 return [
                     'ok' => true,
                     'user' => $user,

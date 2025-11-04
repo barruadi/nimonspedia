@@ -8,6 +8,12 @@
   <link rel="stylesheet" href="/styles/ToastNotification.css">
   <link rel="stylesheet" href="/styles/LoadingComponent.css">
   <link rel="preload" href="/uploads/loading/loading-icon.svg" as="image">
+
+  <style>
+    app-loading {
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <header id="navbar-root">
@@ -18,11 +24,12 @@
 
   <balance-modal></balance-modal>
   <app-toast></app-toast>
+  <app-loading></app-loading>
   
   <script type="module" src="/components/Navbar.js"></script>
   <script type="module" src="/components/BalanceModal.js"></script>
-  <script type="module" src="/components/ToastNotification.js"></script> 
-  <script type="module" src="/components/LoadingComponent.js"></script> 
+  <script type="module" src="/components/ToastNotification.js"></script>
+  <script type="module" src="/components/Loading.js"></script>
   <script type="module" src="/index.js"></script>
 </body>
 </html>
