@@ -20,6 +20,11 @@ async function load(){
   // keep selection for existing ids only
   state.selected = new Set([...state.selected].filter(id => data.items.some(i => i.product_id === id)));
   render();
+
+  // Notify navbar to update cart count badge
+  if (window.notifyAuthChanged) {
+    window.notifyAuthChanged();
+  }
 }
 
 function render(){

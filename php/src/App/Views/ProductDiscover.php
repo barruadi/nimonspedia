@@ -945,6 +945,12 @@ async function addToCart(productId, qty = 1, btn) {
     if (!res || res.ok === false) throw new Error(res?.error || 'Gagal menambahkan ke keranjang');
 
     btn.innerHTML = '✓ Added';
+
+    // Refresh navbar to update cart badge count
+    if (window.notifyAuthChanged) {
+      window.notifyAuthChanged();
+    }
+
     setTimeout(() => { btn.disabled = false; btn.innerHTML = originalHTML; }, 1200);
   } catch (e) {
     console.error(e);
