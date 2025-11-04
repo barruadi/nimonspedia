@@ -367,6 +367,28 @@ $base_params = [
         };
     }
 
+    function guardNonNegativeNumberInput(input) {
+        if (!input) return;
+
+        // Block typing "-" and scientific notation "e"/"E"
+        input.addEventListener('keydown', (e) => {
+            if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                e.preventDefault();
+            }
+        });
+
+        // Clean pasted/typed values to be non-negative numbers
+        const clamp = () => {
+            if (input.value === '') return;
+            const n = Number(input.value.replace(',', '.'));
+            if (Number.isNaN(n)) { input.value = ''; return; }
+            input.value = n < 0 ? '0' : String(n);
+        };
+
+        input.addEventListener('input', clamp);
+        input.addEventListener('blur', clamp);
+    }
+
     // ========== Multi-Category Menu Helpers ==========
     function getSelectedCategoryIdsFromMenu() {
         return Array.from(document.querySelectorAll('#category-menu input[type="checkbox"]:checked'))
@@ -515,24 +537,47 @@ $base_params = [
         filterForm.submit();
     }
 
-    // Debounced filter submission for text/number inputs
+    guardNonNegativeNumberInput(document.getElementById('filter-min'));
+    guardNonNegativeNumberInput(document.getElementById('filter-max'));
+
+    const lastFocusedInput = sessionStorage.getItem('storeFocusedInput');
+    if (lastFocusedInput) {
+        const inputToFocus = document.getElementById(lastFocusedInput);
+        if (inputToFocus) {
+            setTimeout(() => {
+                inputToFocus.focus();
+                const len = inputToFocus.value.length;
+                inputToFocus.setSelectionRange(len, len);
+            }, 100);
+        }
+        sessionStorage.removeItem('storeFocusedInput');
+    }
+
     const filterForm = document.getElementById('filters-form');
     if (filterForm) {
         const debouncedSubmit = debounce(() => submitFilterForm(), 500);
 
-        // Listen to search and price inputs
         const searchInput = document.getElementById('filter-q');
         const minPriceInput = document.getElementById('filter-min');
         const maxPriceInput = document.getElementById('filter-max');
 
         if (searchInput) {
             searchInput.addEventListener('input', debouncedSubmit);
+            searchInput.addEventListener('input', () => {
+                sessionStorage.setItem('storeFocusedInput', 'filter-q');
+            });
         }
         if (minPriceInput) {
             minPriceInput.addEventListener('input', debouncedSubmit);
+            minPriceInput.addEventListener('input', () => {
+                sessionStorage.setItem('storeFocusedInput', 'filter-min');
+            });
         }
         if (maxPriceInput) {
             maxPriceInput.addEventListener('input', debouncedSubmit);
+            maxPriceInput.addEventListener('input', () => {
+                sessionStorage.setItem('storeFocusedInput', 'filter-max');
+            });
         }
     }
 
