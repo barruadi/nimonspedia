@@ -10,7 +10,7 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
   <link rel="stylesheet" href="/styles/Navbar.css">
   <style>
     :root { --bd:#e5e7eb; --muted:#6b7280; --ok:#22c55e; }
-    body { background:#f8fafc; }
+    body { margin:0; background:var(--bg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:#111; }
     .wrap { max-width:1100px; margin:24px auto; padding:0 16px; }
     h1 { font-size:28px; margin:0 0 16px; }
     .grid { display:grid; grid-template-columns:1fr 360px; gap:20px; }

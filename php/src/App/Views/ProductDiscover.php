@@ -1,9 +1,4 @@
 <?php
-/** @var array $filters */
-/** @var array $pagination */
-/** @var array $products */
-/** @var array|null $sessionUser */
-/** @var string $title */
 
 // Fallbacks
 $title       = $title       ?? 'Products';
