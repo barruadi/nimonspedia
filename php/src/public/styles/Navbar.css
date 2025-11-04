@@ -532,3 +532,145 @@
     font-size: 0.95rem;
   }
 }
+
+/* ===== LOGOUT CONFIRMATION MODAL ===== */
+.logout-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.logout-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.logout-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+.logout-modal-overlay.active .logout-modal {
+  transform: scale(1);
+}
+
+.logout-modal-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.logout-modal-image {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.logout-modal-text h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.logout-modal-text p {
+  margin: 0;
+  font-size: 1rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.logout-modal-actions {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: flex-end;
+}
+
+.logout-modal-btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.logout-modal-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.logout-modal-cancel:hover {
+  background: #e5e7eb;
+}
+
+.logout-modal-confirm {
+  background: #dc2626;
+  color: #fff;
+}
+
+.logout-modal-confirm:hover {
+  background: #b91c1c;
+}
+
+.logout-modal-confirm:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .logout-modal {
+    padding: 1.5rem;
+    max-width: 95%;
+  }
+
+  .logout-modal-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .logout-modal-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .logout-modal-text h3 {
+    font-size: 1.25rem;
+  }
+
+  .logout-modal-text p {
+    font-size: 0.9rem;
+  }
+
+  .logout-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .logout-modal-btn {
+    width: 100%;
+    padding: 0.875rem 1rem;
+  }
+}
