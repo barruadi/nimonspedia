@@ -6,6 +6,15 @@ $filters     = $filters     ?? [];
 $pagination  = $pagination  ?? ['page'=>1,'perPage'=>12,'totalPages'=>1,'totalItems'=>0,'hasPrev'=>false,'hasNext'=>false,'prevPage'=>null,'nextPage'=>null];
 $products    = $products    ?? [];
 $sessionUser = $sessionUser ?? null;
+
+// normalize categories to array (supports legacy 'category')
+$filters['categories'] = array_values(array_filter(
+  is_array($filters['categories'] ?? null) ? $filters['categories'] : (
+    isset($filters['category']) ? (array)$filters['category'] : []
+  ),
+  fn($v) => $v !== '' && $v !== null
+));
+$categoriesCsv = implode(',', array_map('strval', $filters['categories']));
 ?>
 <!doctype html>
 <html lang="en">
@@ -381,10 +390,10 @@ $sessionUser = $sessionUser ?? null;
         type="hidden"
         name="categories"
         id="filter-category"
-        value="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
+        value="<?= htmlspecialchars($categoriesCsv) ?>">
       <!-- Dropdown with checkboxes -->
       <div class="multi" id="category-menu"
-           data-selected-csv="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
+           data-selected-csv="<?= htmlspecialchars($categoriesCsv) ?>">
         <button type="button" class="multi__button" aria-haspopup="listbox" aria-expanded="false">
           <span class="multi__label">Pilih kategori</span>
           <span class="multi__count" hidden>0</span>
@@ -506,8 +515,8 @@ $sessionUser = $sessionUser ?? null;
       // Build initial SSR pagination controls
       $baseQuery = [
         'q'           => $filters['q'] ?? '',
-        // Note: use CSV categories (merged behavior)
-        'categories'  => $filters['categories'] ?? ($filters['category'] ?? ''),
+        // pass categories as array in links
+        'categories'  => $filters['categories'],
         'min_price'   => $filters['min_price'] ?? '',
         'max_price'   => $filters['max_price'] ?? '',
         'per_page'    => $pagination['perPage'],
@@ -1018,7 +1027,6 @@ document.getElementById('per-page-select')?.addEventListener('change', () => {
   const params = getCurrentQueryParams(1);
   refetchAndRender(params);
 });
-
 
 </script>
 </body>

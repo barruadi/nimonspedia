@@ -46,8 +46,20 @@ class ProductController
             }
         }
         
-        $q         = isset($_GET['q']) ? trim($_GET['q']) : null;
-        $category  = isset($_GET['category']) ? trim($_GET['category']) : null;
+        $q = isset($_GET['q']) ? trim($_GET['q']) : null;
+    
+        // always-array categories
+        $categories = [];
+        if (isset($_GET['categories'])) {
+            $raw = $_GET['categories'];
+            if (is_array($raw)) {
+                $categories = $raw;
+            } else {
+                $categories = explode(',', (string)$raw);
+            }
+            $categories = array_values(array_filter(array_map(fn($v) => trim((string)$v), $categories), fn($v) => $v !== ''));
+        }
+    
         $minPrice  = isset($_GET['min_price']) && $_GET['min_price'] !== ''
             ? (float) $_GET['min_price'] : null;
         $maxPrice  = isset($_GET['max_price']) && $_GET['max_price'] !== ''
@@ -64,16 +76,14 @@ class ProductController
 
         // Use advanced search if query exists, otherwise regular search
         if (!empty($q)) {
-            // Advanced search with fuzzy matching and synonyms
-            $result = SearchService::search($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+            $result = SearchService::search($q, $categories, $minPrice, $maxPrice, $perPage, $offset);
             $products = $result['products'];
             $totalItems = $result['total'];
             
             error_log("Advanced Search: '{$q}' expanded to [" . implode(', ', $result['expanded_terms']) . "], found {$totalItems} products");
         } else {
-            // Regular search
-            $totalItems = Product::countFiltered($q, $category, $minPrice, $maxPrice);
-            $products   = Product::findFiltered($q, $category, $minPrice, $maxPrice, $perPage, $offset);
+            $totalItems = Product::countFiltered($q, $categories, $minPrice, $maxPrice);
+            $products   = Product::findFiltered($q, $categories, $minPrice, $maxPrice, $perPage, $offset);
         }
 
         // Pagination
@@ -94,8 +104,6 @@ class ProductController
         ];
 
         $title = !empty($q) ? "Search: {$q}" : "Browse Products";
-
-        // AJAX response
         $wantsJson =
             isset($_GET['ajax']) && $_GET['ajax'] === '1' ||
             (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'fetch');
@@ -115,7 +123,8 @@ class ProductController
             'pagination'  => $pagination,
             'filters'     => [
                 'q'         => $q,
-                'category'  => $category,
+                // keep key name 'category' but value is now the array
+                'category'  => $categories,
                 'min_price' => $minPrice,
                 'max_price' => $maxPrice,
             ],
@@ -124,6 +133,7 @@ class ProductController
         
         return;
     }
+
     
     public function getAllCategories(): array
     {
