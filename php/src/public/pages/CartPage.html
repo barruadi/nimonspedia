@@ -4,72 +4,7 @@
   <meta charset="utf-8" />
   <title>Keranjang</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root {
-      --border:#e5e7eb; --muted:#6b7280; --green:#22c55e; --green-700:#16a34a;
-      --bg:#f8fafc; --shadow:0 8px 24px rgba(0,0,0,.06);
-    }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:#111; }
-    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-    h1 { font-size: 28px; margin: 0 0 16px; }
-    .grid { display:grid; grid-template-columns: 1fr 360px; gap:20px; }
-    @media (max-width: 900px){ .grid { grid-template-columns: 1fr; } }
-
-    .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:20px; box-shadow: var(--shadow); }
-
-    /* Left: groups */
-    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-    .all { display:flex; align-items:center; gap:8px; font-size:14px; }
-    .all input { width:16px; height:16px; }
-    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:1px solid transparent; background:#fff; }
-    .btn-outline { border-color: var(--border); }
-    .btn-green { background: var(--green); color:#fff; border-color: var(--green); }
-    .btn-green:hover { background: var(--green-700); border-color: var(--green-700); }
-    .btn[disabled]{ opacity:.5; cursor:not-allowed; }
-
-    .group { margin-bottom:18px; }
-    .group .head { display:flex; align-items:center; gap:10px; font-weight:600; font-size:14px; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
-    .group .head input { width:16px; height:16px; }
-    .group .box { border:1px solid var(--border); border-radius:12px; margin-top:10px; background:#fff; overflow:hidden; }
-
-    .row { display:grid; grid-template-columns: 28px 64px 1fr auto; gap:12px; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); }
-    .row:last-child { border-bottom:none; }
-    .row .chk { width:16px; height:16px; }
-    .thumb { width:64px; height:64px; border-radius:10px; object-fit:cover; border:1px solid var(--border); }
-    .title { font-weight:600; font-size:14px; margin-bottom:6px; }
-    .muted { color: var(--muted); font-size: 12px; }
-    .right { display:flex; align-items:center; gap:16px; }
-    .price { font-weight:700; font-size:14px; white-space:nowrap; min-width:110px; text-align:right; }
-
-    .qty { display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:999px; padding:6px 10px; }
-    .qty .btn-qty { width:24px; height:24px; border-radius:999px; display:grid; place-items:center; background:#fff; border:1px solid var(--border); cursor:pointer; font-size:14px; }
-    .qty .inp-qty { width:28px; text-align:center; border:none; background:transparent; font-weight:600; font-size:14px; }
-    .qty .inp-qty::-webkit-outer-spin-button, .qty .inp-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-
-    .rm { border:none; background:transparent; cursor:pointer; color:#9ca3af; display:grid; place-items:center; width:32px; height:32px; }
-    .rm:hover { color:#ef4444; }
-
-    /* Empty */
-    .empty { display:flex; gap:24px; align-items:flex-start; }
-    .empty h3 { margin:0 0 6px; font-size:18px; }
-    .empty p { margin:0 0 14px; color: var(--muted); }
-
-    /* Right: summary */
-    .sum h3 { margin:0 0 12px; font-size:16px; }
-    .sum .box { background:#f9fafb; border:1px solid var(--border); border-radius:12px; padding:14px; }
-    .summary-lines { margin-bottom:10px; }
-    .sum-row { display:flex; justify-content:space-between; margin:8px 0; color: var(--muted); font-size:14px; }
-    .sum-row.total { color:#111; font-weight:800; font-size:16px; }
-
-    /* Loading skeleton on left list */
-    .skeleton { position: relative; }
-    .skeleton::after {
-      content:''; position:absolute; inset:0; border-radius:12px;
-      background: repeating-linear-gradient(-45deg,#eee,#eee 10px,#f7f7f7 10px,#f7f7f7 20px);
-      opacity:.6; pointer-events:none;
-    }
-  </style>
+  <link rel="stylesheet" href="/styles/Cart.css">
 </head>
 <body>
   <div class="wrap">
@@ -110,23 +45,6 @@
     </div>
   </div>
 
-  <script type="module">
-    import { api } from '/utils/api.js';
-
-    /* ---------- elements ---------- */
-    const elGroups     = document.getElementById('cart-groups');
-    const elEmpty      = document.getElementById('empty');
-    const elCheckAll   = document.getElementById('check-all');
-    const elRemoveSel  = document.getElementById('remove-selected');
-    const elSumItems   = document.getElementById('sum-items');
-    const elSumPrice   = document.getElementById('sum-price');
-    const elSumLines   = document.getElementById('summary-lines');
-    const elBtnCheckout= document.getElementById('btn-checkout');
-    const elTopbar     = document.querySelector('#cart-left .topbar');
-
-    /* ---------- state ---------- */
-    let state
-
-  <script type="module" src="/script/CartPage.js"></script>
+  <script type="module" src="/script/Cart.js"></script>
 </body>
 </html>
