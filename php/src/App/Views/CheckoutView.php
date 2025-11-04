@@ -23,18 +23,18 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
     .btn-ghost { padding:6px 12px; border:1px solid var(--bd); border-radius:999px; background:#fff; cursor:pointer; }
     /* store groups */
     .store { margin-top:16px; }
-    .store h3 { font-size:14px; margin:0 0 8px; }
+    .store h3 { font-size:14px; margin:0 0 8px; font-weight:600; }
     .box { border:1px solid var(--bd); border-radius:14px; padding:8px 16px; background:#fff; }
     .item { display:grid; grid-template-columns:64px 1fr 120px; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid #eee; }
     .item:last-child { border-bottom:none; }
     .thumb { width:64px; height:64px; object-fit:cover; border-radius:10px; border:1px solid var(--bd); }
-    .pname { font-weight:600; margin:0 0 4px; }
-    .price { text-align:right; font-weight:700; }
+    .pname { font-weight:600; margin:0 0 4px; font-size:14px; }
+    .price { text-align:right; font-weight:700; font-size:14px; }
     .qty { text-align:right; font-size:12px; color:var(--muted); }
     /* summary */
-    aside h3 { margin:0 0 12px; }
-    .sum-row { display:flex; justify-content:space-between; margin:8px 0; color:var(--muted); }
-    .sum-row.total { color:#111; font-weight:800; font-size:20px; margin-top:10px; }
+    aside h3 { margin:0 0 12px; font-size:16px; }
+    .sum-row { display:flex; justify-content:space-between; margin:8px 0; color:var(--muted); font-size:14px; }
+    .sum-row.total { color:#111; font-weight:800; font-size:16px; margin-top:10px; }
     .btn { width:100%; padding:12px 22px; border-radius:12px; background:var(--ok); color:#fff; border:none; font-weight:700; cursor:pointer; }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; }
     hr { border:none; border-top:1px solid #eee; margin:16px 0; }
@@ -95,15 +95,89 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
         <div class="sum-row"><span>Total Item</span><span><?= (int)$totalItems ?></span></div>
         <div class="sum-row total"><span>Total Harga</span><span><?= rupiah($summary['total'] ?? 0) ?></span></div>
         <hr>
-        <div class="sum-row"><span>Saldo</span><span><?= rupiah($balance) ?></span></div>
-        <div class="sum-row"><span>Saldo Setelah Checkout</span><span><?= rupiah($afterBalance) ?></span></div>
+        <div class="sum-row"><span>Saldo</span><span id="current-balance"><?= rupiah($balance) ?></span></div>
+        <div class="sum-row"><span>Saldo Setelah Checkout</span><span id="after-balance"><?= rupiah($afterBalance) ?></span></div>
+
+        <?php if (!$canCheckout && $afterBalance < 0): ?>
+          <div style="margin-top: 12px; color: var(--muted); font-size: 14px;">
+            Saldo tidak cukup. <span id="topup-trigger" style="color: #16a34a; font-weight: 600; cursor: pointer; text-decoration: underline;">Isi Saldo</span>
+          </div>
+        <?php endif; ?>
 
         <form method="post" action="/checkout/submit" style="margin-top:16px">
           <input type="hidden" name="address" value="<?= htmlspecialchars($address) ?>">
-          <button class="btn" type="submit" <?= $canCheckout ? '' : 'disabled' ?>>Checkout</button>
+          <button class="btn" type="submit" id="checkout-btn" <?= $canCheckout ? '' : 'disabled' ?>>Checkout</button>
         </form>
       </aside>
     </div>
   </div>
+
+  <script type="module">
+    import { api } from '/utils/api.js';
+
+    // Trigger top-up modal when "Isi Saldo" button clicked
+    const topupTrigger = document.getElementById('topup-trigger');
+    if (topupTrigger) {
+      topupTrigger.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('open-top-up-modal'));
+      });
+    }
+
+    // Listen for balance update events
+    window.addEventListener('balance:updated', async () => {
+      console.log('Balance updated, refreshing checkout page data...');
+      await refreshBalance();
+    });
+
+    // Function to refresh balance without page reload
+    async function refreshBalance() {
+      try {
+        const res = await api.get('/me');
+        if (!res || !res.authenticated || !res.user) {
+          console.error('Failed to fetch user data');
+          return;
+        }
+
+        const newBalance = res.user.balance || 0;
+        const totalPrice = <?= (int)($summary['total'] ?? 0) ?>;
+        const afterBalance = newBalance - totalPrice;
+
+        // Format currency
+        const rupiah = (n) => 'Rp ' + parseInt(n, 10).toLocaleString('id-ID');
+
+        // Update balance displays
+        const currentBalanceEl = document.getElementById('current-balance');
+        const afterBalanceEl = document.getElementById('after-balance');
+        const checkoutBtn = document.getElementById('checkout-btn');
+
+        if (currentBalanceEl) {
+          currentBalanceEl.textContent = rupiah(newBalance);
+        }
+
+        if (afterBalanceEl) {
+          afterBalanceEl.textContent = rupiah(afterBalance);
+        }
+
+        // Enable/disable checkout button based on balance
+        if (checkoutBtn) {
+          if (afterBalance >= 0) {
+            checkoutBtn.disabled = false;
+
+            // Hide warning if exists
+            const warningDiv = topupTrigger?.parentElement;
+            if (warningDiv) {
+              warningDiv.style.display = 'none';
+            }
+          } else {
+            checkoutBtn.disabled = true;
+          }
+        }
+
+        console.log('Balance updated:', { newBalance, afterBalance, canCheckout: afterBalance >= 0 });
+      } catch (error) {
+        console.error('Error refreshing balance:', error);
+      }
+    }
+  </script>
 </body>
 </html>
