@@ -149,6 +149,34 @@ class User {
             ':user_id'       => $user_id,
         ]);
         
+        $user = self::findById($user_id);
+        unset($user['password_hash']);
+        $_SESSION['user']      = $user;
+        
+        return $row_affected === 1;
+    }
+    
+    public static function updateUsername(
+        string $newUsername,
+        int    $userId
+    ): bool
+    {
+        $query = "
+            UPDATE users
+            SET full_name = :name,
+                updated_at    = NOW()
+            WHERE user_id = :user_id
+        ";
+        
+        $row_affected = Database::executeQuery($query, [
+            ':name' => $newUsername,
+            ':user_id' => $userId
+        ]);
+        
+        $user = self::findById($userId);
+        unset($user['password_hash']);
+        $_SESSION['user']      = $user;
+        
         return $row_affected === 1;
     }
     

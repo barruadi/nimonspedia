@@ -60,7 +60,8 @@ class RegisterController
         
         if ($user === null) {
             return [
-                'ok' => false
+                'ok' => false,
+                'error' => 'Terjadi kesalahan pembuatan akun'
             ];
         }
         

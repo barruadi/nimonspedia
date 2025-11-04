@@ -94,14 +94,38 @@ class ProfileController
     // [TODO]
     public function updateUsername($req): array
     {
-        return [];
+        if (!$_SESSION['user']) {
+            return [
+                'ok' => false
+            ];
+        }
+        
+        $userId = $_SESSION['user']['user_id'];
+        $newName = $req['body']['full_name'];
+
+        $update = User::updateUsername($newName, $userId);
+        
+        if (!$update) {
+            return [
+                'ok' => false,
+                'error' => [
+                    'code' => 'PROFILE',
+                    'message' => 'Failed to update'
+                ]
+            ];
+        }
+        
+        return [
+            'ok' => true
+        ];
     }
     
     public function setBalance($req): array
     {
+        $userId = $_SESSION['user']['user_id'];
         $new_balance = $req['body']['balance'];
         
-        User::setBalance($new_balance);
+        User::updateBalance($userId, $new_balance);
 
         return [
             'ok' => true,

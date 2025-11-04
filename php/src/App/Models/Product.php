@@ -198,7 +198,7 @@ class Product
     // Get quantity of total filtered products
     public static function countFiltered(
         ?string $q,
-        ?string $category,
+        array $categories = [],
         ?float $minPrice,
         ?float $maxPrice
     ): int
@@ -213,9 +213,20 @@ class Product
             $params['q'] = '%' . $q . '%';
         }
     
-        if ($category !== null && $category !== '') {
-            $where[] = "category_id = :cat";
-            $params['cat'] = $category;
+        // categories as array of IDs
+        $categories = array_values(array_filter(array_map(
+            fn($v) => (string)$v !== '' ? (int)$v : null,
+            (array)$categories
+        ), fn($v) => $v !== null));
+    
+        if (!empty($categories)) {
+            $ph = [];
+            foreach ($categories as $i => $catId) {
+                $k = "cat{$i}";
+                $ph[] = ":{$k}";
+                $params[$k] = $catId;
+            }
+            $where[] = "category_id IN (" . implode(', ', $ph) . ")";
         }
     
         if ($minPrice !== null) {
@@ -248,7 +259,7 @@ class Product
     // Get products according to filters
     public static function findFiltered(
         ?string $q,
-        ?string $category,
+        array $categories = [],
         ?float $minPrice,
         ?float $maxPrice,
         int $limit,
@@ -260,25 +271,32 @@ class Product
         $where = ['p.is_deleted <> TRUE'];
         $params = [];
     
-        // Search by name
         if ($q !== null && $q !== '') {
             $where[] = "p.name ILIKE :q";
             $params['q'] = '%' . $q . '%';
         }
     
-        // Filter by category
-        if ($category !== null && $category !== '') {
-            $where[] = "p.category_id = :cat";
-            $params['cat'] = $category;
+        // categories as array of IDs
+        $categories = array_values(array_filter(array_map(
+            fn($v) => (string)$v !== '' ? (int)$v : null,
+            (array)$categories
+        ), fn($v) => $v !== null));
+    
+        if (!empty($categories)) {
+            $ph = [];
+            foreach ($categories as $i => $catId) {
+                $k = "cat{$i}";
+                $ph[] = ":{$k}";
+                $params[$k] = $catId;
+            }
+            $where[] = "p.category_id IN (" . implode(', ', $ph) . ")";
         }
     
-        // Min price
         if ($minPrice !== null) {
             $where[] = "p.price >= :minPrice";
             $params['minPrice'] = $minPrice;
         }
     
-        // Max price
         if ($maxPrice !== null) {
             $where[] = "p.price <= :maxPrice";
             $params['maxPrice'] = $maxPrice;
@@ -305,7 +323,6 @@ class Product
     
         $stmt = $db->prepare($sql);
     
-        // Bind dynamic params
         foreach ($params as $key => $val) {
             $stmt->bindValue(':' . $key, $val);
         }
