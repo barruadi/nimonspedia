@@ -23,15 +23,29 @@ $router->get('/api/logout', fn($req) => (new LogoutController())->logout(), [$au
 // Sanity checks ------------------------
 $router->get('/api/me', function ($req) {
     $u = $_SESSION['user'] ?? null;
+    if (!$u) {
+        return [
+            'authenticated' => false,
+            'user' => null
+        ];
+    }
+
+    $userData = [
+        'id'      => $u['user_id'],
+        'name'    => $u['full_name'],
+        'email'   => $u['email'],
+        'role'    => $u['role'],
+        'balance' => $u['balance'],
+    ];
+
+    // Add unique cart items count for buyers (distinct products, not total quantity)
+    if ($u['role'] === 'buyer') {
+        $userData['cartCount'] = \App\Models\Cart::countItems((int)$u['user_id']);
+    }
+
     return [
-        'authenticated' => (bool)$u,
-        'user' => $u ? [
-            'id'      => $u['user_id'],
-            'name'    => $u['full_name'],
-            'email'   => $u['email'],
-            'role'    => $u['role'],
-            'balance' => $u['balance'],
-        ] : null
+        'authenticated' => true,
+        'user' => $userData
     ];
 });
 

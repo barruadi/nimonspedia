@@ -413,4 +413,3 @@ $base_params = [
             }, 500); // 500ms debounce
         });
     });
-</script>
