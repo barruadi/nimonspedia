@@ -1,6 +1,5 @@
 import { api } from '../utils/api.js';
 import { checkSellerAuth } from '../utils/sellerAuth.js';
-import { showToast } from '../utils/toast.js';
 import { showLoading, hideLoading } from '../utils/loading.js';
 
 function initOrderManagementPage() {
@@ -39,6 +38,117 @@ function initOrderManagementPage() {
     const confirmDelivery = document.getElementById('confirmDelivery');
     const rejectReason = document.getElementById('rejectReason');
     const deliveryDays = document.getElementById('deliveryDays');
+
+    // Toast Notification
+    const Toast = {
+        backdrop: null,
+        toast: null,
+        primaryEl: null,
+        secondaryEl: null,
+        closeBtn: null,
+        autoHideTimer: null,
+        isShowing: false,
+        queue: [],
+
+        init() {
+            this.backdrop = document.getElementById('toastBackdrop');
+            this.toast = document.getElementById('toast');
+            this.primaryEl = document.getElementById('toastPrimaryMessage');
+            this.secondaryEl = document.getElementById('toastSecondaryMessage');
+            this.closeBtn = document.getElementById('toastCloseBtn');
+
+            if (!this.backdrop || !this.toast || !this.closeBtn) {
+                console.error('Toast elements not found in DOM');
+                return;
+            }
+
+            this.closeBtn.addEventListener('click', () => this.hide());
+            this.backdrop.addEventListener('click', () => this.hide());
+
+            console.log('Toast initialized');
+        },
+
+        show(primary, secondary = '', type = 'success') {
+            if (!this.toast) {
+                console.error('Toast not initialized');
+                return;
+            }
+
+            // Check for duplicate in queue
+            const isDuplicate = this.queue.some(item => 
+                item.primary === primary && 
+                item.secondary === secondary && 
+                item.type === type
+            );
+            
+            if (isDuplicate) {
+                console.warn('Duplicate toast ignored:', primary);
+                return;
+            }
+
+            // If toast is currently showing, queue this one
+            if (this.isShowing) {
+                console.log('Toast busy, queueing:', primary);
+                this.queue.push({ primary, secondary, type });
+                return;
+            }
+
+            this.isShowing = true;
+
+            // Clear any existing timer
+            if (this.autoHideTimer) {
+                clearTimeout(this.autoHideTimer);
+            }
+
+            // Set content
+            this.primaryEl.textContent = primary;
+            this.secondaryEl.textContent = secondary;
+            this.toast.className = 'toast ' + type;
+
+            // Show toast
+            this.backdrop.classList.add('is-open');
+            this.toast.classList.add('is-open');
+
+            console.log('Toast shown:', primary);
+
+            // Auto hide after 5 seconds
+            this.autoHideTimer = setTimeout(() => {
+                this.hide();
+
+                // Show next queued toast if any
+                if (this.queue.length > 0) {
+                    const next = this.queue.shift();
+                    setTimeout(() => {
+                        this.show(next.primary, next.secondary, next.type);
+                    }, 300);
+                }
+            }, 5000);
+        },
+
+        hide() {
+            if (this.autoHideTimer) {
+                clearTimeout(this.autoHideTimer);
+                this.autoHideTimer = null;
+            }
+
+            this.backdrop.classList.remove('is-open');
+            this.toast.classList.remove('is-open');
+
+            setTimeout(() => {
+                this.isShowing = false;
+            }, 300);
+
+            console.log('Toast hidden');
+        }
+    };
+
+    // Helper function for toast calls
+    const showToast = (primary, secondary = '', type = 'success') => {
+        Toast.show(primary, secondary, type);
+    };
+
+    // Initialize Toast
+    Toast.init();
 
     async function initPage() {
         const isAuthorized = await checkSellerAuth();

@@ -6,6 +6,15 @@ $filters     = $filters     ?? [];
 $pagination  = $pagination  ?? ['page'=>1,'perPage'=>12,'totalPages'=>1,'totalItems'=>0,'hasPrev'=>false,'hasNext'=>false,'prevPage'=>null,'nextPage'=>null];
 $products    = $products    ?? [];
 $sessionUser = $sessionUser ?? null;
+
+// normalize categories to array (supports legacy 'category')
+$filters['categories'] = array_values(array_filter(
+  is_array($filters['categories'] ?? null) ? $filters['categories'] : (
+    isset($filters['category']) ? (array)$filters['category'] : []
+  ),
+  fn($v) => $v !== '' && $v !== null
+));
+$categoriesCsv = implode(',', array_map('strval', $filters['categories']));
 ?>
 <!doctype html>
 <html lang="en">
@@ -378,10 +387,10 @@ $sessionUser = $sessionUser ?? null;
         type="hidden"
         name="categories"
         id="filter-category"
-        value="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
+        value="<?= htmlspecialchars($categoriesCsv) ?>">
       <!-- Dropdown with checkboxes -->
       <div class="multi" id="category-menu"
-           data-selected-csv="<?= htmlspecialchars($filters['categories'] ?? ($filters['category'] ?? '')) ?>">
+           data-selected-csv="<?= htmlspecialchars($categoriesCsv) ?>">
         <button type="button" class="multi__button" aria-haspopup="listbox" aria-expanded="false">
           <span class="multi__label">Pilih kategori</span>
           <span class="multi__count" hidden>0</span>
@@ -504,8 +513,8 @@ $sessionUser = $sessionUser ?? null;
       // Build initial SSR pagination controls
       $baseQuery = [
         'q'           => $filters['q'] ?? '',
-        // Note: use CSV categories (merged behavior)
-        'categories'  => $filters['categories'] ?? ($filters['category'] ?? ''),
+        // pass categories as array in links
+        'categories'  => $filters['categories'],
         'min_price'   => $filters['min_price'] ?? '',
         'max_price'   => $filters['max_price'] ?? '',
         'per_page'    => $pagination['perPage'],
@@ -596,6 +605,31 @@ function debounce(fn, delay = 500) {
     t = setTimeout(() => fn(...args), delay);
   };
 }
+
+function guardNonNegativeNumberInput(input) {
+  if (!input) return;
+
+  // Block typing "-" and scientific notation "e"/"E"
+  input.addEventListener('keydown', (e) => {
+    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+      e.preventDefault();
+    }
+  });
+
+  // Clean pasted/typed values to be non-negative numbers
+  const clamp = () => {
+    if (input.value === '') return;
+    const n = Number(input.value.replace(',', '.'));
+    if (Number.isNaN(n)) { input.value = ''; return; }
+    input.value = n < 0 ? '0' : String(n);
+  };
+
+  input.addEventListener('input', clamp);
+  input.addEventListener('blur', clamp);
+}
+
+guardNonNegativeNumberInput(document.getElementById('filter-min'));
+guardNonNegativeNumberInput(document.getElementById('filter-max'));
 
 /* -------- multi-category menu helpers (fix/bug-check) -------- */
 function getSelectedCategoryIdsFromMenu() {
@@ -745,27 +779,40 @@ loadCategories();
 
 /* --------------------- list interactions --------------------- */
 function getCurrentQueryParams(pageOverride = null) {
-  const q             = document.getElementById('filter-q').value.trim();
-  const categoriesCsv = document.getElementById('filter-category').value; // CSV from hidden
-  const minP          = document.getElementById('filter-min').value;
-  const maxP          = document.getElementById('filter-max').value;
+  const q   = document.getElementById('filter-q').value.trim();
+  const minEl = document.getElementById('filter-min');
+  const maxEl = document.getElementById('filter-max');
+
+  const minP = minEl?.value ?? '';
+  const maxP = maxEl?.value ?? '';
 
   const grid   = document.getElementById('product-grid');
   const perSel = document.getElementById('per-page-select');
   const perPage = perSel?.value || grid.dataset.perPage;
 
   const params = new URLSearchParams();
-  if (q)             params.set('q', q);
-  if (categoriesCsv) params.set('categories', categoriesCsv);
-  if (minP)          params.set('min_price', minP);
-  if (maxP)          params.set('max_price', maxP);
-  if (perPage)       params.set('per_page', perPage);
+  if (q) params.set('q', q);
 
-  if (pageOverride !== null) {
-    params.set('page', pageOverride);
-  } else {
-    params.set('page', grid.dataset.page || '1');
-  }
+  // keep existing categories behavior
+  const categoriesCsv = document.getElementById('filter-category').value;
+  if (categoriesCsv) params.set('categories', categoriesCsv);
+
+  // clamp prices to >= 0
+  const clampNonNeg = (v) => {
+    if (v === '') return '';
+    const n = Number(String(v).replace(',', '.'));
+    if (Number.isNaN(n)) return '';
+    return Math.max(0, n).toString();
+  };
+  const minClean = clampNonNeg(minP);
+  const maxClean = clampNonNeg(maxP);
+
+  if (minClean !== '') params.set('min_price', minClean);
+  if (maxClean !== '') params.set('max_price', maxClean);
+
+  if (perPage) params.set('per_page', perPage);
+  if (pageOverride !== null) params.set('page', pageOverride);
+  else params.set('page', grid.dataset.page || '1');
 
   params.set('ajax', '1');
   return params.toString();
@@ -1019,7 +1066,6 @@ document.getElementById('per-page-select')?.addEventListener('change', () => {
   const params = getCurrentQueryParams(1);
   refetchAndRender(params);
 });
-
 
 </script>
 </body>

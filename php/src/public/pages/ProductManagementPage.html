@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,10 +10,20 @@
   </head>
   <body>
     <app-loading></app-loading>
-    <app-toast></app-toast>
+    
+    <!-- Toast Notification  -->
+    <div id="toastBackdrop" class="toast-backdrop"></div>
+    <div id="toast" class="toast">
+      <img src="/uploads/toast-notification/toast-icon.svg" alt="Toast Icon" class="toast-icon" />
+      <div class="toast-message">
+        <div id="toastPrimaryMessage"></div>
+        <div id="toastSecondaryMessage"></div>
+      </div>
+      <button type="button" id="toastCloseBtn" class="toast-close-btn">Tutup</button>
+    </div>
 
     <div class="product-management-page">
-      <!-- Main Content - Shown after data has been successfully loaded -->
+      <!-- Main Content -->
       <div id="mainContent" style="display: none;">
         <!-- Header Section -->
         <div class="page-header">
@@ -84,7 +94,6 @@
       </div>
     </div>
 
-    <script type="module" src="/components/ToastNotification.js"></script>
     <script type="module" src="/components/LoadingComponent.js"></script>
     <script type="module" src="/script/ProductManagement.js" defer></script>
   </body>

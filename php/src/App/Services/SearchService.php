@@ -153,45 +153,60 @@ class SearchService
     // Advanced search with fuzzy matching
     public static function search(
         string $query,
-        ?string $category = null,
+        array $categories = [],      // ← always an array
         ?float $minPrice = null,
         ?float $maxPrice = null,
         int $limit = 12,
         int $offset = 0
     ): array {
         $db = Database::getInstance();
-        
+    
         $query = trim($query);
-        if (empty($query)) {
+        if ($query === '') {
             return ['products' => [], 'total' => 0, 'expanded_terms' => []];
         }
-        
+    
         // Expand query with synonyms
         $expandedTerms = self::expandQuery($query);
-        
+    
         // Build SQL conditions
         $conditions = ["p.is_deleted = FALSE", "p.stock > 0"];
         $params = [];
-        
-        if ($category !== null && $category !== '') {
-            $conditions[] = "c.name = :category";
-            $params['category'] = $category;
+    
+        // --- Multiple categories (array) ---
+        $categories = array_values(array_unique(
+            array_filter(
+                array_map(
+                    fn($v) => mb_strtolower(trim((string)$v)),
+                    $categories
+                ),
+                fn($v) => $v !== ''
+            )
+        ));
+    
+        if (!empty($categories)) {
+            $ph = [];
+            foreach ($categories as $i => $cat) {
+                $key = "cat{$i}";
+                $ph[] = ":{$key}";
+                $params[$key] = $cat;
+            }
+            $conditions[] = "LOWER(c.name) IN (" . implode(', ', $ph) . ")";
         }
-        
+        // -----------------------------------
+    
         if ($minPrice !== null && $minPrice > 0) {
             $conditions[] = "p.price >= :min_price";
             $params['min_price'] = (int)$minPrice;
         }
-        
+    
         if ($maxPrice !== null && $maxPrice > 0) {
             $conditions[] = "p.price <= :max_price";
             $params['max_price'] = (int)$maxPrice;
         }
-        
-        // Don't filter by search terms in SQL - let fuzzy matching handle it
+    
         $whereClause = implode(' AND ', $conditions);
-        
-        // Get all products matching filters (without text search)
+    
         $sql = "
             SELECT 
                 p.product_id,
@@ -202,9 +217,9 @@ class SearchService
                 p.price,
                 p.stock,
                 p.image_path,
-                c.name as category_name,
+                c.name AS category_name,
                 s.store_name,
-                s.logo_path as store_logo
+                s.logo_path AS store_logo
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
             LEFT JOIN stores s ON p.store_id = s.store_id
@@ -216,7 +231,7 @@ class SearchService
         $stmt->execute($params);
         $allProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Apply fuzzy matching and scoring
+        // ----- scoring logic unchanged (kept intact) -----
         $scoredProducts = [];
         $queryLower = mb_strtolower($query);
         
@@ -224,126 +239,67 @@ class SearchService
             $score = 0;
             $nameLower = mb_strtolower($product['name']);
             $descLower = mb_strtolower($product['description'] ?? '');
-            $catLower = mb_strtolower($product['category_name'] ?? '');
+            $catLower  = mb_strtolower($product['category_name'] ?? '');
+            $descWords = preg_split('/\s+/', $descLower);
             
-            // Name Matching (Highest Priority)
-            
-            // 1.1 Exact match (highest score)
             if ($nameLower === $queryLower) {
                 $score += 100;
-            } 
-            // 1.2 Starts with query
-            elseif (mb_strpos($nameLower, $queryLower) === 0) {
+            } elseif (mb_strpos($nameLower, $queryLower) === 0) {
                 $score += 80;
-            }
-            // 1.3 Contains query anywhere in name
-            elseif (mb_strpos($nameLower, $queryLower) !== false) {
+            } elseif (mb_strpos($nameLower, $queryLower) !== false) {
                 $score += 60;
-            }
-            // 1.4 Fuzzy match on full name
-            else {
+            } else {
                 $nameSimilarity = self::similarity($queryLower, $nameLower);
-                if ($nameSimilarity >= 0.7) {
-                    $score += $nameSimilarity * 70; // Max 70 points for fuzzy match
-                }
+                if ($nameSimilarity >= 0.7) $score += $nameSimilarity * 70;
             }
-            
-            // 1.5 Word-by-word fuzzy matching in name
+    
             $productWords = preg_split('/\s+/', $nameLower);
             $maxWordScore = 0;
             foreach ($productWords as $word) {
-                if (mb_strlen($word) < 3) continue; // Skip short words
-                
+                if (mb_strlen($word) < 3) continue;
                 $wordSimilarity = self::similarity($queryLower, $word);
-                if ($wordSimilarity >= 0.5) {
-                    $maxWordScore = max($maxWordScore, $wordSimilarity * 50);
-                }
+                if ($wordSimilarity >= 0.5) $maxWordScore = max($maxWordScore, $wordSimilarity * 50);
             }
             $score += $maxWordScore;
-            
-            // Description Matching
-            
-            // 2.1 Exact match in description
+    
             if (mb_strpos($descLower, $queryLower) !== false) {
                 $score += 30;
-            }
-            // 2.2 Fuzzy match on description words
-            else {
-                $descWords = preg_split('/\s+/', $descLower);
+            } else {
                 $maxDescScore = 0;
-                
                 foreach ($descWords as $word) {
-                    if (mb_strlen($word) < 3) continue; // Skip short words
-                    
-                    // Check similarity with query
+                    if (mb_strlen($word) < 3) continue;
                     $wordSimilarity = self::similarity($queryLower, $word);
-                    if ($wordSimilarity >= 0.6) { // Slightly higher threshold for description
-                        $maxDescScore = max($maxDescScore, $wordSimilarity * 25);
-                    }
+                    if ($wordSimilarity >= 0.6) $maxDescScore = max($maxDescScore, $wordSimilarity * 25);
                 }
-                
                 $score += $maxDescScore;
             }
-            
-            // 2.3 Multi-word fuzzy matching in description
-            // For queries with multiple words, check if description contains similar phrases
+    
             $queryWords = preg_split('/\s+/', $queryLower);
             if (count($queryWords) > 1) {
                 $matchedWords = 0;
                 foreach ($queryWords as $qWord) {
                     if (mb_strlen($qWord) < 3) continue;
-                    
                     foreach ($descWords as $dWord) {
                         if (mb_strlen($dWord) < 3) continue;
-                        
-                        if (self::similarity($qWord, $dWord) >= 0.7) {
-                            $matchedWords++;
-                            break;
-                        }
+                        if (self::similarity($qWord, $dWord) >= 0.7) { $matchedWords++; break; }
                     }
                 }
-                
-                // Bonus for matching multiple words in description
-                if ($matchedWords > 1) {
-                    $score += ($matchedWords / count($queryWords)) * 20;
-                }
+                if ($matchedWords > 1) $score += ($matchedWords / count($queryWords)) * 20;
             }
-            
-            // SECTION 3: Category Matching
-            
-            // 3.1 Exact match in category
+    
             if (mb_strpos($catLower, $queryLower) !== false) {
                 $score += 40;
-            }
-            // 3.2 Fuzzy match on category
-            else {
+            } else {
                 $catSimilarity = self::similarity($queryLower, $catLower);
-                if ($catSimilarity >= 0.6) {
-                    $score += $catSimilarity * 35;
-                }
+                if ($catSimilarity >= 0.6) $score += $catSimilarity * 35;
             }
-            
-            // Synonym Matching
-            
+    
             foreach ($expandedTerms as $term) {
                 if ($term === $queryLower) continue;
-                
-                // Synonym match in name
-                if (mb_strpos($nameLower, $term) !== false) {
-                    $score += 50;
-                    break;
-                } 
-                // Synonym match in description
-                elseif (mb_strpos($descLower, $term) !== false) {
-                    $score += 30;
-                    break;
-                } 
-                // Synonym match in category
-                elseif (mb_strpos($catLower, $term) !== false) {
-                    $score += 40;
-                    break;
-                }
-                // Fuzzy synonym match in description
+    
+                if (mb_strpos($nameLower, $term) !== false) { $score += 50; break; }
+                elseif (mb_strpos($descLower, $term) !== false) { $score += 30; break; }
+                elseif (mb_strpos($catLower, $term) !== false) { $score += 40; break; }
                 else {
                     foreach ($descWords as $dWord) {
                         if (mb_strlen($dWord) < 3) continue;
@@ -356,19 +312,14 @@ class SearchService
                 }
             }
             
-            // Only include products with score > 0
             if ($score > 0) {
                 $product['relevance_score'] = round($score, 2);
                 $scoredProducts[] = $product;
             }
         }
         
-        // Sort by relevance score (highest first)
-        usort($scoredProducts, function($a, $b) {
-            return $b['relevance_score'] <=> $a['relevance_score'];
-        });
+        usort($scoredProducts, fn($a, $b) => $b['relevance_score'] <=> $a['relevance_score']);
         
-        // Apply pagination after scoring
         $total = count($scoredProducts);
         $scoredProducts = array_slice($scoredProducts, $offset, $limit);
         

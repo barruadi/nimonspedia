@@ -1,6 +1,5 @@
 import { api } from '../utils/api.js';
 import { checkSellerAuth } from '../utils/sellerAuth.js';
-import { showToast } from '../utils/toast.js';
 import { showLoading, hideLoading } from '../utils/loading.js';
 
 function initProductManagementPage() {
@@ -19,6 +18,117 @@ function initProductManagementPage() {
     const sortOrder = document.getElementById('sortOrder');
     const searchInput = document.getElementById('searchInput');
     let searchTerm = '';
+
+    // Toast Notification
+    const Toast = {
+        backdrop: null,
+        toast: null,
+        primaryEl: null,
+        secondaryEl: null,
+        closeBtn: null,
+        autoHideTimer: null,
+        isShowing: false,
+        queue: [],
+
+        init() {
+            this.backdrop = document.getElementById('toastBackdrop');
+            this.toast = document.getElementById('toast');
+            this.primaryEl = document.getElementById('toastPrimaryMessage');
+            this.secondaryEl = document.getElementById('toastSecondaryMessage');
+            this.closeBtn = document.getElementById('toastCloseBtn');
+
+            if (!this.backdrop || !this.toast || !this.closeBtn) {
+                console.error('Toast elements not found in DOM');
+                return;
+            }
+
+            this.closeBtn.addEventListener('click', () => this.hide());
+            this.backdrop.addEventListener('click', () => this.hide());
+
+            console.log('Toast initialized');
+        },
+
+        show(primary, secondary = '', type = 'success') {
+            if (!this.toast) {
+                console.error('Toast not initialized');
+                return;
+            }
+
+            // Check for duplicate in queue
+            const isDuplicate = this.queue.some(item => 
+                item.primary === primary && 
+                item.secondary === secondary && 
+                item.type === type
+            );
+            
+            if (isDuplicate) {
+                console.warn('Duplicate toast ignored:', primary);
+                return;
+            }
+
+            // If toast is currently showing, queue this one
+            if (this.isShowing) {
+                console.log('Toast busy, queueing:', primary);
+                this.queue.push({ primary, secondary, type });
+                return;
+            }
+
+            this.isShowing = true;
+
+            // Clear any existing timer
+            if (this.autoHideTimer) {
+                clearTimeout(this.autoHideTimer);
+            }
+
+            // Set content
+            this.primaryEl.textContent = primary;
+            this.secondaryEl.textContent = secondary;
+            this.toast.className = 'toast ' + type;
+
+            // Show toast
+            this.backdrop.classList.add('is-open');
+            this.toast.classList.add('is-open');
+
+            console.log('Toast shown:', primary);
+
+            // Auto hide after 5 seconds
+            this.autoHideTimer = setTimeout(() => {
+                this.hide();
+
+                // Show next queued toast if any
+                if (this.queue.length > 0) {
+                    const next = this.queue.shift();
+                    setTimeout(() => {
+                        this.show(next.primary, next.secondary, next.type);
+                    }, 300);
+                }
+            }, 5000);
+        },
+
+        hide() {
+            if (this.autoHideTimer) {
+                clearTimeout(this.autoHideTimer);
+                this.autoHideTimer = null;
+            }
+
+            this.backdrop.classList.remove('is-open');
+            this.toast.classList.remove('is-open');
+
+            setTimeout(() => {
+                this.isShowing = false;
+            }, 300);
+
+            console.log('Toast hidden');
+        }
+    };
+
+    // Helper function for toast calls
+    const showToast = (primary, secondary = '', type = 'success') => {
+        Toast.show(primary, secondary, type);
+    };
+
+    // Initialize Toast
+    Toast.init();
 
     async function initPage() {
         const isAuthorized = await checkSellerAuth();
@@ -147,10 +257,8 @@ function initProductManagementPage() {
         
         if (!filteredProducts || filteredProducts.length === 0) {
             if (products.length === 0) {
-                // No products suited to filters (show empty state)
                 showEmptyState();
             } else {
-                // Has products but filtered out (show message in main content)
                 hideLoading();
                 showMainContent();
                 hideEmptyState();
@@ -163,7 +271,6 @@ function initProductManagementPage() {
             return;
         }
 
-        // Show products
         hideLoading();
         showMainContent();
         hideEmptyState();
@@ -179,57 +286,56 @@ function initProductManagementPage() {
     }
 
     function createProductCard(product) {
-    const card = document.createElement('div');
-    card.className = 'product-card';
+        const card = document.createElement('div');
+        card.className = 'product-card';
 
-    // Determine availability status (Active if stock > 0, Inactive if stock = 0)
-    const availabilityStatus = product.stock > 0
-        ? { text: 'Active', class: 'status-active' }
-        : { text: 'Inactive', class: 'status-inactive' };
+        const availabilityStatus = product.stock > 0
+            ? { text: 'Active', class: 'status-active' }
+            : { text: 'Inactive', class: 'status-inactive' };
 
-    const formattedPrice = `Rp ${parseInt(product.price).toLocaleString('id-ID')}`;
+        const formattedPrice = `Rp ${parseInt(product.price).toLocaleString('id-ID')}`;
 
-    card.innerHTML = `
-        <div class="product-card-image">
-            <img 
-                src="${product.image_path || '/images/placeholder.png'}" 
-                alt="${escapeHtml(product.name)}"
-                loading="lazy"
-            >
-        </div>
-        <div class="product-card-content">
-            <h3 class="product-card-title">${escapeHtml(product.name)}</h3>
-            <div class="product-card-price">${formattedPrice}</div>
-            <div class="product-card-meta">
-                <span class="product-card-category">Kategori: ${escapeHtml(product.category_name || 'Tidak ada kategori')}</span>
-                <span class="product-card-stock">Stok: ${product.stock}</span>
-                <span class="product-card-status ${availabilityStatus.class}">${availabilityStatus.text}</span>
+        card.innerHTML = `
+            <div class="product-card-image">
+                <img 
+                    src="${product.image_path || '/images/placeholder.png'}" 
+                    alt="${escapeHtml(product.name)}"
+                    loading="lazy"
+                >
             </div>
-        </div>
-        <div class="product-card-actions">
-            <button class="btn-card-edit" data-product-id="${product.product_id}" title="Edit produk">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-            </button>
-            <button class="btn-card-delete" data-product-id="${product.product_id}" title="Hapus produk">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-            </button>
-        </div>
-    `;
+            <div class="product-card-content">
+                <h3 class="product-card-title">${escapeHtml(product.name)}</h3>
+                <div class="product-card-price">${formattedPrice}</div>
+                <div class="product-card-meta">
+                    <span class="product-card-category">Kategori: ${escapeHtml(product.category_name || 'Tidak ada kategori')}</span>
+                    <span class="product-card-stock">Stok: ${product.stock}</span>
+                    <span class="product-card-status ${availabilityStatus.class}">${availabilityStatus.text}</span>
+                </div>
+            </div>
+            <div class="product-card-actions">
+                <button class="btn-card-edit" data-product-id="${product.product_id}" title="Edit produk">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="btn-card-delete" data-product-id="${product.product_id}" title="Hapus produk">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
 
-    const editBtn = card.querySelector('.btn-card-edit');
-    const deleteBtn = card.querySelector('.btn-card-delete');
+        const editBtn = card.querySelector('.btn-card-edit');
+        const deleteBtn = card.querySelector('.btn-card-delete');
 
-    editBtn.addEventListener('click', () => handleEdit(product.product_id));
-    deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name));
+        editBtn.addEventListener('click', () => handleEdit(product.product_id));
+        deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name));
 
-    return card;
-}
+        return card;
+    }
 
     function showMainContent() {
         if (mainContent) {

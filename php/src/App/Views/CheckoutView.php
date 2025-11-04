@@ -1,5 +1,7 @@
 <?php
 function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
+$address     = $address     ?? '';
+$canCheckout = $canCheckout ?? true; // server-side rule; JS will enable if temp address is set
 ?>
 <!doctype html>
 <html lang="id">
@@ -9,7 +11,7 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/styles/Navbar.css">
   <style>
-    :root { --bd:#e5e7eb; --muted:#6b7280; --ok:#22c55e; }
+    :root { --bd:#e5e7eb; --muted:#6b7280; --ok:#22c55e; --bg:#fafafa; --overlay:rgba(0,0,0,.5); }
     body { margin:0; background:var(--bg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:#111; }
     .wrap { max-width:1100px; margin:24px auto; padding:0 16px; }
     h1 { font-size:28px; margin:0 0 16px; }
@@ -19,7 +21,7 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
     /* address */
     .addr { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
     .addr .title { font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-    .addr .text { color:var(--muted); }
+    .addr .text { color:var(--muted); white-space:pre-line; }
     .btn-ghost { padding:6px 12px; border:1px solid var(--bd); border-radius:999px; background:#fff; cursor:pointer; }
     /* store groups */
     .store { margin-top:16px; }
@@ -38,6 +40,30 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
     .btn { width:100%; padding:12px 22px; border-radius:12px; background:var(--ok); color:#fff; border:none; font-weight:700; cursor:pointer; }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; }
     hr { border:none; border-top:1px solid #eee; margin:16px 0; }
+
+    /* ===== Modal (Alamat Sementara – 1 field) ===== */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: var(--overlay);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px; z-index: 1000;
+    }
+    .modal-backdrop[aria-hidden="false"] { display: flex; }
+    .modal {
+      width: 100%; max-width: 560px; background:#fff; border-radius:14px; border:1px solid var(--bd);
+      box-shadow: 0 20px 50px rgba(0,0,0,.25); overflow:hidden;
+    }
+    .modal header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--bd); }
+    .modal h2 { font-size:18px; margin:0; }
+    .modal .close { background:none; border:none; font-size:20px; cursor:pointer; padding:6px; }
+    .modal .body { padding:16px; }
+    .field label { font-size:12px; color:#555; display:block; margin-bottom:6px; }
+    .field textarea {
+      width:100%; min-height:140px; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font:inherit; background:#fff; resize:vertical;
+    }
+    .modal footer { display:flex; gap:10px; justify-content:flex-end; padding:14px 16px; border-top:1px solid var(--bd); background:#fafafa; }
+    .btn-secondary { background:#fff; border:1px solid var(--bd); color:#111; padding:10px 16px; border-radius:10px; cursor:pointer; }
+    .btn-primary { background:var(--ok); border:1px solid var(--ok); color:#fff; padding:10px 16px; border-radius:10px; cursor:pointer; }
+    .error { color:#b91c1c; font-size:12px; margin-top:8px; }
   </style>
 </head>
 <body>
@@ -51,11 +77,9 @@ function rupiah($n){ return 'Rp '.number_format((int)$n,0,',','.'); }
           <div class="addr">
             <div>
               <div class="title">Alamat Pengiriman</div>
-              <div class="text"><?= nl2br(htmlspecialchars($address ?: 'Belum ada alamat')) ?></div>
+              <div id="address-text" class="text"><?= nl2br(htmlspecialchars($address ?: 'Belum ada alamat')) ?></div>
             </div>
-            <form method="get" action="/account/address">
-              <button class="btn-ghost" type="submit">Ganti</button>
-            </form>
+            <button class="btn-ghost" type="button" id="btn-change-address">Ganti</button>
           </div>
         </div>
 
