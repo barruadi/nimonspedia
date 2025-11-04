@@ -80,7 +80,7 @@ import { api } from '/utils/api.js';
             <div class="row" data-id="${i.product_id}">
               <input type="checkbox" class="chk chk-line" ${checked} aria-label="Pilih produk">
               <img class="thumb" src="${i.image_path || '/placeholder.png'}" alt="">
-              <div>
+              <div class="info">
                 <div class="title">${i.name}</div>
                 <div class="muted">${i.store_name ?? ''}</div>
               </div>
