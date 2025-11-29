@@ -7,19 +7,25 @@ class Database {
     private static ?PDO $instance = null;
 
     public static function getInstance(): PDO {
-        # If PDO hasn't been built yet (access via .env variables)
         if (!self::$instance) {
-            $host = getenv('DB_HOST') ?: 'db';
+            
+            # Perubahan: Host HARUS 'postgres' (nama service Docker)
+            $host = 'postgres'; 
+            
+            # Kita menggunakan getenv() untuk variabel lain
             $port = getenv('DB_PORT') ?: '5432';
-            $name = getenv('DB_NAME') ?: 'ecommerce';
-            $user = getenv('DB_USER') ?: 'user';
-            $pass = getenv('DB_PASS') ?: 'password';
+            $name = getenv('DB_NAME') ?: 'ecommerce'; # Nama DB: 'ecommerce'
+            $user = getenv('DB_USER') ?: 'user';      # User: 'user'
+            $pass = getenv('DB_PASS') ?: 'password';  # Pass: 'password'
 
+            # Pastikan DSN menggunakan driver 'pgsql'
             self::$instance = new PDO("pgsql:host=$host;dbname=$name", $user, $pass);
             self::$instance->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
         return self::$instance;
     }
+    
+    // ... (fungsi fetchOne, executeQuery, pdo tetap sama)
     
     public static function fetchOne(string $sql, array $params = []): ?array
     {
