@@ -1,0 +1,28 @@
+# --- Node.js & React ---
+node_modules/
+**/node_modules/
+dist/
+build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- PHP ---
+/vendor/
+**/vendor/
+.phpunit.result.cache
+
+# --- Environment Variables ---
+.env
+**/.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- System Files ---
+.DS_Store
+Thumbs.db
