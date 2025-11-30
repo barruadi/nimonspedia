@@ -198,18 +198,65 @@ class Order
 
     public static function markAsReceived(int $orderId): bool
     {
-        $db = self::getDB();
-
-        $stmt = $db->prepare("
-            UPDATE orders
-            SET status = 'received',
-                received_at = NOW(),
-                updated_at = NOW()
-            WHERE order_id = :order_id
-            AND status = 'on_delivery'
-        ");
-
-        return $stmt->execute(['order_id' => $orderId]);
+        $db = Database::getInstance();
+        
+        try {
+            $db->beginTransaction();
+            
+            // Get order details
+            $stmt = $db->prepare("
+                SELECT o.order_id, o.buyer_id, o.total_amount, s.owner_id as seller_id
+                FROM orders o
+                JOIN stores s ON o.store_id = s.store_id
+                WHERE o.order_id = :order_id 
+                AND o.status = 'on_delivery'
+                FOR UPDATE
+            ");
+            $stmt->execute(['order_id' => $orderId]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$order) {
+                $db->rollBack();
+                return false;
+            }
+            
+            // Update order status ke received
+            $updateStmt = $db->prepare("
+                UPDATE orders 
+                SET status = 'received', 
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+            ");
+            $updateStmt->execute(['order_id' => $orderId]);
+            
+            // Transfer uang ke  seller
+            $transferStmt = $db->prepare("
+                UPDATE users 
+                SET balance = balance + :amount,
+                    updated_at = NOW()
+                WHERE user_id = :seller_id
+            ");
+            $transferred = $transferStmt->execute([
+                'amount' => $order['total_amount'],
+                'seller_id' => $order['seller_id']
+            ]);
+            
+            if (!$transferred) {
+                $db->rollBack();
+                return false;
+            }
+            
+            $db->commit();
+            
+            error_log("Order {$orderId} received. Transferred {$order['total_amount']} to seller {$order['seller_id']}");
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            $db->rollBack();
+            error_log("Error marking order as received: " . $e->getMessage());
+            return false;
+        }
     }
 
     // Get order details with items

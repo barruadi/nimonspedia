@@ -187,7 +187,7 @@ class OrderManagementController
         }
 
         // Validate delivery days
-        if ($deliveryDays < 1 || $deliveryDays > 30) {
+        if ($deliveryDays < 0 || $deliveryDays > 30) {
             http_response_code(400);
             return ['ok' => false, 'error' => 'Delivery days must be between 1 and 30'];
         }
