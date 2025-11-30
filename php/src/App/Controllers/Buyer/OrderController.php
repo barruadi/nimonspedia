@@ -67,25 +67,27 @@ class OrderController
             return ['ok' => false, 'error' => 'Order not found or unauthorized'];
         }
 
+        // Check apakah order dapat diterima (received)
         if (!Order::canBeReceived($order)) {
             http_response_code(400);
             return [
                 'ok' => false,
-                'error' => 'Order cannot be marked as received yet. Please wait until delivery time has passed.'
+                'error' => 'Order belum bisa dikonfirmasi. Tunggu hingga waktu pengiriman tercapai.'
             ];
         }
 
+        // Tandai sebagai received dan transfer uang ke seller
         $success = Order::markAsReceived($orderId);
 
         if (!$success) {
             http_response_code(500);
-            return ['ok' => false, 'error' => 'Failed to update order status'];
+            return ['ok' => false, 'error' => 'Gagal mengkonfirmasi penerimaan barang'];
         }
 
         http_response_code(200);
         return [
             'ok' => true,
-            'message' => 'Order marked as received successfully'
+            'message' => 'Penerimaan barang berhasil dikonfirmasi'
         ];
     }
 }

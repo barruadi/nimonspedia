@@ -755,9 +755,19 @@ function initOrderManagementPage() {
 
     // Handle set delivery
     confirmDelivery.addEventListener('click', async () => {
-        const days = parseInt(deliveryDays.value);
-        if (!days || days < 1 || days > 30) {
-            showToast('Jumlah hari tidak valid', 'Masukkan angka antara 1-30 hari', 'error');
+        const inputValue = deliveryDays.value.trim();
+        
+        // Check apakah input kosong
+        if (inputValue === '') {
+            showToast('Jumlah hari tidak valid', 'Masukkan angka 0-30 hari', 'error');
+            return;
+        }
+        
+        const days = parseInt(inputValue, 10);
+        
+        // Check if parse failed or out of range
+        if (isNaN(days) || days < 0 || days > 30) {
+            showToast('Jumlah hari tidak valid', 'Masukkan angka 0-30 hari', 'error');
             return;
         }
 
@@ -770,28 +780,24 @@ function initOrderManagementPage() {
                 delivery_days: days
             });
 
-            // Hide modal after API call
+            // Hide modal setelah API call
             deliveryModal.style.display = 'none';
-            const tempOrderId = selectedOrderId;
             selectedOrderId = null;
 
             if (!result.ok) {
-                showToast('Gagal mengatur pengiriman', result.error || 'Terjadi kesalahan', 'error');
-                return;
+                throw new Error(result.error || 'Terjadi kesalahan');
             }
 
-            showToast('Pengiriman berhasil diatur!', `Estimasi ${days} hari pengiriman`);
-            await initPage(); // Refresh data
+            showToast('Pengiriman berhasil diatur!', `Estimasi ${days} hari pengiriman`, 'success');
+            await initPage();
             
         } catch (error) {
-            // Hide modal even on catch error
+            console.error('Error setting delivery:', error);
             deliveryModal.style.display = 'none';
             selectedOrderId = null;
-            
-            console.error('Error setting delivery:', error);
             showToast('Gagal mengatur pengiriman', error.message, 'error');
+            
         } finally {
-            // Reenable button
             confirmDelivery.disabled = false;
             confirmDelivery.textContent = 'Kirim Barang';
         }

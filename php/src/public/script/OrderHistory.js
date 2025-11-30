@@ -320,10 +320,8 @@ async function handleConfirmReceived(orderId) {
       throw new Error(result?.error || 'Gagal mengkonfirmasi penerimaan barang');
     }
 
-    showToast('Berhasil!', 'Penerimaan barang telah dikonfirmasi', 'success');
-
     detailModal.style.display = "none";
-
+    showToast('Berhasil!', 'Penerimaan barang telah dikonfirmasi.', 'success');
     await initPage();
 
   } catch (error) {
