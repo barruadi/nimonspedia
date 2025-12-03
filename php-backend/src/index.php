@@ -7,6 +7,7 @@ require __DIR__ . '/bootstrap/bootstrap.php';
 use App\Core\Application;
 
 $app = new Application();
+$router = $app->router;
 
 // Load routes
 require __DIR__ . '/App/Routes/AuthRoutes.php';
