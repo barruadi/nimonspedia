@@ -30,6 +30,15 @@ $router->get('/api/me', function ($req) {
         ];
     }
 
+    // Fetch fresh balance from database
+    $freshBalance = \App\Models\User::getBalance((int)$u['user_id']);
+    
+    // Update session with fresh balance
+    if ($freshBalance !== null) {
+        $_SESSION['user']['balance'] = $freshBalance;
+        $u['balance'] = $freshBalance;
+    }
+
     $userData = [
         'id'      => $u['user_id'],
         'name'    => $u['full_name'],
