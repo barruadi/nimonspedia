@@ -2,17 +2,34 @@ const express = require('express');
 const router = express.Router();
 const auctionController = require('../controllers/auctionController');
 
-// Auction API routes (to be implemented)
-// GET /api/node/auctions - Get all active auctions
-// GET /api/node/auction/:id - Get auction by ID
-// POST /api/node/auction - Create new auction
-// POST /api/node/auction/:id/bid - Place a bid
-// DELETE /api/node/auction/:id - Cancel auction
 
+/**
+ * List auctions with filters & pagination
+ */
 router.get('/auctions', auctionController.getAllAuctions);
+
+/**
+ * Get auction detail (initial load) 
+ */
 router.get('/auction/:id', auctionController.getAuctionById);
+
+/**
+ * Create auction (seller action)
+ */
 router.post('/auction', auctionController.createAuction);
-router.post('/auction/:id/bid', auctionController.placeBid);
-router.delete('/auction/:id', auctionController.cancelAuction);
+
+/**
+ * Seller history routes
+ */
+router.get('/seller/auction/active', auctionController.getSellerActiveAuction);
+router.get('/seller/auctions', auctionController.getSellerAuctions);
+
+/**
+ * Buyer history routes
+ */
+router.get('/buyer/bids', auctionController.getBuyerBidHistory);
+router.get('/buyer/won-auctions', auctionController.getBuyerWonAuctions);
+
+
 
 module.exports = router;

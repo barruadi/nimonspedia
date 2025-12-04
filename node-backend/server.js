@@ -2,6 +2,10 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require('cors');
+require('dotenv').config();
+
+// Import database singleton
+const db = require('./src/config/db');
 
 // Import routes
 const auctionRoutes = require('./src/routes/auctionRoutes');
@@ -22,6 +26,8 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
+
+db.testConnection();
 
 // API Routes
 app.get('/', (req, res) => {

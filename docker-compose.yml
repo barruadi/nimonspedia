@@ -59,7 +59,7 @@ services:
       - ./.env
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d:ro
+      - ./db/init:/docker-entrypoint-initdb.d:ro
 
 volumes:
   pgdata:
