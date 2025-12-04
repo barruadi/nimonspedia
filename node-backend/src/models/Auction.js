@@ -19,6 +19,8 @@ class Auction {
           a.product_id,
           a.starting_price,
           a.current_price,
+          a.min_increment,
+          a.quantity,
           a.start_time,
           a.end_time,
           a.status,
@@ -82,13 +84,14 @@ class Auction {
           a.product_id,
           a.starting_price,
           a.current_price,
+          a.min_increment,
+          a.quantity,
           a.start_time,
           a.end_time,
           a.status,
           a.winner_id,
           p.name as product_name,
           p.image_path,
-          p.product_id,
           s.store_id,
           s.store_name,
           u.full_name as winner_name
@@ -155,7 +158,12 @@ class Auction {
 
       const result = await pool.query(query, [auctionId]);
 
-      return result.rows[0];
+      return result.rows[0] || {
+        total_bids: 0,
+        highest_bid: null,
+        lowest_bid: null,
+        unique_bidders: 0
+      };
 
     } catch (error) {
       console.error('Error in Auction.getAuctionStats:', error);
@@ -173,24 +181,26 @@ class Auction {
         product_id,
         starting_price,
         current_price,
+        min_increment = 1000,
+        quantity,
         start_time,
         end_time,
         status = 'scheduled'
       } = auctionData;
 
-      // Validate required fields
-      if (!product_id || !starting_price || !start_time || !end_time) {
-        throw new Error('Missing required fields: product_id, starting_price, start_time, end_time');
+      // ✅ Validate required fields sesuai schema
+      if (!product_id || starting_price === undefined || !quantity || !start_time || !end_time) {
+        throw new Error('Missing required fields: product_id, starting_price, quantity, start_time, end_time');
       }
 
       // Validate that product exists
       const productCheck = await client.query(
-        'SELECT product_id FROM products WHERE product_id = $1',
+        'SELECT product_id FROM products WHERE product_id = $1 AND is_deleted = FALSE',
         [product_id]
       );
 
       if (productCheck.rows.length === 0) {
-        throw new Error('Product not found');
+        throw new Error('Product not found or is deleted');
       }
 
       // Validate status
@@ -207,16 +217,38 @@ class Auction {
         throw new Error('End time must be after start time');
       }
 
+      // Validate prices
+      if (starting_price < 0) {
+        throw new Error('Starting price must be >= 0');
+      }
+
+      if (quantity <= 0) {
+        throw new Error('Quantity must be > 0');
+      }
+
+      // ✅ Schema: current_price >= starting_price
+      const finalCurrentPrice = current_price !== undefined ? current_price : starting_price;
+      if (finalCurrentPrice < starting_price) {
+        throw new Error('Current price must be >= starting price');
+      }
+
+      // ✅ Insert dengan semua fields dari schema
       const query = `
-        INSERT INTO auctions (product_id, starting_price, current_price, start_time, end_time, status)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING auction_id, product_id, starting_price, current_price, start_time, end_time, status, created_at
+        INSERT INTO auctions 
+          (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+        VALUES 
+          ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING 
+          auction_id, product_id, starting_price, current_price, min_increment, quantity, 
+          start_time, end_time, status, created_at
       `;
 
       const result = await client.query(query, [
         product_id,
         starting_price,
-        current_price || starting_price,
+        finalCurrentPrice,
+        min_increment,
+        quantity,
         start_time,
         end_time,
         status
@@ -255,6 +287,8 @@ class Auction {
       const {
         starting_price,
         current_price,
+        min_increment,
+        quantity,
         start_time,
         end_time,
         status,
@@ -300,6 +334,18 @@ class Auction {
         paramCount++;
       }
 
+      if (min_increment !== undefined) {
+        updateFields.push(`min_increment = $${paramCount}`);
+        updateValues.push(min_increment);
+        paramCount++;
+      }
+
+      if (quantity !== undefined) {
+        updateFields.push(`quantity = $${paramCount}`);
+        updateValues.push(quantity);
+        paramCount++;
+      }
+
       if (start_time !== undefined) {
         updateFields.push(`start_time = $${paramCount}`);
         updateValues.push(start_time);
@@ -338,14 +384,15 @@ class Auction {
         throw new Error('No fields to update');
       }
 
-      updateFields.push(`updated_at = NOW()`);
       updateValues.push(auctionId);
 
       const query = `
         UPDATE auctions
         SET ${updateFields.join(', ')}
         WHERE auction_id = $${paramCount}
-        RETURNING auction_id, product_id, starting_price, current_price, start_time, end_time, status, winner_id, updated_at
+        RETURNING 
+          auction_id, product_id, starting_price, current_price, min_increment, quantity,
+          start_time, end_time, status, winner_id, created_at
       `;
 
       const result = await client.query(query, updateValues);
@@ -451,9 +498,9 @@ class Auction {
         throw new Error(`Cannot place bid on auction with status: ${auction.status}`);
       }
 
-      // Check if auction hasn't ended
+      // ✅ Check if auction hasn't ended (end_time is nullable)
       const now = new Date();
-      if (new Date(auction.end_time) < now) {
+      if (auction.end_time && new Date(auction.end_time) < now) {
         throw new Error('Auction has ended');
       }
 
@@ -482,11 +529,19 @@ class Auction {
         WHERE p.product_id = $1
       `, [auction.product_id]);
 
+      if (sellerCheck.rows.length === 0) {
+        throw new Error('Product not found');
+      }
+
       const seller = sellerCheck.rows[0];
       const storeOwnerCheck = await client.query(
         'SELECT owner_id FROM stores WHERE store_id = $1',
         [seller.store_id]
       );
+
+      if (storeOwnerCheck.rows.length === 0) {
+        throw new Error('Store not found');
+      }
 
       const storeOwner = storeOwnerCheck.rows[0];
 
@@ -506,7 +561,7 @@ class Auction {
       // Update auction current price
       const updateAuctionQuery = `
         UPDATE auctions 
-        SET current_price = $1, updated_at = NOW()
+        SET current_price = $1
         WHERE auction_id = $2
       `;
 
@@ -538,6 +593,8 @@ class Auction {
           a.product_id,
           a.starting_price,
           a.current_price,
+          a.min_increment,
+          a.quantity,
           a.start_time,
           a.end_time,
           a.status,
@@ -574,6 +631,8 @@ class Auction {
           a.product_id,
           a.starting_price,
           a.current_price,
+          a.min_increment,
+          a.quantity,
           a.start_time,
           a.end_time,
           a.status,
@@ -590,7 +649,7 @@ class Auction {
       `;
 
       const params = [sellerId];
-      let paramCount = 1;
+      let paramCount = 2;
 
       if (status) {
         query += ` AND a.status = $${paramCount}`;
@@ -630,7 +689,7 @@ class Auction {
 
       // Check if auction exists
       const auctionCheck = await client.query(
-        'SELECT auction_id, status, winner_id FROM auctions WHERE auction_id = $1',
+        'SELECT auction_id, status, winner_id, product_id FROM auctions WHERE auction_id = $1',
         [auctionId]
       );
 
@@ -642,28 +701,32 @@ class Auction {
 
       // Check seller ownership
       const productCheck = await client.query(
-        'SELECT p.store_id FROM products p JOIN stores s ON p.store_id = s.store_id WHERE p.product_id = $1',
+        'SELECT p.store_id FROM products p WHERE p.product_id = $1',
         [auction.product_id]
       );
 
-      if (productCheck.rows.length === 0 || productCheck.rows[0].store_id !== sellerId) {
+      if (productCheck.rows.length === 0) {
+        throw new Error('Product not found');
+      }
+
+      const storeCheck = await client.query(
+        'SELECT owner_id FROM stores WHERE store_id = $1',
+        [productCheck.rows[0].store_id]
+      );
+
+      if (storeCheck.rows.length === 0 || storeCheck.rows[0].owner_id !== sellerId) {
         throw new Error('You do not have permission to stop this auction');
       }
 
       // Update status to 'ended'
       const updateQuery = `
         UPDATE auctions
-        SET status = 'ended', updated_at = NOW()
+        SET status = 'ended'
         WHERE auction_id = $1
         RETURNING auction_id, status, winner_id
       `;
 
       const result = await client.query(updateQuery, [auctionId]);
-
-      // If auction has a winner, create order
-      if (result.rows[0].winner_id) {
-        await this.createOrderFromAuction(auctionId);
-      }
 
       await client.query('COMMIT');
 
@@ -689,7 +752,7 @@ class Auction {
       const query = `
         SELECT 
           a.current_price,
-          COALESCE(a.min_increment, 1000) as min_increment
+          a.min_increment
         FROM auctions a
         WHERE a.auction_id = $1
       `;
@@ -739,8 +802,7 @@ class Auction {
       // Refund balance to buyer
       const refundQuery = `
         UPDATE users
-        SET balance = balance + $1,
-            updated_at = NOW()
+        SET balance = balance + $1
         WHERE user_id = $2
         RETURNING user_id, balance
       `;
@@ -778,11 +840,8 @@ class Auction {
         SELECT a.auction_id, a.winner_id, a.current_price, a.product_id, a.status
         FROM auctions a
         WHERE a.status = 'active' 
+        AND a.end_time IS NOT NULL
         AND a.end_time <= NOW()
-        AND NOT EXISTS (
-          SELECT 1 FROM orders o 
-          WHERE o.auction_id = a.auction_id
-        )
       `;
 
       const endedAuctions = await pool.query(query);
@@ -792,32 +851,24 @@ class Auction {
           // Update status to ended
           await this.updateAuctionStatus(auction.auction_id, 'ended');
 
-          // Create order if winner exists
-          if (auction.winner_id) {
-            const order = await this.createOrderFromAuction(auction.auction_id);
-            
-            console.log(`[Background Job] Order created for auction ${auction.auction_id}, Order ID: ${order.order.order_id}`);
-            
-            // Broadcast to socket room
-            if (io) {
-              io.to(`auction-${auction.auction_id}`).emit('auction:order-created', {
+          console.log(`[Background Job] Auction ${auction.auction_id} ended`);
+          
+          if (io) {
+            if (auction.winner_id) {
+              io.to(`auction-${auction.auction_id}`).emit('auction:ended', {
                 auction_id: auction.auction_id,
-                order_id: order.order.order_id,
+                status: 'ended',
                 winner_id: auction.winner_id,
                 final_price: auction.current_price,
+                reason: 'time_ended',
                 timestamp: new Date().toISOString()
               });
-            }
-          } else {
-            // No winner, just update status
-            console.log(`[Background Job] Auction ${auction.auction_id} ended with no winner`);
-            
-            if (io) {
+            } else {
               io.to(`auction-${auction.auction_id}`).emit('auction:ended', {
                 auction_id: auction.auction_id,
                 status: 'ended',
                 winner_id: null,
-                reason: 'no_winner',
+                reason: 'no_bids',
                 timestamp: new Date().toISOString()
               });
             }
@@ -855,6 +906,8 @@ class Auction {
           ab.bid_time,
           a.status,
           a.current_price,
+          a.min_increment,
+          a.quantity,
           p.name as product_name,
           p.image_path,
           s.store_id,
@@ -907,6 +960,8 @@ class Auction {
           a.product_id,
           a.starting_price,
           a.current_price,
+          a.min_increment,
+          a.quantity,
           a.start_time,
           a.end_time,
           a.status,
@@ -962,8 +1017,9 @@ class Auction {
       // Validate status transition
       const validTransitions = {
         scheduled: ['active', 'cancelled'],
-        active: ['ended'],
-        ended: []
+        active: ['ended', 'cancelled'],
+        ended: [],
+        cancelled: []
       };
 
       if (!validTransitions[auction.status].includes(status)) {
@@ -973,7 +1029,7 @@ class Auction {
       // Update status
       const updateQuery = `
         UPDATE auctions
-        SET status = $1, updated_at = NOW()
+        SET status = $1
         WHERE auction_id = $2
         RETURNING auction_id, status
       `;
