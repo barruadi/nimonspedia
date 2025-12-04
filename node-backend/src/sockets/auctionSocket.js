@@ -1,7 +1,6 @@
 // Auction WebSocket Handlers - Mockup
 const Auction = require('../models/Auction');
 const { Pool } = require('pg');
-const cron = require('node-cron');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/nimonspedia'
@@ -666,13 +665,12 @@ const setupAuctionSocket = (io) => {
     });
   });
 
-  /**
-   * Setup Cron Job: Process ended auctions every 30 seconds
-   */
-  cron.schedule('*/30 * * * * *', () => {
-    console.log('[Cron] Running processEndedAuctions job...');
-    Auction.processEndedAuctions(io, pool);
-  });
+  setInterval(() => {
+    console.log('[Background Job] Running processEndedAuctions...');
+    Auction.processEndedAuctions(io, pool).catch(error => {
+      console.error('[Background Job] Error in processEndedAuctions:', error);
+    });
+  }, 30000); // 30 seconds in milliseconds
 
   return io;
 };
