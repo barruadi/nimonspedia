@@ -1,10 +1,5 @@
 // Auction WebSocket Handlers - Mockup
 const Auction = require('../models/Auction');
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/nimonspedia'
-});
 
 const setupAuctionSocket = (io) => {
   io.on('connection', (socket) => {
@@ -12,7 +7,6 @@ const setupAuctionSocket = (io) => {
 
     /**
      * Join auction room
-     * Client emits: { auctionId: number, userId: number }
      */
     socket.on('auction:join', (data, callback) => {
       try {
@@ -31,7 +25,6 @@ const setupAuctionSocket = (io) => {
 
         console.log(`[Auction] User ${userId} (socket: ${socket.id}) joined auction ${auctionId}`);
 
-        // Notify others that user joined
         io.to(`auction-${auctionId}`).emit('auction:user-joined', {
           userId,
           socketId: socket.id,
@@ -44,7 +37,7 @@ const setupAuctionSocket = (io) => {
         });
 
       } catch (error) {
-        console.error('[Auction] Error in join:', error);
+        console.error('[Auction] Error in join:', error.message);
         callback?.({
           success: false,
           error: 'Failed to join auction room'
@@ -457,6 +450,7 @@ const setupAuctionSocket = (io) => {
 
         const stats = await Auction.getAuctionStats(auctionId);
         const auction = await Auction.findById(auctionId);
+        const minBid = await Auction.getMinimumBidAmount(auctionId);
 
         if (!auction) {
           return callback?.({
@@ -477,6 +471,7 @@ const setupAuctionSocket = (io) => {
             status: auction.status,
             end_time: auction.end_time,
             time_remaining: Math.ceil(timeRemaining),
+            minimum_bid_amount: minBid?.minimum_bid_amount || null,
             total_bids: parseInt(stats.total_bids) || 0,
             unique_bidders: parseInt(stats.unique_bidders) || 0,
             highest_bid: stats.highest_bid ? parseInt(stats.highest_bid) : null,
@@ -486,7 +481,7 @@ const setupAuctionSocket = (io) => {
         });
 
       } catch (error) {
-        console.error('[Auction] Error in get-stats:', error);
+        console.error('[Auction] Error in get-stats:', error.message);
         callback?.({
           success: false,
           error: 'Failed to get auction stats'
@@ -527,7 +522,7 @@ const setupAuctionSocket = (io) => {
         });
 
       } catch (error) {
-        console.error('[Auction] Error in get-bids:', error);
+        console.error('[Auction] Error in get-bids:', error.message);
         callback?.({
           success: false,
           error: 'Failed to get bid history'
@@ -665,25 +660,39 @@ const setupAuctionSocket = (io) => {
     });
   });
 
-  setInterval(() => {
-    console.log('[Background Job] Running processEndedAuctions...');
-    Auction.processEndedAuctions(io, pool).catch(error => {
-      console.error('[Background Job] Error in processEndedAuctions:', error);
-    });
-  }, 30000); // 30 seconds in milliseconds
+  /**
+   * Background Job: Process ended auctions every 30 seconds
+   */
+  const backgroundJobInterval = setInterval(async () => {
+    try {
+      console.log('[Background Job] Running processEndedAuctions...');
+      await Auction.processEndedAuctions(io);
+
+    } catch (error) {
+      console.error('[Background Job] Error:', error.message);
+    }
+  }, 30000);
+
+  process.on('SIGTERM', () => {
+    clearInterval(backgroundJobInterval);
+  });
+
+  process.on('SIGINT', () => {
+    clearInterval(backgroundJobInterval);
+  });
 
   return io;
 };
 
 /**
- * Helper function to get bid count
+ * Helper function
  */
 async function getAuctionBidCount(auctionId) {
   try {
     const stats = await Auction.getAuctionStats(auctionId);
     return parseInt(stats.total_bids) || 0;
   } catch (error) {
-    console.error('Error getting bid count:', error);
+    console.error('Error getting bid count:', error.message);
     return 0;
   }
 }

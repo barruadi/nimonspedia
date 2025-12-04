@@ -1,12 +1,16 @@
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/nimonspedia'
-});
+const db = require('../config/db');
 
 class Auction {
+  /**
+   * Get pool instance
+   */
+  static getPool() {
+    return db.getInstance();
+  }
+
   static async findAll({ page = 1, limit = 10, status = null, search = null }) {
     try {
+      const pool = this.getPool();
       const offset = (page - 1) * limit;
       
       let query = `
@@ -33,14 +37,12 @@ class Auction {
       const params = [];
       let paramCount = 1;
 
-      // Filter by status
       if (status) {
         query += ` AND a.status = $${paramCount}`;
         params.push(status);
         paramCount++;
       }
 
-      // Search by product name
       if (search) {
         query += ` AND p.name ILIKE $${paramCount}`;
         params.push(`%${search}%`);
@@ -73,6 +75,7 @@ class Auction {
 
   static async findById(auctionId) {
     try {
+      const pool = this.getPool();
       const query = `
         SELECT 
           a.auction_id,
@@ -112,6 +115,7 @@ class Auction {
 
   static async getBids(auctionId) {
     try {
+      const pool = this.getPool();
       const query = `
         SELECT 
           ab.bid_id,
@@ -138,6 +142,7 @@ class Auction {
 
   static async getAuctionStats(auctionId) {
     try {
+      const pool = this.getPool();
       const query = `
         SELECT 
           COUNT(*) as total_bids,
@@ -159,6 +164,7 @@ class Auction {
   }
 
   static async create(auctionData) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -230,6 +236,7 @@ class Auction {
   }
 
   static async update(auctionId, auctionData) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -357,6 +364,7 @@ class Auction {
   }
 
   static async delete(auctionId) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -415,6 +423,7 @@ class Auction {
   }
 
   static async placeBid(auctionId, bidData) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -522,6 +531,7 @@ class Auction {
 
   static async findSellerActiveAuction(sellerId) {
     try {
+      const pool = this.getPool();
       const query = `
         SELECT 
           a.auction_id,
@@ -555,6 +565,7 @@ class Auction {
 
   static async findSellerAuctions(sellerId, { page = 1, limit = 10, status = null }) {
     try {
+      const pool = this.getPool();
       const offset = (page - 1) * limit;
       
       let query = `
@@ -581,7 +592,6 @@ class Auction {
       const params = [sellerId];
       let paramCount = 1;
 
-      // Filter by status
       if (status) {
         query += ` AND a.status = $${paramCount}`;
         params.push(status);
@@ -613,6 +623,7 @@ class Auction {
   }
 
   static async stopAuction(auctionId, sellerId) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -674,6 +685,7 @@ class Auction {
 
   static async getMinimumBidAmount(auctionId) {
     try {
+      const pool = this.getPool();
       const query = `
         SELECT 
           a.current_price,
@@ -702,6 +714,7 @@ class Auction {
   }
 
   static async refundPreviousBid(auctionId, buyerId) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -757,8 +770,10 @@ class Auction {
     }
   }
 
-  static async processEndedAuctions(io, pool) {
+  static async processEndedAuctions(io) {
     try {
+      const pool = this.getPool();
+
       const query = `
         SELECT a.auction_id, a.winner_id, a.current_price, a.product_id, a.status
         FROM auctions a
@@ -781,7 +796,7 @@ class Auction {
           if (auction.winner_id) {
             const order = await this.createOrderFromAuction(auction.auction_id);
             
-            console.log(`[Cron] Order created for auction ${auction.auction_id}, Order ID: ${order.order.order_id}`);
+            console.log(`[Background Job] Order created for auction ${auction.auction_id}, Order ID: ${order.order.order_id}`);
             
             // Broadcast to socket room
             if (io) {
@@ -795,7 +810,7 @@ class Auction {
             }
           } else {
             // No winner, just update status
-            console.log(`[Cron] Auction ${auction.auction_id} ended with no winner`);
+            console.log(`[Background Job] Auction ${auction.auction_id} ended with no winner`);
             
             if (io) {
               io.to(`auction-${auction.auction_id}`).emit('auction:ended', {
@@ -808,16 +823,17 @@ class Auction {
             }
           }
         } catch (error) {
-          console.error(`[Cron] Error processing ended auction ${auction.auction_id}:`, error);
+          console.error(`[Background Job] Error processing auction ${auction.auction_id}:`, error.message);
         }
       }
     } catch (error) {
-      console.error('[Cron] Error in processEndedAuctions:', error);
+      console.error('[Background Job] Error in processEndedAuctions:', error.message);
     }
   }
 
   static async findBuyerBidHistory(buyerId, { page = 1, limit = 10 }) {
     try {
+      const pool = this.getPool();
       const offset = (page - 1) * limit;
       
       const countQuery = `
@@ -872,6 +888,7 @@ class Auction {
 
   static async findBuyerWonAuctions(buyerId, { page = 1, limit = 10 }) {
     try {
+      const pool = this.getPool();
       const offset = (page - 1) * limit;
       
       const countQuery = `
@@ -925,6 +942,7 @@ class Auction {
   }
 
   static async updateAuctionStatus(auctionId, status) {
+    const pool = this.getPool();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -981,6 +999,7 @@ class Auction {
 
   static async verifySellerOwnership(auctionId, sellerId) {
     try {
+      const pool = this.getPool();
       const query = `
         SELECT p.store_id
         FROM auctions a
