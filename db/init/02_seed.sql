@@ -2,27 +2,61 @@
 
 BEGIN;
 
+-- ============================================================
+-- 0. CLEANUP & PREPARATION
+-- ============================================================
+
 -- Ensure extension/enums exist
 CREATE EXTENSION IF NOT EXISTS citext;
 
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
-    CREATE TYPE user_role AS ENUM ('buyer', 'seller');
+    CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'admin');
+  ELSE
+    ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'admin';
   END IF;
+  
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
     CREATE TYPE order_status AS ENUM ('waiting_approval','approved','on_delivery','received','rejected');
   END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'auction_status') THEN
+    CREATE TYPE auction_status AS ENUM ('scheduled', 'active', 'ended', 'cancelled');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'message_type') THEN
+    CREATE TYPE message_type AS ENUM ('text', 'image', 'item_preview');
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'feature_name_enum') THEN
+    CREATE TYPE feature_name_enum AS ENUM ('checkout_enabled', 'chat_enabled', 'auction_enabled');
+  END IF;
 END$$;
 
--- Truncate tables (fresh start)
+-- Truncate tables (Updated with new tables)
 DO $$
 DECLARE
   t text;
 BEGIN
   FOR t IN
     SELECT unnest(ARRAY[
-      'order_items','orders','cart_items','carts','category_items','products','categories','stores','users'
+      'user_feature_access',
+      'push_preferences',
+      'push_subscriptions',
+      'chat_messages',
+      'chat_rooms',
+      'auction_bids',
+      'auctions',
+      'order_items',
+      'orders',
+      'cart_items',
+      'carts',
+      'category_items',
+      'products',
+      'categories',
+      'stores',
+      'users'
     ]) AS t
   LOOP
     IF EXISTS (
@@ -34,26 +68,33 @@ BEGIN
   END LOOP;
 END$$;
 
+
 -- ============================================================
--- USERS
+-- 1. USERS (Added Admin)
 -- ============================================================
--- Password for sellers: Seller123*
--- Password for buyers: Buyer123*
+-- Passwords:
+-- Sellers/Admin: Seller123* ($2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO)
+-- Buyers: Buyer123* ($2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.)
+
 INSERT INTO users (email, password_hash, full_name, role, address, balance)
 VALUES
-  -- SELLERS
+  -- ADMIN (NEW)
+  ('admin@nimonspedia.com', '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Super Admin', 'admin', 'Nimonspedia HQ, Bandung', 0),
+
+  -- SELLERS (EXISTING)
   ('rina@gadgethub.com',     '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Rina Pratama',   'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 5000000),
   ('budi@freshmart.com',     '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Budi Santoso',   'seller', 'Jl. Gatot Subroto No. 45, Bandung', 3500000),
   ('charlie@fashionista.com','$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Charlie Wijaya', 'seller', 'Jl. Asia Afrika No. 78, Surabaya', 2800000),
   
-  -- BUYERS
-  ('alice@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Alice Wardhani', 'buyer',  'Jl. Merdeka No. 67, Jakarta Selatan', 1500000),
-  ('bob@buyer.com',          '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Bob Saputra',    'buyer',  'Jl. Diponegoro No. 89, Yogyakarta', 2000000),
-  ('carol@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Carol Susanto',  'buyer',  'Jl. Thamrin No. 34, Medan', 1200000)
+  -- BUYERS (EXISTING)
+  ('alice@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Alice Wardhani', 'buyer',  'Jl. Merdeka No. 67, Jakarta Selatan', 15000000), -- Balance increased for bidding
+  ('bob@buyer.com',          '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Bob Saputra',    'buyer',  'Jl. Diponegoro No. 89, Yogyakarta', 20000000),
+  ('carol@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Carol Susanto',  'buyer',  'Jl. Thamrin No. 34, Medan', 12000000)
 ON CONFLICT (email) DO NOTHING;
 
+
 -- ============================================================
--- STORES
+-- 2. STORES (EXISTING)
 -- ============================================================
 INSERT INTO stores (owner_id, store_name, description, logo_path, balance)
 SELECT u.user_id, s.store_name, s.description, s.logo, s.balance
@@ -66,8 +107,9 @@ FROM (
 JOIN users u ON u.email = s.owner_email
 ON CONFLICT (store_name) DO NOTHING;
 
+
 -- ============================================================
--- CATEGORIES
+-- 3. CATEGORIES (EXISTING)
 -- ============================================================
 INSERT INTO categories (name, description)
 VALUES
@@ -85,8 +127,9 @@ VALUES
   ('Sports & Outdoors',  'Sports equipment and outdoor gear')
 ON CONFLICT (name) DO NOTHING;
 
+
 -- ============================================================
--- PRODUCTS
+-- 4. PRODUCTS (EXISTING)
 -- ============================================================
 WITH s AS (
   SELECT store_id, store_name FROM stores
@@ -99,7 +142,7 @@ SELECT s.store_id, c.category_id, p.name, p.description, p.price, p.stock, p.img
 FROM s
 CROSS JOIN c
 JOIN (
-  -- ========== Gadget Hub Products ==========
+  -- Gadget Hub
   SELECT 'Gadget Hub'::text AS store_name, 'Electronics'::text AS category_name, * FROM (
     VALUES
       ('Wireless Mouse Logitech',       'Ergonomic 2.4GHz wireless mouse with precision tracking',             149900, 85,  '/uploads/products/mouse-logitech.png'),
@@ -125,13 +168,13 @@ JOIN (
   SELECT 'Gadget Hub', 'Mobile & Tablets', * FROM (
     VALUES
       ('Phone Case iPhone 15 Pro',      'Shockproof transparent case with raised edges',                       249000, 150, '/uploads/products/case-iphone.png'),
-      ('Screen Protector Tempered Glass','9H hardness tempered glass screen protector',                         79000,  200, '/uploads/products/screen-protector.png'),
+      ('Screen Protector Tempered Glass','9H hardness tempered glass screen protector',                        79000,  200, '/uploads/products/screen-protector.png'),
       ('Power Bank 20000mAh',           'Fast charging power bank with dual USB ports',                        349000, 80,  '/uploads/products/powerbank-20k.png')
   ) g4(name, description, price, stock, img)
   
   UNION ALL
   
-  -- ========== FreshMart Products ==========
+  -- FreshMart
   SELECT 'FreshMart', 'Fresh Produce', * FROM (
     VALUES
       ('Organic Apples Fuji (1kg)',     'Fresh imported Fuji apples, crisp and sweet',                         49900, 180, '/uploads/products/apples-fuji.png'),
@@ -158,7 +201,7 @@ JOIN (
   
   UNION ALL
   
-  -- ========== Fashionista Store Products ==========
+  -- Fashionista
   SELECT 'Fashionista Store', 'Fashion', * FROM (
     VALUES
       ('Classic White T-Shirt',         'Premium cotton crew neck t-shirt, unisex fit',                        129000, 200, '/uploads/products/tshirt-white.png'),
@@ -184,24 +227,68 @@ JOIN (
 ) p ON p.store_name = s.store_name AND p.category_name = c.category_name
 ON CONFLICT ON CONSTRAINT uq_products_store_name DO NOTHING;
 
+
 -- ============================================================
--- CATEGORY ITEMS (single category per product)
+-- 5. CATEGORY ITEMS (EXISTING)
 -- ============================================================
 INSERT INTO category_items (category_id, product_id)
 SELECT p.category_id, p.product_id
 FROM products p
 ON CONFLICT (category_id, product_id) DO NOTHING;
 
+
 -- ============================================================
--- CARTS
+-- 6. AUCTIONS (NEW!)
+-- ============================================================
+-- 1. Active Auction (Ends in 2 days) - Mechanical Keyboard
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Mechanical Keyboard RGB' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 200000, price - 50000, 10000, 5, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '2 days', 'active'
+FROM p;
+
+-- 2. Scheduled Auction (Starts tomorrow) - Sony Headphones
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Noise-Canceling Headphones Sony' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 500000, price - 500000, 25000, 2, NOW() + INTERVAL '1 day', NULL, 'scheduled'
+FROM p;
+
+-- 3. Ended Auction (Winner: Alice) - JBL Speaker
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Bluetooth Speaker JBL' LIMIT 1),
+     u AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status, winner_id)
+SELECT p.product_id, p.price - 300000, p.price - 100000, 15000, 1, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day', 'ended', u.user_id
+FROM p CROSS JOIN u;
+
+
+-- ============================================================
+-- 7. AUCTION BIDS (NEW!)
+-- ============================================================
+-- Bids for Active Auction (Keyboard)
+WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'active' LIMIT 1),
+     bob AS (SELECT user_id FROM users WHERE email = 'bob@buyer.com'),
+     carol AS (SELECT user_id FROM users WHERE email = 'carol@buyer.com')
+INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+SELECT a.auction_id, bob.user_id, a.starting_price + 20000, NOW() - INTERVAL '45 minutes'
+FROM a CROSS JOIN bob
+UNION ALL
+SELECT a.auction_id, carol.user_id, a.starting_price + 50000, NOW() - INTERVAL '10 minutes'
+FROM a CROSS JOIN carol;
+
+-- Bids for Ended Auction (Speaker)
+WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'ended' LIMIT 1),
+     alice AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
+INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+SELECT a.auction_id, alice.user_id, a.starting_price + 200000, NOW() - INTERVAL '1 day 2 hours'
+FROM a CROSS JOIN alice;
+
+
+-- ============================================================
+-- 8. CARTS & CART ITEMS (EXISTING)
 -- ============================================================
 INSERT INTO carts (buyer_id)
 SELECT user_id FROM users WHERE role='buyer'
 ON CONFLICT (buyer_id) DO NOTHING;
 
--- ============================================================
--- CART ITEMS (Sample cart items for buyers)
--- ============================================================
 WITH
 alice_cart AS (SELECT cart_id FROM carts c JOIN users u ON u.user_id=c.buyer_id WHERE u.email='alice@buyer.com'),
 bob_cart AS (SELECT cart_id FROM carts c JOIN users u ON u.user_id=c.buyer_id WHERE u.email='bob@buyer.com'),
@@ -227,11 +314,12 @@ UNION ALL
 SELECT (SELECT cart_id FROM carol_cart), p.product_id, 2 FROM products p WHERE p.name = 'Free-Range Eggs Large (10pcs)'
 ON CONFLICT (cart_id, product_id) DO NOTHING;
 
+
 -- ============================================================
--- ORDERS & ORDER ITEMS
+-- 9. ORDERS & ORDER ITEMS (EXISTING)
 -- ============================================================
 
--- Order 1: Alice from Gadget Hub - APPROVED (recently approved, awaiting shipment)
+-- Order 1: Alice from Gadget Hub - APPROVED
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, confirmed_at)
   SELECT u.user_id, s.store_id, 'approved', 0, u.address, NOW() - INTERVAL '3 hours'
@@ -244,7 +332,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 2 FROM products p WHERE p.name = 'True Wireless Earbuds';
 
--- Order 2: Bob from FreshMart - WAITING_APPROVAL (new order, pending seller approval)
+-- Order 2: Bob from FreshMart - WAITING_APPROVAL
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address)
   SELECT u.user_id, s.store_id, 'waiting_approval', 0, u.address
@@ -259,7 +347,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 3 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 2 FROM products p WHERE p.name = 'Greek Yogurt Plain (500g)';
 
--- Order 3: Carol from Fashionista Store - ON_DELIVERY (shipped, in transit)
+-- Order 3: Carol from Fashionista Store - ON_DELIVERY
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at)
   SELECT u.user_id, s.store_id, 'on_delivery', 0, u.address, NOW() + INTERVAL '2 days', NOW() - INTERVAL '1 day'
@@ -272,7 +360,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 2 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE p.name = 'Women''s Tote Bag Leather';
 
--- Order 4: Alice from Fashionista Store - RECEIVED (delivered and confirmed)
+-- Order 4: Alice from Fashionista Store - RECEIVED
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at, received_at)
   SELECT u.user_id, s.store_id, 'received', 0, u.address, NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '5 days'
@@ -285,7 +373,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE p.name = 'Sneakers Canvas Unisex';
 
--- Order 5: Bob from Gadget Hub - RECEIVED (older completed order)
+-- Order 5: Bob from Gadget Hub - RECEIVED
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, delivery_time, confirmed_at, received_at)
   SELECT u.user_id, s.store_id, 'received', 0, u.address, NOW() - INTERVAL '10 days', NOW() - INTERVAL '12 days', NOW() - INTERVAL '9 days'
@@ -298,7 +386,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE p.name = 'Power Bank 20000mAh';
 
--- Order 6: Carol from FreshMart - REJECTED (payment issue)
+-- Order 6: Carol from FreshMart - REJECTED
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, reject_reason, confirmed_at)
   SELECT u.user_id, s.store_id, 'rejected', 0, u.address, 'Payment verification failed - insufficient funds', NOW() - INTERVAL '4 days'
@@ -309,7 +397,7 @@ WITH o AS (
 INSERT INTO order_items (order_id, product_id, price_at, qty)
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 10 FROM products p WHERE p.name = 'Organic Apples Fuji (1kg)';
 
--- Order 7: Alice from FreshMart - WAITING_APPROVAL (another pending order)
+-- Order 7: Alice from FreshMart - WAITING_APPROVAL
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address)
   SELECT u.user_id, s.store_id, 'waiting_approval', 0, u.address
@@ -322,7 +410,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 2 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE p.name = 'Green Tea Matcha Powder (100g)';
 
--- Order 8: Bob from Fashionista Store - APPROVED (ready to ship)
+-- Order 8: Bob from Fashionista Store - APPROVED
 WITH o AS (
   INSERT INTO orders (buyer_id, store_id, status, total_amount, shipping_address, confirmed_at)
   SELECT u.user_id, s.store_id, 'approved', 0, u.address, NOW() - INTERVAL '6 hours'
@@ -335,9 +423,7 @@ SELECT (SELECT order_id FROM o), p.product_id, p.price, 2 FROM products p WHERE 
 UNION ALL
 SELECT (SELECT order_id FROM o), p.product_id, p.price, 1 FROM products p WHERE p.name = 'Men''s Leather Belt Brown';
 
--- ============================================================
 -- UPDATE ORDER TOTALS
--- ============================================================
 UPDATE orders o
 SET total_amount = COALESCE(oi.sum_sub, 0), updated_at = NOW()
 FROM (
@@ -346,5 +432,51 @@ FROM (
   GROUP BY order_id
 ) oi
 WHERE o.order_id = oi.order_id;
+
+
+-- ============================================================
+-- 10. CHAT ROOMS & MESSAGES (NEW!)
+-- ============================================================
+-- Room 1: Alice & Gadget Hub
+WITH u AS (SELECT user_id FROM users WHERE email='alice@buyer.com'),
+     s AS (SELECT store_id FROM stores WHERE store_name='Gadget Hub')
+INSERT INTO chat_rooms (store_id, buyer_id, last_message_at)
+SELECT s.store_id, u.user_id, NOW()
+FROM u CROSS JOIN s;
+
+-- Messages for Room 1
+WITH r AS (
+    SELECT cr.store_id, cr.buyer_id, u.user_id as alice_id, s.owner_id as rina_id
+    FROM chat_rooms cr
+    JOIN users u ON u.user_id = cr.buyer_id
+    JOIN stores s ON s.store_id = cr.store_id
+    WHERE u.email='alice@buyer.com' AND s.store_name='Gadget Hub'
+)
+INSERT INTO chat_messages (store_id, buyer_id, sender_id, message_type, content, is_read, created_at)
+SELECT store_id, buyer_id, alice_id, 'text', 'Halo, apakah keyboard RGB ready stock?', true, NOW() - INTERVAL '1 hour' FROM r
+UNION ALL
+SELECT store_id, buyer_id, rina_id, 'text', 'Halo kak Alice! Iya ready stock ya, silakan diorder.', true, NOW() - INTERVAL '55 minutes' FROM r
+UNION ALL
+SELECT store_id, buyer_id, alice_id, 'text', 'Oke terima kasih infonya.', false, NOW() - INTERVAL '5 minutes' FROM r;
+
+
+-- ============================================================
+-- 11. PUSH PREFERENCES (NEW!)
+-- ============================================================
+INSERT INTO push_preferences (user_id, chat_enabled, auction_enabled, order_enabled)
+SELECT user_id, true, true, true
+FROM users
+ON CONFLICT (user_id) DO NOTHING;
+
+
+-- ============================================================
+-- 12. USER FEATURE ACCESS (NEW!)
+-- ============================================================
+-- Global Feature Flags (user_id IS NULL)
+INSERT INTO user_feature_access (user_id, feature_name, is_enabled, reason)
+VALUES
+  (NULL, 'checkout_enabled', true, 'Global checkout feature'),
+  (NULL, 'chat_enabled', true, 'Global chat feature'),
+  (NULL, 'auction_enabled', true, 'Global auction feature');
 
 COMMIT;
