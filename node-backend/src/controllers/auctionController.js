@@ -325,6 +325,312 @@ class AuctionController {
       });
     }
   }
+
+  /**
+   * Stop Auction (Seller Action)
+   * Seller can stop active auction - auction ends with current winner
+   * PUT /api/node/auction/:id/stop
+   */
+  static async stopAuction(req, res) {
+    try {
+      const auctionId = parseInt(req.params.id);
+      const sellerId = req.userId; // From auth middleware
+
+      // Validate auction ID
+      if (!auctionId || isNaN(auctionId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Invalid auction ID'
+        });
+      }
+
+      // Validate seller ID
+      if (!sellerId) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Unauthorized'
+        });
+      }
+
+      // Verify auction exists
+      const auction = await Auction.findById(auctionId);
+      if (!auction) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Auction not found'
+        });
+      }
+
+      // Verify auction is active
+      if (auction.status !== 'active') {
+        return res.status(400).json({
+          ok: false,
+          error: `Cannot stop auction with status '${auction.status}'. Only active auctions can be stopped.`
+        });
+      }
+
+      // Verify seller ownership
+      const isOwner = await Auction.verifySellerOwnership(auctionId, sellerId);
+      if (!isOwner) {
+        return res.status(403).json({
+          ok: false,
+          error: 'You do not have permission to stop this auction'
+        });
+      }
+
+      // Stop the auction
+      const result = await Auction.stopAuction(auctionId, sellerId);
+
+      return res.status(200).json({
+        ok: true,
+        data: {
+          auction_id: result.auction_id,
+          status: result.status,
+          winner_id: auction.winner_id || null,
+          final_price: parseInt(auction.current_price),
+          message: result.message
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in stopAuction:', error);
+      return res.status(500).json({
+        ok: false,
+        error: error.message || 'Failed to stop auction'
+      });
+    }
+  }
+
+  /**
+   * Cancel Auction (Seller Action)
+   * Seller can cancel auction ONLY if no bids have been placed yet
+   * PUT /api/node/auction/:id/cancel
+   */
+  static async cancelAuction(req, res) {
+    try {
+      const auctionId = parseInt(req.params.id);
+      const sellerId = req.userId; // From auth middleware
+
+      // Validate auction ID
+      if (!auctionId || isNaN(auctionId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Invalid auction ID'
+        });
+      }
+
+      // Validate seller ID
+      if (!sellerId) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Unauthorized'
+        });
+      }
+
+      // Verify auction exists
+      const auction = await Auction.findById(auctionId);
+      if (!auction) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Auction not found'
+        });
+      }
+
+      // Verify auction is active
+      if (auction.status !== 'active') {
+        return res.status(400).json({
+          ok: false,
+          error: `Cannot cancel auction with status '${auction.status}'. Only active auctions can be cancelled.`
+        });
+      }
+
+      // Verify seller ownership
+      const isOwner = await Auction.verifySellerOwnership(auctionId, sellerId);
+      if (!isOwner) {
+        return res.status(403).json({
+          ok: false,
+          error: 'You do not have permission to cancel this auction'
+        });
+      }
+
+      // Check if auction has bids
+      const bids = await Auction.getBids(auctionId);
+      if (bids.length > 0) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Cannot cancel auction with existing bids. Use "Stop" instead to end the auction with current winner.'
+        });
+      }
+
+      // Cancel the auction
+      const result = await Auction.delete(auctionId);
+
+      return res.status(200).json({
+        ok: true,
+        data: {
+          auction_id: auctionId,
+          message: result.message
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in cancelAuction:', error);
+      return res.status(500).json({
+        ok: false,
+        error: error.message || 'Failed to cancel auction'
+      });
+    }
+  }
+
+  /**
+   * Get bids for an auction (paginated)
+   * GET /api/node/auction/:id/bids
+   */
+  static async getBidHistory(req, res) {
+    try {
+      const auctionId = parseInt(req.params.id);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      // Validate auction ID
+      if (!auctionId || isNaN(auctionId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Invalid auction ID'
+        });
+      }
+
+      // Verify auction exists
+      const auction = await Auction.findById(auctionId);
+      if (!auction) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Auction not found'
+        });
+      }
+
+      // Get all bids for pagination
+      const allBids = await Auction.getBids(auctionId);
+      const offset = (page - 1) * limit;
+      const paginatedBids = allBids.slice(offset, offset + limit);
+      const totalCount = allBids.length;
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return res.status(200).json({
+        ok: true,
+        data: {
+          auction_id: auctionId,
+          bids: paginatedBids.map(bid => ({
+            bid_id: bid.bid_id,
+            bidder_id: bid.bidder_id,
+            bidder_name: bid.bidder_name,
+            bid_amount: parseInt(bid.bid_amount),
+            bid_time: bid.bid_time
+          }))
+        },
+        meta: {
+          page,
+          limit,
+          totalCount,
+          totalPages
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in getBidHistory:', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Place a bid on an auction
+   * POST /api/node/auction/:id/bids
+   */
+  static async placeBid(req, res) {
+    try {
+      const auctionId = parseInt(req.params.id);
+      const { bidAmount } = req.body;
+      const bidderId = req.userId; // From auth middleware
+
+      // Validate auction ID
+      if (!auctionId || isNaN(auctionId)) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Invalid auction ID'
+        });
+      }
+
+      // Validate bidder ID
+      if (!bidderId) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Unauthorized'
+        });
+      }
+
+      // Validate bid amount
+      if (!bidAmount || isNaN(bidAmount) || bidAmount <= 0) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Invalid bid amount. Must be a positive number.'
+        });
+      }
+
+      // Verify auction exists
+      const auction = await Auction.findById(auctionId);
+      if (!auction) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Auction not found'
+        });
+      }
+
+      // Verify auction is active
+      if (auction.status !== 'active') {
+        return res.status(400).json({
+          ok: false,
+          error: `Cannot bid on auction with status '${auction.status}'. Only active auctions accept bids.`
+        });
+      }
+
+      // Check if auction hasn't ended
+      const now = new Date();
+      if (auction.end_time && new Date(auction.end_time) < now) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Auction has already ended'
+        });
+      }
+
+      // Place the bid (will validate bid amount, seller ownership, etc.)
+      const result = await Auction.placeBid(auctionId, {
+        bidder_id: bidderId,
+        bid_amount: parseInt(bidAmount)
+      });
+
+      return res.status(201).json({
+        ok: true,
+        data: {
+          bid_id: result.bid.bid_id,
+          auction_id: auctionId,
+          bidder_id: bidderId,
+          bid_amount: parseInt(result.bid.bid_amount),
+          bid_time: result.bid.bid_time,
+          new_current_price: parseInt(result.auction_current_price)
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in placeBid:', error);
+      return res.status(400).json({
+        ok: false,
+        error: error.message || 'Failed to place bid'
+      });
+    }
+  }
 }
 
 module.exports = AuctionController;
