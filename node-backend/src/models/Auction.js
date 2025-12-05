@@ -29,10 +29,12 @@ class Auction {
           p.image_path,
           s.store_id,
           s.store_name,
+          COUNT(DISTINCT b.bid_id) as bid_count,
           COUNT(*) OVER () as total_count
         FROM auctions a
         JOIN products p ON a.product_id = p.product_id
         JOIN stores s ON p.store_id = s.store_id
+        LEFT JOIN bids b ON a.auction_id = b.auction_id
         WHERE 1=1
       `;
 
@@ -51,7 +53,7 @@ class Auction {
         paramCount++;
       }
 
-      query += ` ORDER BY a.start_time DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+      query += ` GROUP BY a.auction_id, p.product_id, s.store_id ORDER BY a.start_time DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
       params.push(limit, offset);
 
       const result = await pool.query(query, params);

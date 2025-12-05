@@ -71,7 +71,7 @@ const AuctionCard = ({ auction, onViewDetail }) => {
         <div className="auction-info">
           <div className="info-item">
             <span className="label">Penawaran</span>
-            <span className="value">-</span>
+            <span className="value">{auction.bid_count || 0}</span>
           </div>
           <div className="info-item">
             <span className="label">Sisa Waktu</span>

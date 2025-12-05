@@ -48,6 +48,7 @@ class AuctionController {
           end_time: row.end_time,
           status: row.status,
           store_name: row.store_name,
+          bid_count: parseInt(row.bid_count) || 0,
           winner_id: row.winner_id
         })),
         meta: {
