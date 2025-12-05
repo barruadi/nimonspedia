@@ -81,12 +81,12 @@ VALUES
   -- ADMIN (NEW)
   ('admin@nimonspedia.com', '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Super Admin', 'admin', 'Nimonspedia HQ, Bandung', 0),
 
-  -- SELLERS (EXISTING)
+  -- SELLERS
   ('rina@gadgethub.com',     '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Rina Pratama',   'seller', 'Jl. Sudirman No. 123, Jakarta Pusat', 5000000),
   ('budi@freshmart.com',     '$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Budi Santoso',   'seller', 'Jl. Gatot Subroto No. 45, Bandung', 3500000),
   ('charlie@fashionista.com','$2y$10$R.bgkavrMB3/1fDjim6HAOZz4g992xbGslFKj6sJCXmf.Prwa8BEO', 'Charlie Wijaya', 'seller', 'Jl. Asia Afrika No. 78, Surabaya', 2800000),
   
-  -- BUYERS (EXISTING)
+  -- BUYERS
   ('alice@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Alice Wardhani', 'buyer',  'Jl. Merdeka No. 67, Jakarta Selatan', 15000000), -- Balance increased for bidding
   ('bob@buyer.com',          '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Bob Saputra',    'buyer',  'Jl. Diponegoro No. 89, Yogyakarta', 20000000),
   ('carol@buyer.com',        '$2y$10$pmYiDOAeFaNT57lj5b0vi.33dH2k1kBb73AW1b5ZR1WQfq.NUekl.', 'Carol Susanto',  'buyer',  'Jl. Thamrin No. 34, Medan', 12000000)
@@ -94,7 +94,7 @@ ON CONFLICT (email) DO NOTHING;
 
 
 -- ============================================================
--- 2. STORES (EXISTING)
+-- 2. STORES
 -- ============================================================
 INSERT INTO stores (owner_id, store_name, description, logo_path, balance)
 SELECT u.user_id, s.store_name, s.description, s.logo, s.balance
@@ -109,7 +109,7 @@ ON CONFLICT (store_name) DO NOTHING;
 
 
 -- ============================================================
--- 3. CATEGORIES (EXISTING)
+-- 3. CATEGORIES
 -- ============================================================
 INSERT INTO categories (name, description)
 VALUES
@@ -129,7 +129,7 @@ ON CONFLICT (name) DO NOTHING;
 
 
 -- ============================================================
--- 4. PRODUCTS (EXISTING)
+-- 4. PRODUCTS
 -- ============================================================
 WITH s AS (
   SELECT store_id, store_name FROM stores
@@ -229,7 +229,7 @@ ON CONFLICT ON CONSTRAINT uq_products_store_name DO NOTHING;
 
 
 -- ============================================================
--- 5. CATEGORY ITEMS (EXISTING)
+-- 5. CATEGORY ITEMS
 -- ============================================================
 INSERT INTO category_items (category_id, product_id)
 SELECT p.category_id, p.product_id
@@ -283,7 +283,7 @@ FROM a CROSS JOIN alice;
 
 
 -- ============================================================
--- 8. CARTS & CART ITEMS (EXISTING)
+-- 8. CARTS & CART ITEMS
 -- ============================================================
 INSERT INTO carts (buyer_id)
 SELECT user_id FROM users WHERE role='buyer'
@@ -316,7 +316,7 @@ ON CONFLICT (cart_id, product_id) DO NOTHING;
 
 
 -- ============================================================
--- 9. ORDERS & ORDER ITEMS (EXISTING)
+-- 9. ORDERS & ORDER ITEMS
 -- ============================================================
 
 -- Order 1: Alice from Gadget Hub - APPROVED
@@ -435,7 +435,7 @@ WHERE o.order_id = oi.order_id;
 
 
 -- ============================================================
--- 10. CHAT ROOMS & MESSAGES (NEW!)
+-- 10. CHAT ROOMS & MESSAGES
 -- ============================================================
 -- Room 1: Alice & Gadget Hub
 WITH u AS (SELECT user_id FROM users WHERE email='alice@buyer.com'),
@@ -453,15 +453,15 @@ WITH r AS (
     WHERE u.email='alice@buyer.com' AND s.store_name='Gadget Hub'
 )
 INSERT INTO chat_messages (store_id, buyer_id, sender_id, message_type, content, is_read, created_at)
-SELECT store_id, buyer_id, alice_id, 'text', 'Halo, apakah keyboard RGB ready stock?', true, NOW() - INTERVAL '1 hour' FROM r
+SELECT store_id, buyer_id, alice_id, 'text'::message_type, 'Halo, apakah keyboard RGB ready stock?', true, NOW() - INTERVAL '1 hour' FROM r
 UNION ALL
-SELECT store_id, buyer_id, rina_id, 'text', 'Halo kak Alice! Iya ready stock ya, silakan diorder.', true, NOW() - INTERVAL '55 minutes' FROM r
+SELECT store_id, buyer_id, rina_id, 'text'::message_type, 'Halo kak Alice! Iya ready stock ya, silakan diorder.', true, NOW() - INTERVAL '55 minutes' FROM r
 UNION ALL
-SELECT store_id, buyer_id, alice_id, 'text', 'Oke terima kasih infonya.', false, NOW() - INTERVAL '5 minutes' FROM r;
+SELECT store_id, buyer_id, alice_id, 'text'::message_type, 'Oke terima kasih infonya.', false, NOW() - INTERVAL '5 minutes' FROM r;
 
 
 -- ============================================================
--- 11. PUSH PREFERENCES (NEW!)
+-- 11. PUSH PREFERENCES
 -- ============================================================
 INSERT INTO push_preferences (user_id, chat_enabled, auction_enabled, order_enabled)
 SELECT user_id, true, true, true
@@ -470,7 +470,7 @@ ON CONFLICT (user_id) DO NOTHING;
 
 
 -- ============================================================
--- 12. USER FEATURE ACCESS (NEW!)
+-- 12. USER FEATURE ACCESS
 -- ============================================================
 -- Global Feature Flags (user_id IS NULL)
 INSERT INTO user_feature_access (user_id, feature_name, is_enabled, reason)
