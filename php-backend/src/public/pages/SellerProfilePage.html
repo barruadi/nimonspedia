@@ -1,0 +1,475 @@
+<main class="profile-page">
+      <section class="profile-left">
+        <div class="profile-illus">
+          <img src="/uploads/auth/login-art.png" class="hero-img" alt="Edit Profil" />
+        </div>
+      </section>
+
+      <section class="profile-card" id="profile-root">
+        <div id="profile-loading" class="loading-row">Loading…</div>
+
+        <div id="profile-content" style="display:none">
+          <h2 class="card-title">Ubah Biodata Diri</h2>
+
+          <div class="info-row">
+            <div class="info-label">Nama</div>
+            <div class="info-value">
+              <span id="p-name" class="info-text"></span>
+              <button id="editNameBtn" class="link-edit" type="button">Ubah</button>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">Email</div>
+            <div class="info-value">
+              <span id="p-email" class="info-text"></span>
+            </div>
+          </div>
+
+          <button id="changePwBtn" class="pw-btn" type="button">Ubah kata sandi</button>
+
+          <h2 class="card-title notification-title">Pengaturan Notifikasi</h2>
+
+          <div class="notification-settings">
+            <div class="notification-item">
+              <div class="notification-info">
+                <span class="notification-label">Notifikasi Chat</span>
+                <span class="notification-desc">Terima notifikasi untuk pesan chat baru</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-chat" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="notification-item">
+              <div class="notification-info">
+                <span class="notification-label">Notifikasi Lelang</span>
+                <span class="notification-desc">Terima notifikasi untuk aktivitas lelang</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-auction" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="notification-item">
+              <div class="notification-info">
+                <span class="notification-label">Notifikasi Pesanan</span>
+                <span class="notification-desc">Terima notifikasi untuk pesanan baru</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-order" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div id="profile-error" class="error-msg" style="display:none"></div>
+          <div id="profile-success" class="success-msg" style="display:none"></div>
+        </div>
+      </section>
+
+    <div id="nameModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
+        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
+        <h3 id="nameModalTitle" class="modal-title">Ubah Nama</h3>
+
+        <form id="nameForm" class="modal-form">
+          <label for="nameInput" class="modal-label">Nama baru</label>
+          <input id="nameInput" class="modal-input" type="text" placeholder="Masukkan nama" required />
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" data-close>Batal</button>
+            <button type="submit" class="save-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="pwModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pwModalTitle">
+        <button class="modal-close" type="button" data-close aria-label="Tutup">×</button>
+        <h3 id="pwModalTitle" class="modal-title">Ubah Kata Sandi</h3>
+
+        <form id="pwForm" class="modal-form">
+          <label class="modal-label" for="oldPwInput">Password lama</label>
+          <div class="password-field">
+            <input id="oldPwInput" class="modal-input" type="password" placeholder="Masukkan password lama" required />
+            <button type="button" class="toggle-pw" data-target="oldPwInput" aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path class="eye-open" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-open" cx="12" cy="12" r="3"/>
+                <path class="eye-closed" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line class="eye-closed" x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+
+          <label class="modal-label" for="newPwInput">Password baru</label>
+          <div class="password-field">
+            <input id="newPwInput" class="modal-input" type="password" placeholder="Masukkan password baru" required />
+            <button type="button" class="toggle-pw" data-target="newPwInput" aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path class="eye-open" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-open" cx="12" cy="12" r="3"/>
+                <path class="eye-closed" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line class="eye-closed" x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+
+          <label class="modal-label" for="newPwConfirmInput">Ulangi password baru</label>
+          <div class="password-field">
+            <input id="newPwConfirmInput" class="modal-input" type="password" placeholder="Ulangi password baru" required />
+            <button type="button" class="toggle-pw" data-target="newPwConfirmInput" aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path class="eye-open" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-open" cx="12" cy="12" r="3"/>
+                <path class="eye-closed" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line class="eye-closed" x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" data-close>Batal</button>
+            <button type="submit" class="save-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+</main>
+
+<style>
+.profile-page {
+  --green: #2f9d4a;
+  --green-bg: #d5edd8;
+  --border: #2f9d4a;
+  --radius-card: 12px;
+  --radius-field: 8px;
+  --text-main: #000;
+  --text-dim: #6b7280;
+  --bg-page: #ffffff;
+
+  font-family: system-ui, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
+  background: var(--bg-page);
+  min-height: 100dvh;
+  padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2rem;
+  color: var(--text-main);
+}
+
+.profile-left {
+  flex: 1 1 50%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.profile-illus {
+  max-width: 360px;
+  width: 100%;
+}
+.hero-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.profile-card {
+  flex: 1 1 50%;
+  max-width: 520px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card-title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.notification-title {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.loading-row {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+.info-row {
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.info-row:last-of-type { border-bottom: 0; }
+
+.info-label {
+  flex: 0 0 110px;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+.info-value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.info-text {
+  flex: 1;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+.link-edit {
+  background: transparent;
+  border: 0;
+  color: var(--green);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+.link-edit:hover { color: #267a3a; }
+
+.pw-btn {
+  margin-top: 1rem;
+  background: var(--green);
+  border: 2px solid var(--green);
+  color: #fff;
+  border-radius: 8px;
+  padding: .6rem .9rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background .15s;
+}
+.pw-btn:hover { background: #267a3a; }
+
+.notification-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.notification-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notification-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.notification-desc {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: #cbd5e1;
+  border-radius: 28px;
+  transition: background-color 0.2s;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--green);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: none;
+}
+.modal.is-open { display: block; }
+.modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+}
+.modal-dialog {
+  position: relative;
+  width: min(520px, 92vw);
+  margin: 10vh auto 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.18);
+  padding: 1.25rem 1rem 1rem;
+  animation: modalIn .18s ease-out;
+}
+@keyframes modalIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.modal-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000;
+}
+.modal-close {
+  position: absolute; right: .25rem; top: .25rem;
+  border: 0; background: transparent; font-size: 1.35rem; line-height: 1;
+  width: 32px; height: 32px; border-radius: 999px; cursor: pointer;
+  color: #111;
+}
+
+.modal-form { display: flex; flex-direction: column; gap: .65rem; }
+.modal-label { font-weight: 600; font-size: 0.85rem; color: #000; }
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-field .modal-input {
+  flex: 1;
+  padding-right: 2.5rem;
+}
+.toggle-pw {
+  position: absolute;
+  right: .5rem;
+  background: transparent;
+  border: 0;
+  padding: .25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: color .2s;
+}
+.toggle-pw:hover { color: var(--green); }
+.toggle-pw[data-visible="true"] .eye-open { display: none; }
+.toggle-pw[data-visible="true"] .eye-closed { display: block; }
+
+.eye-closed {
+  display: none;
+}
+
+.modal-input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: .55rem .65rem;
+  font-size: 0.875rem; outline: none;
+}
+.modal-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,157,74,.15); }
+
+.modal-actions {
+  display: flex; justify-content: flex-end; gap: .5rem; margin-top: .2rem;
+}
+.cancel-btn {
+  background: transparent; border: 2px solid rgba(0,0,0,0.1); color: #000;
+  border-radius: 8px; padding: .5rem .8rem; font-weight: 500; cursor: pointer;
+  font-size: 0.85rem;
+}
+.save-btn {
+  background: var(--green); border: 2px solid var(--green); color: #fff;
+  border-radius: 8px; padding: .5rem .85rem; font-weight: 700; cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.error-msg {
+  display: block;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border-radius: .5rem;
+  padding: .5rem .7rem;
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+  margin-top: .4rem;
+}
+.success-msg {
+  display: block;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+  border-radius: .5rem;
+  padding: .5rem .7rem;
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+  margin-top: .4rem;
+}
+
+@media (max-width: 900px) {
+  .profile-page {
+    flex-direction: column;
+    align-items: center;
+    text-align: left;
+  }
+  .profile-left {
+    order: 1;
+  }
+  .profile-card {
+    order: 2;
+    width: 100%;
+    max-width: 480px;
+  }
+}
+</style>
+
+<script type="module" src="/script/SellerProfile.js"></script>

@@ -13,6 +13,10 @@ import { api } from '/utils/api.js';
   const editNameBtn   = document.getElementById('editNameBtn');
   const changePwBtn   = document.getElementById('changePwBtn');
 
+  const toggleChat    = document.getElementById('toggle-chat');
+  const toggleAuction = document.getElementById('toggle-auction');
+  const toggleOrder   = document.getElementById('toggle-order');
+
   // modals + forms
   const nameModal     = document.getElementById('nameModal');
   const pwModal       = document.getElementById('pwModal');
@@ -72,6 +76,27 @@ import { api } from '/utils/api.js';
   wireModalClose(nameModal);
   wireModalClose(pwModal);
 
+  function setupPasswordToggles() {
+    const toggleButtons = document.querySelectorAll('.toggle-pw');
+    toggleButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+
+        const isVisible = btn.getAttribute('data-visible') === 'true';
+        if (isVisible) {
+          input.type = 'password';
+          btn.setAttribute('data-visible', 'false');
+        } else {
+          input.type = 'text';
+          btn.setAttribute('data-visible', 'true');
+        }
+      });
+    });
+  }
+  setupPasswordToggles();
+
   /* ---------- load profile ---------- */
   try {
     const res = await api.get('/me');
@@ -85,6 +110,14 @@ import { api } from '/utils/api.js';
     nameSpan.textContent  = user.full_name || user.name || '';
     emailSpan.textContent = user.email || '';
     nameInput.value       = nameSpan.textContent;
+
+    const notifRes = await api.get('/profile/notifications');
+    if (notifRes && notifRes.ok) {
+      const prefs = notifRes.preferences || {};
+      toggleChat.checked = prefs.chat_enabled !== false;
+      toggleAuction.checked = prefs.auction_enabled !== false;
+      toggleOrder.checked = prefs.order_enabled !== false;
+    }
 
     rootLoading.style.display = 'none';
     rootContent.style.display = 'block';
@@ -201,4 +234,40 @@ import { api } from '/utils/api.js';
       if (saveBtn) saveBtn.disabled = false;
     }
   });
+
+  async function updateNotificationPreference(field, enabled) {
+    try {
+      const res = await api.post('/profile/notifications', {
+        [field]: enabled
+      });
+
+      if (res && res.ok) {
+        showSuccess('Pengaturan notifikasi berhasil diperbarui.');
+        setTimeout(() => clearMessages(), 3000);
+      } else {
+        showError(res?.error?.message || 'Gagal memperbarui pengaturan.');
+      }
+    } catch (err) {
+      console.error(err);
+      showError('Terjadi kesalahan jaringan.');
+    }
+  }
+
+  if (toggleChat) {
+    toggleChat.addEventListener('change', (e) => {
+      updateNotificationPreference('chat_enabled', e.target.checked);
+    });
+  }
+
+  if (toggleAuction) {
+    toggleAuction.addEventListener('change', (e) => {
+      updateNotificationPreference('auction_enabled', e.target.checked);
+    });
+  }
+
+  if (toggleOrder) {
+    toggleOrder.addEventListener('change', (e) => {
+      updateNotificationPreference('order_enabled', e.target.checked);
+    });
+  }
 })();
