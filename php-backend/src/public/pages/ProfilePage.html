@@ -28,6 +28,43 @@
 
           <button id="changePwBtn" class="pw-btn" type="button">Ubah kata sandi</button>
 
+          <h2 class="card-title notification-title">Pengaturan Notifikasi</h2>
+
+          <div class="notification-settings">
+            <div class="notification-item">
+              <div class="notification-info">
+                <span class="notification-label">Notifikasi Chat</span>
+                <span class="notification-desc">Terima notifikasi untuk pesan chat baru</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-chat" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="notification-item">
+              <div class="notification-info">
+                <span class="notification-label">Notifikasi Lelang</span>
+                <span class="notification-desc">Terima notifikasi untuk aktivitas lelang</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-auction" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="notification-item">
+              <div class="notification-info">
+                <span class="notification-label">Notifikasi Pesanan</span>
+                <span class="notification-desc">Terima notifikasi untuk pesanan baru</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-order" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
           <div id="profile-error" class="error-msg" style="display:none"></div>
           <div id="profile-success" class="success-msg" style="display:none"></div>
         </div>
@@ -155,42 +192,49 @@
 }
 
 .card-title {
-  margin: 0 0 1.25rem;
-  font-size: 1.35rem;
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #000;
+}
+
+.notification-title {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .loading-row {
   text-align: center;
   padding: 2rem;
   color: var(--text-dim);
+  font-size: 0.875rem;
 }
 
 .info-row {
   display: flex;
-  gap: 1.5rem;
-  padding: 1rem 0;
+  gap: 1.25rem;
+  padding: 0.85rem 0;
   border-bottom: 1px solid #f3f4f6;
 }
 .info-row:last-of-type { border-bottom: 0; }
 
 .info-label {
-  flex: 0 0 120px;
+  flex: 0 0 110px;
   font-weight: 600;
   color: var(--text-dim);
-  font-size: .95rem;
+  font-size: 0.85rem;
 }
 .info-value {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: .75rem;
+  gap: .6rem;
 }
 .info-text {
   flex: 1;
   color: var(--text-main);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 .link-edit {
   background: transparent;
@@ -198,24 +242,104 @@
   color: var(--green);
   font-weight: 600;
   cursor: pointer;
-  font-size: .9rem;
+  font-size: 0.8rem;
   text-decoration: underline;
 }
 .link-edit:hover { color: #267a3a; }
 
 .pw-btn {
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   background: var(--green);
   border: 2px solid var(--green);
   color: #fff;
   border-radius: 8px;
-  padding: .7rem 1rem;
+  padding: .6rem .9rem;
   font-weight: 700;
-  font-size: .95rem;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: background .15s;
 }
 .pw-btn:hover { background: #267a3a; }
+
+.notification-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.notification-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notification-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.notification-desc {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: #cbd5e1;
+  border-radius: 28px;
+  transition: background-color 0.2s;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--green);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .modal {
   position: fixed; inset: 0; z-index: 1000;
@@ -242,20 +366,20 @@
   to   { transform: translateY(0); opacity: 1; }
 }
 .modal-title {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
+  margin: 0 0 0.85rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #000;
 }
 .modal-close {
   position: absolute; right: .25rem; top: .25rem;
-  border: 0; background: transparent; font-size: 1.5rem; line-height: 1;
-  width: 36px; height: 36px; border-radius: 999px; cursor: pointer;
+  border: 0; background: transparent; font-size: 1.35rem; line-height: 1;
+  width: 32px; height: 32px; border-radius: 999px; cursor: pointer;
   color: #111;
 }
 
-.modal-form { display: flex; flex-direction: column; gap: .75rem; }
-.modal-label { font-weight: 600; font-size: .95rem; color: #000; }
+.modal-form { display: flex; flex-direction: column; gap: .65rem; }
+.modal-label { font-weight: 600; font-size: 0.85rem; color: #000; }
 .password-field {
   position: relative;
   display: flex;
@@ -289,21 +413,23 @@
 .modal-input {
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  padding: .65rem .75rem;
-  font-size: 1rem; outline: none;
+  padding: .55rem .65rem;
+  font-size: 0.875rem; outline: none;
 }
 .modal-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(47,157,74,.15); }
 
 .modal-actions {
-  display: flex; justify-content: flex-end; gap: .6rem; margin-top: .25rem;
+  display: flex; justify-content: flex-end; gap: .5rem; margin-top: .2rem;
 }
 .cancel-btn {
   background: transparent; border: 2px solid rgba(0,0,0,0.1); color: #000;
-  border-radius: 8px; padding: .6rem .9rem; font-weight: 500; cursor: pointer;
+  border-radius: 8px; padding: .5rem .8rem; font-weight: 500; cursor: pointer;
+  font-size: 0.85rem;
 }
 .save-btn {
   background: var(--green); border: 2px solid var(--green); color: #fff;
-  border-radius: 8px; padding: .6rem 1rem; font-weight: 700; cursor: pointer;
+  border-radius: 8px; padding: .5rem .85rem; font-weight: 700; cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .error-msg {
@@ -311,22 +437,22 @@
   background: #fee2e2;
   border: 1px solid #fca5a5;
   color: #991b1b;
-  border-radius: .6rem;
-  padding: .6rem .8rem;
-  font-size: .8rem;
-  line-height: 1.3rem;
-  margin-top: .5rem;
+  border-radius: .5rem;
+  padding: .5rem .7rem;
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+  margin-top: .4rem;
 }
 .success-msg {
   display: block;
   background: #d1fae5;
   border: 1px solid #6ee7b7;
   color: #065f46;
-  border-radius: .6rem;
-  padding: .6rem .8rem;
-  font-size: .8rem;
-  line-height: 1.3rem;
-  margin-top: .5rem;
+  border-radius: .5rem;
+  padding: .5rem .7rem;
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+  margin-top: .4rem;
 }
 
 @media (max-width: 900px) {

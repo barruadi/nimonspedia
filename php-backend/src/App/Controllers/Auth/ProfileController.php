@@ -124,12 +124,115 @@ class ProfileController
     {
         $userId = $_SESSION['user']['user_id'];
         $new_balance = $req['body']['balance'];
-        
+
         User::updateBalance($userId, $new_balance);
 
         return [
             'ok' => true,
             'new_balance' => $new_balance
+        ];
+    }
+
+    public function getNotificationPreferences($req): array
+    {
+        $userId = (int) $_SESSION['user']['user_id'] ?? null;
+
+        if (!$userId) {
+            http_response_code(401);
+            return ['ok' => false, 'error' => 'User not authenticated'];
+        }
+
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT chat_enabled, auction_enabled, order_enabled, updated_at
+            FROM push_preferences
+            WHERE user_id = :user_id
+        ");
+        $stmt->execute(['user_id' => $userId]);
+        $prefs = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$prefs) {
+            $stmt = $db->prepare("
+                INSERT INTO push_preferences (user_id, chat_enabled, auction_enabled, order_enabled)
+                VALUES (:user_id, TRUE, TRUE, TRUE)
+                RETURNING chat_enabled, auction_enabled, order_enabled, updated_at
+            ");
+            $stmt->execute(['user_id' => $userId]);
+            $prefs = $stmt->fetch(\PDO::FETCH_ASSOC);
+        }
+
+        return [
+            'ok' => true,
+            'preferences' => $prefs
+        ];
+    }
+
+    public function updateNotificationPreferences($req): array
+    {
+        $userId = (int) $_SESSION['user']['user_id'] ?? null;
+
+        if (!$userId) {
+            http_response_code(401);
+            return ['ok' => false, 'error' => 'User not authenticated'];
+        }
+
+        $body = $req['body'] ?? [];
+        $fields = [];
+        $params = ['user_id' => $userId];
+
+        if (isset($body['chat_enabled'])) {
+            $fields[] = "chat_enabled = :chat_enabled";
+            $params['chat_enabled'] = $body['chat_enabled'] ? 'TRUE' : 'FALSE';
+        }
+
+        if (isset($body['auction_enabled'])) {
+            $fields[] = "auction_enabled = :auction_enabled";
+            $params['auction_enabled'] = $body['auction_enabled'] ? 'TRUE' : 'FALSE';
+        }
+
+        if (isset($body['order_enabled'])) {
+            $fields[] = "order_enabled = :order_enabled";
+            $params['order_enabled'] = $body['order_enabled'] ? 'TRUE' : 'FALSE';
+        }
+
+        if (empty($fields)) {
+            return [
+                'ok' => false,
+                'error' => 'No fields to update'
+            ];
+        }
+
+        $db = \App\Core\Database::getInstance();
+
+        $checkStmt = $db->prepare("SELECT user_id FROM push_preferences WHERE user_id = :user_id");
+        $checkStmt->execute(['user_id' => $userId]);
+        $exists = $checkStmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$exists) {
+            $insertStmt = $db->prepare("
+                INSERT INTO push_preferences (user_id, chat_enabled, auction_enabled, order_enabled)
+                VALUES (:user_id, TRUE, TRUE, TRUE)
+            ");
+            $insertStmt->execute(['user_id' => $userId]);
+        }
+
+        $fields[] = "updated_at = NOW()";
+        $sql = "UPDATE push_preferences SET " . implode(', ', $fields) . " WHERE user_id = :user_id";
+
+        $stmt = $db->prepare($sql);
+        $success = $stmt->execute($params);
+
+        if (!$success) {
+            http_response_code(500);
+            return [
+                'ok' => false,
+                'error' => 'Failed to update preferences'
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'message' => 'Preferences updated successfully'
         ];
     }
 }
