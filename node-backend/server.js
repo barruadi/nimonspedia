@@ -17,10 +17,15 @@ const setupChatSocket = require('./src/sockets/chatSocket');
 
 const app = express();
 
-// Configure CORS to accept requests with credentials from any origin
+// Configure CORS to accept requests with credentials
 app.use(cors({
-    origin: "*", // Allow all origins
-    credentials: false, // Note: cannot use credentials:true with origin:"*", so we handle cookies manually
+    origin: [
+        'http://localhost',
+        'http://localhost:80',
+        'http://127.0.0.1',
+        'http://127.0.0.1:80'
+    ],
+    credentials: true, // Allow credentials (cookies) to be sent
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-User-ID']
 }));
