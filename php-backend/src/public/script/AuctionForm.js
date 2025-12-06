@@ -43,13 +43,15 @@ async function initAuctionFormPage() {
     const quantityInput = document.getElementById('quantity');
     const minIncrementInput = document.getElementById('minIncrement');
     const startTimeInput = document.getElementById('startTime');
+    const endTimeInput = document.getElementById('endTime');
 
     // Validation error elements
     const errorElements = {
         startingPrice: document.getElementById('startingPriceError'),
         quantity: document.getElementById('quantityError'),
         minIncrement: document.getElementById('minIncrementError'),
-        startTime: document.getElementById('startTimeError')
+        startTime: document.getElementById('startTimeError'),
+        endTime: document.getElementById('endTimeError')
     };
 
     let productData = null;
@@ -87,6 +89,22 @@ async function initAuctionFormPage() {
             const minStartTime = new Date(now.getTime() + 5 * 60000);
             startTimeInput.min = minStartTime.toISOString().slice(0, 16);
             startTimeInput.value = minStartTime.toISOString().slice(0, 16);
+
+            // Set default end time to 1 day after start time
+            const defaultEndTime = new Date(minStartTime.getTime() + 1 * 24 * 60 * 60 * 1000);
+            endTimeInput.min = minStartTime.toISOString().slice(0, 16);
+            endTimeInput.value = defaultEndTime.toISOString().slice(0, 16);
+
+            // Update end time minimum when start time changes
+            startTimeInput.addEventListener('change', () => {
+                const newStartTime = new Date(startTimeInput.value);
+                endTimeInput.min = startTimeInput.value;
+                // If end time is before or equal to new start time, update it
+                if (!endTimeInput.value || new Date(endTimeInput.value) <= newStartTime) {
+                    const newEndTime = new Date(newStartTime.getTime() + 1 * 24 * 60 * 60 * 1000);
+                    endTimeInput.value = newEndTime.toISOString().slice(0, 16);
+                }
+            });
 
             console.log('Product data loaded successfully');
             hideLoading();
@@ -160,6 +178,24 @@ async function initAuctionFormPage() {
             }
         }
 
+        // Validate end time
+        if (!endTimeInput?.value) {
+            if (errorElements.endTime) {
+                errorElements.endTime.textContent = 'Waktu akhir wajib diisi';
+            }
+            isValid = false;
+        } else {
+            const startTime = new Date(startTimeInput.value);
+            const endTime = new Date(endTimeInput.value);
+
+            if (endTime <= startTime) {
+                if (errorElements.endTime) {
+                    errorElements.endTime.textContent = 'Waktu akhir harus lebih dari waktu mulai';
+                }
+                isValid = false;
+            }
+        }
+
         return isValid;
     }
 
@@ -188,7 +224,7 @@ async function initAuctionFormPage() {
         try {
             // Prepare auction data
             const startTime = new Date(startTimeInput.value);
-            const endTime = new Date(startTime.getTime() + 15 * 1000); // 15 seconds duration
+            const endTime = new Date(endTimeInput.value);
 
             const auctionData = {
                 product_id: parseInt(productIdInput.value),
@@ -203,11 +239,89 @@ async function initAuctionFormPage() {
 
             console.log('Submitting auction data:', auctionData);
 
+            showLoading('Mengidentifikasi Penjual...', 'Mempersiapkan data lelang');
+
+            // Get current user ID from PHP backend
+            let currentUser = null;
+            try {
+                const userResponse = await fetch('/api/me', {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const userData = await userResponse.json();
+                if (userData.authenticated && userData.user) {
+                    currentUser = userData.user;
+                    
+                    // Validate user is a seller
+                    if (currentUser.role !== 'seller') {
+                        throw new Error('Hanya penjual yang dapat membuat lelang');
+                    }
+                    
+                    auctionData.user_id = currentUser.id;
+                    console.log('Added user_id to auctionData:', auctionData.user_id, 'Role:', currentUser.role);
+                } else {
+                    throw new Error('Gagal mendapatkan informasi penjual');
+                }
+            } catch (err) {
+                console.error('Error fetching user:', err);
+                throw new Error('Gagal mengidentifikasi penjual: ' + err.message);
+            }
+
+            showLoading('Memeriksa Jadwal Lelang...', 'Memastikan tidak ada tumpang tindih');
+
+            // Check for overlapping auctions in the same store
+            if (productData && productData.store_id) {
+                const checkResponse = await fetch(`http://localhost:3000/api/node/auctions?store_id=${productData.store_id}`, {
+                    method: 'GET',
+                    credentials: 'include', // Include cookies (PHPSESSID)
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(localStorage.getItem('token') && {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        })
+                    }
+                });
+
+                const checkResult = await checkResponse.json();
+                console.log('Existing auctions check:', checkResult);
+
+                if (checkResult.ok && checkResult.data && checkResult.data.length > 0) {
+                    // Check for overlapping time ranges
+                    const newStartTime = new Date(startTime);
+                    const newEndTime = new Date(endTime);
+
+                    const overlappingAuction = checkResult.data.find(auction => {
+                        const existingStart = new Date(auction.start_time);
+                        const existingEnd = new Date(auction.end_time);
+
+                        // Check if time ranges overlap
+                        // Ranges overlap if: newStart < existingEnd AND newEnd > existingStart
+                        const isOverlapping = newStartTime < existingEnd && newEndTime > existingStart;
+
+                        // Also check if auction is still active or scheduled (not ended/cancelled)
+                        const isActiveOrScheduled = auction.status === 'active' || auction.status === 'scheduled';
+
+                        return isOverlapping && isActiveOrScheduled;
+                    });
+
+                    if (overlappingAuction) {
+                        throw new Error(
+                            `Jadwal lelang bertabrakan dengan lelang lain "${overlappingAuction.product_name}". ` +
+                            `Pilih waktu yang berbeda atau tunggu lelang sebelumnya selesai.`
+                        );
+                    }
+                }
+            }
+
             showLoading('Membuat Lelang...', 'Mohon tunggu sebentar');
 
             // Submit to Node.js API
             const response = await fetch('http://localhost:3000/api/node/auction', {
                 method: 'POST',
+                credentials: 'include', // Include cookies (PHPSESSID)
                 headers: {
                     'Content-Type': 'application/json',
                     ...(localStorage.getItem('token') && {
@@ -233,7 +347,14 @@ async function initAuctionFormPage() {
         } catch (error) {
             console.error('Error submitting auction:', error);
             hideLoading();
-            showToast('Gagal membuat lelang!', error.message, 'error');
+            
+            // Provide more specific error messages
+            let errorMessage = error.message;
+            if (error.message === 'Failed to fetch') {
+                errorMessage = 'Tidak dapat terhubung ke server. Pastikan Node.js server running di localhost:3000';
+            }
+            
+            showToast('Gagal membuat lelang!', errorMessage, 'error');
 
             if (submitBtn) {
                 submitBtn.disabled = false;

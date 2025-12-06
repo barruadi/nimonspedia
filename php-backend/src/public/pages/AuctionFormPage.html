@@ -116,6 +116,22 @@
             <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Waktu mulai harus minimal 5 menit dari sekarang</div>
           </div>
 
+          <!-- End Time -->
+          <div class="form-group">
+            <label for="endTime" class="form-label">
+              Waktu Akhir Lelang<span class="required">*</span>
+            </label>
+            <input 
+              type="datetime-local" 
+              id="endTime" 
+              name="end_time" 
+              class="form-input"
+              required 
+            />
+            <span class="error-message" id="endTimeError"></span>
+            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">Waktu akhir harus lebih dari waktu mulai</div>
+          </div>
+
           <!-- Form Actions -->
           <div class="form-actions">
             <button type="button" id="cancelBtn" class="btn btn-cancel">
@@ -133,10 +149,10 @@
     <div id="cancelModalBackdrop" class="modal-backdrop" style="display:none;">
       <div id="cancelConfirmationModal" class="modal">
         <img src="/uploads/seller/edit-confirmation-logo.svg" alt="Confirmation Icon" class="modal-icon" loading="lazy"/>
-        <div class="confirmation-text">Batal membuat lelang? Perubahan tidak akan tersimpan.</div>
+        <div class="confirmation-text">Apakah anda yakin ingin menyimpan auction?</div>
         <div class="confirmation-buttons">
-          <button type="button" id="cancelModalCancelBtn" class="btn-modal-cancel">Lanjut</button>
-          <button type="button" id="cancelModalConfirmBtn" class="btn-modal-confirm">Batal</button>
+          <button type="button" id="cancelModalCancelBtn" class="btn-modal-cancel">Batal</button>
+          <button type="button" id="cancelModalConfirmBtn" class="btn-modal-confirm">Lanjut</button>
         </div>
       </div>
     </div>
