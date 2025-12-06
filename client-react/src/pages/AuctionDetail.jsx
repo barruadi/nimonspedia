@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import './AuctionDetail.css';
@@ -17,30 +17,90 @@ const AuctionDetail = () => {
   const [error, setError] = useState(null);
   
   // Timer & Countdown
-  const [timeLeft, setTimeLeft] = useState('');
-  const [antiSnipingCountdown, setAntiSnipingCountdown] = useState(null);
+  const [countdownSeconds, setCountdownSeconds] = useState(null);
   
   // Bid Form
   const [bidAmount, setBidAmount] = useState('');
   const [submittingBid, setSubmittingBid] = useState(false);
   const [bidError, setBidError] = useState(null);
   const [bidSuccess, setBidSuccess] = useState(false);
+  const [newBidAnimation, setNewBidAnimation] = useState(null);
   
   // User & Auction State
   const [currentUser, setCurrentUser] = useState(null);
   const [userBalance, setUserBalance] = useState(0);
   const [isSeller, setIsSeller] = useState(false);
+  const [auctionSellerId, setAuctionSellerId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelAction, setCancelAction] = useState('cancel'); // 'cancel' or 'stop'
   const [cancelLoading, setCancelLoading] = useState(false);
 
-  // Fetch auction detail with CORRECT API route
+  // Fetch current user from PHP backend
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch(`http://localhost/api/me`, {
+          credentials: 'include'
+        });
+        
+        console.log('[AuctionDetail] PHP API response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[AuctionDetail] PHP API response data:', data);
+          
+          // Handle PHP API response structure: { authenticated: true, user: { id, name, role, balance } }
+          if (data.authenticated && data.user) {
+            const userData = {
+              user_id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              role: data.user.role,
+              balance: data.user.balance
+            };
+            console.log('[AuctionDetail] Extracted user data:', userData);
+            setCurrentUser(userData);
+            // Ensure user_id is a number
+            const userId = parseInt(userData.user_id, 10);
+            console.log('[AuctionDetail] Setting currentUserId to:', userId, 'type:', typeof userId);
+            setCurrentUserId(userId);
+            setUserBalance(userData.balance || 0);
+          } else if ((data.ok && data.data) || data.user_id) {
+            // Fallback for other response structures
+            const userData = data.data || data;
+            console.log('[AuctionDetail] Current user fetched (fallback):', userData);
+            setCurrentUser(userData);
+            const userId = parseInt(userData.user_id, 10);
+            console.log('[AuctionDetail] Setting currentUserId to:', userId, 'type:', typeof userId);
+            setCurrentUserId(userId);
+            setUserBalance(userData.balance || 0);
+          } else {
+            console.warn('[AuctionDetail] PHP API response unexpected structure:', data);
+          }
+        } else {
+          console.warn('[AuctionDetail] PHP API returned non-ok status:', response.status);
+        }
+      } catch (err) {
+        console.warn('[AuctionDetail] Failed to fetch current user:', err.message);
+        // If PHP API fails, set dummy currentUser to allow page load BUT don't set currentUserId
+        const dummyUser = { user_id: 0, email: 'guest', balance: 0 };
+        console.log('[AuctionDetail] Using dummy user (PHP API failed):', dummyUser);
+        setCurrentUser(dummyUser);
+        setCurrentUserId(null); // Keep null so isSeller won't compare with dummy user
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  // Fetch auction detail - tidak perlu wait untuk currentUser
   useEffect(() => {
     const fetchAuctionDetail = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Validate ID
         if (!id || isNaN(id)) {
           throw new Error('Invalid auction ID');
         }
@@ -60,10 +120,13 @@ const AuctionDetail = () => {
           throw new Error(data.error || 'Gagal memuat lelang');
         }
 
-        // Response structure: { ok: true, data: { auction: {...}, product: {...}, store: {...}, stats: {...}, bid_history: [...] } }
         const responseData = data.data;
+        console.log('[AuctionDetail] Node API response:', responseData);
+        console.log('[AuctionDetail] Auction object:', responseData.auction);
+        console.log('[AuctionDetail] Product object:', responseData.product);
+        console.log('[AuctionDetail] seller_id from auction:', responseData.auction?.seller_id);
+        console.log('[AuctionDetail] seller_id from product:', responseData.product?.seller_id);
         
-        // Flatten the nested structure for easier access in component
         const auctionData = {
           auction_id: responseData.auction.auction_id,
           product_id: responseData.auction.product_id,
@@ -74,9 +137,11 @@ const AuctionDetail = () => {
           start_time: responseData.auction.start_time,
           end_time: responseData.auction.end_time,
           status: responseData.auction.status,
+          seller_id: responseData.auction.seller_id,
           winner_id: responseData.auction.winner_id,
           winner_name: responseData.auction.winner_name,
           product_name: responseData.product.name,
+          product_description: responseData.product.description,
           image_path: responseData.product.image_path,
           store_id: responseData.store.store_id,
           store_name: responseData.store.store_name
@@ -84,20 +149,37 @@ const AuctionDetail = () => {
 
         setAuction(auctionData);
         
-        // Bids from response
+        console.log('[AuctionDetail] Auction loaded:', {
+          auction_id: auctionData.auction_id,
+          seller_id: auctionData.seller_id,
+          product_name: auctionData.product_name
+        });
+        
+        console.log('[AuctionDetail] Setting auctionSellerId to:', auctionData.seller_id, 'type:', typeof auctionData.seller_id);
+        
+        // Ensure seller_id is a number
+        if (auctionData.seller_id) {
+          const sellerId = parseInt(auctionData.seller_id, 10);
+          if (!isNaN(sellerId)) {
+            console.log('[AuctionDetail] Converted auctionSellerId to:', sellerId, 'type:', typeof sellerId);
+            setAuctionSellerId(sellerId);
+          } else {
+            console.error('[AuctionDetail] seller_id is not a valid number:', auctionData.seller_id);
+            setAuctionSellerId(null);
+          }
+        } else {
+          console.warn('[AuctionDetail] seller_id is null or undefined');
+          setAuctionSellerId(null);
+        }
+        
         if (responseData.bid_history && responseData.bid_history.length > 0) {
           setBids(responseData.bid_history);
         } else {
           setBids([]);
         }
 
-        // TODO: Fetch current user from auth context
-        // setCurrentUser(getCurrentUser());
-        // setUserBalance(getCurrentUserBalance());
-        // setIsSeller(data.data.seller_id === getCurrentUserId());
-
       } catch (err) {
-        console.error('Error fetching auction:', err);
+        console.error('[AuctionDetail] Error fetching auction:', err);
         setError(err.message || 'Terjadi kesalahan saat memuat lelang');
       } finally {
         setLoading(false);
@@ -107,206 +189,222 @@ const AuctionDetail = () => {
     fetchAuctionDetail();
   }, [id]);
 
-  // Timer untuk countdown (dengan anti-sniping 15s)
+  // Update isSeller when auction or currentUser changes
+  useEffect(() => {
+    console.log('[AuctionDetail] useEffect checking isSeller:', {
+      auctionSellerId,
+      currentUserId,
+      type_sellerId: typeof auctionSellerId,
+      type_currentId: typeof currentUserId,
+      bothNull: auctionSellerId === null || currentUserId === null
+    });
+
+    // Only set isSeller if BOTH IDs are actual values (not null)
+    if (auctionSellerId !== null && currentUserId !== null) {
+      const isSellerUser = auctionSellerId === currentUserId;
+      console.log('[AuctionDetail] isSeller CALCULATED:', {
+        auctionSellerId,
+        currentUserId,
+        result: isSellerUser
+      });
+      setIsSeller(isSellerUser);
+    } else {
+      console.log('[AuctionDetail] SKIPPING isSeller - waiting for both IDs to be available');
+      console.log('  - auctionSellerId:', auctionSellerId, '(type:', typeof auctionSellerId, ')');
+      console.log('  - currentUserId:', currentUserId, '(type:', typeof currentUserId, ')');
+      setIsSeller(false); // Reset to false while waiting for data
+    }
+  }, [auctionSellerId, currentUserId]);
+
+  // Timer countdown with server-side sync
   useEffect(() => {
     if (!auction) return;
 
-    const calculateTimeLeft = () => {
-      const now = new Date();
-      let targetTime;
-      
-      if (auction.status === 'active') {
-        // Use anti-sniping countdown if available (15s after last bid)
-        if (antiSnipingCountdown) {
-          const remaining = antiSnipingCountdown - Math.floor(Date.now() / 1000);
-          if (remaining <= 0) {
-            setTimeLeft('Berakhir');
-            return;
-          }
-          setTimeLeft(`${remaining}s (Anti-sniping)`);
-          return;
-        }
-        targetTime = new Date(auction.end_time);
-      } else {
-        targetTime = new Date(auction.start_time);
-      }
-
-      if (targetTime <= now) {
-        setTimeLeft(auction.status === 'active' ? 'Berakhir' : 'Dimulai');
+    const calculateCountdown = () => {
+      // Jika status scheduled
+      if (auction.status === 'scheduled') {
+        setCountdownSeconds(null);
         return;
       }
 
-      const diff = targetTime - now;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      // Jika status ended atau cancelled
+      if (auction.status === 'ended' || auction.status === 'cancelled') {
+        setCountdownSeconds(0);
+        return;
+      }
 
-      let result = '';
-      if (days > 0) result = `${days}d ${hours}h ${minutes}m`;
-      else if (hours > 0) result = `${hours}h ${minutes}m ${seconds}s`;
-      else if (minutes > 0) result = `${minutes}m ${seconds}s`;
-      else result = `${seconds}s`;
+      // Auction active tapi belum ada bid (end_time null)
+      if (auction.status === 'active' && !auction.end_time) {
+        setCountdownSeconds('waiting');
+        return;
+      }
 
-      setTimeLeft(result);
+      // Auction active dengan bid
+      if (auction.status === 'active' && auction.end_time) {
+        const now = new Date();
+        const endTime = new Date(auction.end_time);
+        const diffMs = endTime - now;
+        const seconds = Math.max(0, Math.ceil(diffMs / 1000));
+        setCountdownSeconds(seconds);
+        return;
+      }
+
+      // Default
+      setCountdownSeconds(null);
     };
 
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
+    calculateCountdown();
+    const timer = setInterval(calculateCountdown, 1000);
 
     return () => clearInterval(timer);
-  }, [auction, antiSnipingCountdown]);
+  }, [auction?.end_time, auction?.status]);
 
-  // WebSocket real-time updates
+  // Socket setup - join room and listen for updates
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !auction || !currentUser) return;
 
-    const handleBidPlaced = (data) => {
-      console.log('[AuctionDetail] Real-time bid placed:', data);
+    console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
+
+    socket.emit('auction:join', {
+      auctionId: auction.auction_id,
+      userId: currentUser.user_id
+    }, (response) => {
+      if (response?.success) {
+        console.log('[AuctionDetail] Successfully joined auction room');
+      } else {
+        console.warn('[AuctionDetail] Failed to join room:', response?.error);
+      }
+    });
+
+    const handleBidUpdate = (data) => {
+      console.log('[AuctionDetail] Bid update received:', data);
       
-      if (data.auction_id === parseInt(id)) {
-        // Update auction current price
+      if (data.auction_id === auction.auction_id) {
         setAuction(prev => ({
           ...prev,
-          current_price: data.new_price || prev.current_price
+          current_price: data.bid_amount,
+          end_time: data.new_end_time,
+          status: 'active'
         }));
 
-        // Reset anti-sniping countdown to 15 seconds
-        setAntiSnipingCountdown(Math.floor(Date.now() / 1000) + 15);
+        if (data.bid_history && Array.isArray(data.bid_history)) {
+          setBids(data.bid_history);
+        }
 
-        // Refresh bids
-        fetch(`${API_BASE_URL}/auction/${id}/bids`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.ok) setBids(data.data || []);
-          })
-          .catch(err => console.warn('Failed to refresh bids:', err));
+        setNewBidAnimation(true);
+        setTimeout(() => setNewBidAnimation(false), 2000);
       }
     };
 
     const handleAuctionEnded = (data) => {
       console.log('[AuctionDetail] Auction ended:', data);
       
-      if (data.auction_id === parseInt(id)) {
+      if (data.auction_id === auction.auction_id) {
         setAuction(prev => ({
           ...prev,
           status: 'ended',
-          winner_id: data.winner_id
+          winner_id: data.winner_id,
+          winner_name: data.winner_name
         }));
-        setTimeLeft('Berakhir');
+        setCountdownSeconds(0);
       }
     };
 
-    socket.on('bid:placed', handleBidPlaced);
+    const handleBidError = (data) => {
+      console.error('[AuctionDetail] Bid error:', data);
+      setBidError(data.error || 'Gagal menempatkan penawaran');
+    };
+
+    socket.on('auction:bid-update', handleBidUpdate);
     socket.on('auction:ended', handleAuctionEnded);
+    socket.on('auction:bid-error', handleBidError);
 
     return () => {
-      socket.off('bid:placed', handleBidPlaced);
+      socket.emit('auction:leave', { auctionId: auction.auction_id });
+      socket.off('auction:bid-update', handleBidUpdate);
       socket.off('auction:ended', handleAuctionEnded);
+      socket.off('auction:bid-error', handleBidError);
     };
-  }, [socket, id]);
+  }, [socket, auction?.auction_id, currentUser]);
 
-  // Format currency
-  const formatPrice = (price) => {
-    if (!price && price !== 0) return 'Rp 0';
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
-
-  // Place bid with COMPLETE validation
-  const handlePlaceBid = async () => {
+  // Place bid via Socket.IO (with validation)
+  const handlePlaceBid = useCallback(async () => {
     try {
       setBidError(null);
       setBidSuccess(false);
 
-      // Validate auction status
       if (auction.status !== 'active') {
         setBidError('Lelang tidak sedang berlangsung');
         return;
       }
 
-      // Validate bid amount
       const bid = parseInt(bidAmount);
       if (!bidAmount || isNaN(bid)) {
         setBidError('Masukkan jumlah penawaran yang valid');
         return;
       }
 
-      // Validate minimum bid: current_price + min_increment
       const minimumBid = auction.current_price + (auction.min_increment || 0);
       if (bid < minimumBid) {
         setBidError(`Penawaran minimal: Rp ${minimumBid.toLocaleString('id-ID')}`);
         return;
       }
 
-      // Validate user balance (if available)
-      if (userBalance > 0 && bid > userBalance) {
+      if (bid > userBalance) {
         setBidError(`Saldo Anda tidak cukup. Saldo: Rp ${userBalance.toLocaleString('id-ID')}`);
+        return;
+      }
+
+      if (!socket || !socket.connected) {
+        setBidError('Koneksi socket terputus. Silakan refresh halaman.');
         return;
       }
 
       setSubmittingBid(true);
 
-      const response = await fetch(`${API_BASE_URL}/auction/${id}/bids`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bidAmount: bid,
-        }),
+      socket.emit('auction:place-bid', {
+        auctionId: auction.auction_id,
+        bidderId: currentUser.user_id,
+        bidAmount: bid
+      }, (response) => {
+        if (response?.success) {
+          console.log('[AuctionDetail] Bid placed successfully');
+          setBidSuccess(true);
+          setBidAmount('');
+          setUserBalance(response.data?.newBalance || userBalance - bid);
+          
+          setTimeout(() => setBidSuccess(false), 3000);
+        } else {
+          setBidError(response?.error || 'Gagal menempatkan penawaran');
+          console.error('[AuctionDetail] Bid failed:', response?.error);
+        }
+        setSubmittingBid(false);
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.ok) {
-        throw new Error(data.error || 'Gagal menempatkan penawaran');
-      }
-
-      setBidSuccess(true);
-      setBidAmount('');
-
-      // Refresh bids
-      const bidsResponse = await fetch(`${API_BASE_URL}/auction/${id}/bids`);
-      if (bidsResponse.ok) {
-        const bidsData = await bidsResponse.json();
-        if (bidsData.ok) {
-          setBids(bidsData.data || []);
-        }
-      }
-
-      // Reset anti-sniping countdown
-      setAntiSnipingCountdown(Math.floor(Date.now() / 1000) + 15);
-
-      setTimeout(() => setBidSuccess(false), 3000);
-
     } catch (err) {
-      console.error('Error placing bid:', err);
+      console.error('[AuctionDetail] Error placing bid:', err);
       setBidError(err.message || 'Gagal menempatkan penawaran');
-    } finally {
       setSubmittingBid(false);
     }
-  };
+  }, [auction, bidAmount, userBalance, currentUser, socket]);
 
   // Handle seller stop/cancel auction
   const handleStopAuction = async (action) => {
     try {
       setCancelLoading(true);
       
-      const response = await fetch(`${API_BASE_URL}/auction/${id}/${action}`, {
+      const endpoint = action === 'stop' 
+        ? `${API_BASE_URL}/auction/${auction.auction_id}/stop`
+        : `${API_BASE_URL}/auction/${auction.auction_id}/cancel`;
+
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        // Request body tidak perlu seller_id - akan diambil dari auth middleware
+        body: JSON.stringify({
+          userId: currentUser.user_id
+        })
       });
 
       if (!response.ok) {
@@ -320,21 +418,55 @@ const AuctionDetail = () => {
         throw new Error(data.error || 'Gagal menghentikan lelang');
       }
 
-      // Update auction status based on action
       setAuction(prev => ({
         ...prev,
-        status: action === 'stop' ? 'ended' : 'cancelled'
+        status: action === 'stop' ? 'ended' : 'cancelled',
+        winner_id: data.data?.winner_id
       }));
 
       setShowCancelModal(false);
       alert(`Lelang berhasil di${action === 'stop' ? 'hentikan' : 'batalkan'}!`);
 
     } catch (err) {
-      console.error('Error stopping auction:', err);
+      console.error('[AuctionDetail] Error stopping auction:', err);
       alert(err.message || 'Gagal menghentikan lelang');
     } finally {
       setCancelLoading(false);
     }
+  };
+
+  // Format currency helper
+  const formatPrice = (price) => {
+    if (!price && price !== 0) return 'Rp 0';
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Format timer display
+  const formatTimer = () => {
+    if (countdownSeconds === 'waiting') {
+      return '⏳ Menunggu Bid Pertama';
+    }
+    
+    if (countdownSeconds === null) {
+      return '⏱️ Belum Dimulai';
+    }
+    
+    if (countdownSeconds === 0) {
+      return 'Berakhir';
+    }
+
+    if (typeof countdownSeconds === 'number') {
+      const minutes = Math.floor(countdownSeconds / 60);
+      const secs = countdownSeconds % 60;
+      return `${minutes}:${String(secs).padStart(2, '0')}`;
+    }
+
+    return 'Menghitung...';
   };
 
   // Loading state
@@ -353,12 +485,11 @@ const AuctionDetail = () => {
   if (error) {
     return (
       <div className="auction-detail-page">
-        <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali</button>
         <div className="error-container">
           <h2>⚠️ Terjadi Kesalahan</h2>
           <p>{error}</p>
           <button onClick={() => navigate('/auctions')} className="primary-btn">
-            Kembali ke Lelang
+            Kembali
           </button>
         </div>
       </div>
@@ -369,12 +500,11 @@ const AuctionDetail = () => {
   if (!auction) {
     return (
       <div className="auction-detail-page">
-        <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali</button>
         <div className="error-container">
           <h2>Lelang Tidak Ditemukan</h2>
           <p>Lelang dengan ID {id} tidak ditemukan.</p>
           <button onClick={() => navigate('/auctions')} className="primary-btn">
-            Kembali ke Lelang
+            Kembali
           </button>
         </div>
       </div>
@@ -383,11 +513,23 @@ const AuctionDetail = () => {
 
   const isActive = auction.status === 'active';
   const displayPrice = isActive ? auction.current_price : auction.starting_price;
-  const highestBid = bids.length > 0 ? bids[0].bid_amount : auction.starting_price;
+  const timerClass = countdownSeconds !== null && countdownSeconds !== 'waiting' && countdownSeconds < 60 ? 'timer-warning' : '';
+  const nextMinBid = auction.current_price + (auction.min_increment || 1000);
+
+  console.log('[AuctionDetail] RENDER:', {
+    isSeller: isSeller,
+    auctionSellerId: auctionSellerId,
+    currentUserId: currentUserId,
+    button_should_be: isSeller ? 'Kembali' : 'Kembali ke Lelang'
+  });
 
   return (
     <div className="auction-detail-page">
-      <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
+      {isSeller ? (
+        <button className="back-btn" onClick={() => navigate(-1)}>← Kembali</button>
+      ) : (
+        <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
+      )}
 
       <div className="detail-container">
         {/* Left: Image Section */}
@@ -398,8 +540,8 @@ const AuctionDetail = () => {
               alt={auction.product_name}
               onError={(e) => e.target.src = '/placeholder.png'}
             />
-            <span className={`status-badge ${auction.status}`}>
-              {auction.status === 'active' ? '🔴 Berlangsung' : '⏱️ Akan Datang'}
+            <span className={`status-badge status-${auction.status}`}>
+              {auction.status === 'active' ? '🔴 ACTIVE' : auction.status === 'scheduled' ? '⏱️ SCHEDULED' : auction.status === 'ended' ? '✓ ENDED' : '✗ CANCELLED'}
             </span>
           </div>
         </div>
@@ -409,6 +551,9 @@ const AuctionDetail = () => {
           {/* Product Info */}
           <div className="product-info">
             <h1>{auction.product_name}</h1>
+            {auction.product_description && (
+              <p className="product-description">{auction.product_description}</p>
+            )}
             <p className="store-info">
               <span className="label">Toko:</span>
               <span className="value">{auction.store_name}</span>
@@ -430,117 +575,170 @@ const AuctionDetail = () => {
           {/* Auction Meta Info */}
           <div className="meta-grid">
             <div className="meta-card">
-              <span className="meta-label">Harga Minimal Bid</span>
+              <span className="meta-label">Min Increment</span>
               <span className="meta-value">{formatPrice(auction.min_increment || 0)}</span>
             </div>
+            {!isSeller && (
+              <div className={`meta-card ${timerClass}`}>
+                <span className="meta-label">⏱️ Sisa Waktu</span>
+                <span className="meta-value timer-display">{formatTimer()}</span>
+              </div>
+            )}
             <div className="meta-card">
-              <span className="meta-label">Sisa Waktu</span>
-              <span className={`meta-value ${timeLeft.includes('Berakhir') ? 'ended' : ''}`}>
-                {timeLeft}
-              </span>
-            </div>
-            <div className="meta-card">
-              <span className="meta-label">Mulai</span>
+              <span className="meta-label">Dimulai</span>
               <span className="meta-value">{new Date(auction.start_time).toLocaleString('id-ID')}</span>
             </div>
-            <div className="meta-card">
-              <span className="meta-label">Berakhir</span>
-              <span className="meta-value">{new Date(auction.end_time).toLocaleString('id-ID')}</span>
-            </div>
+            {auction.end_time && (
+              <div className="meta-card">
+                <span className="meta-label">Berakhir</span>
+                <span className="meta-value">{new Date(auction.end_time).toLocaleString('id-ID')}</span>
+              </div>
+            )}
           </div>
 
-          {/* Bid Form - Buyer Only */}
-          {!isSeller && auction.status === 'active' && (
-            <div className="bid-form-section">
-              <h3>Tawar Produk</h3>
-              
+          {/* BUYER SECTION */}
+          {!isSeller && currentUser && (
+            <>
               {/* User Balance Display */}
-              {userBalance > 0 && (
-                <div className="balance-info">
-                  Saldo: <strong>{formatPrice(userBalance)}</strong>
+              <div className="user-info-section">
+                <div className="balance-card">
+                  <span className="balance-label">Saldo Anda</span>
+                  <span className="balance-value">{formatPrice(userBalance)}</span>
+                </div>
+              </div>
+
+              {/* Bid Form - Only if Active */}
+              {auction.status === 'active' && (
+                <div className="bid-form-section">
+                  <h3>📢 Tawar Produk</h3>
+                  
+                  <div className="bid-requirement">
+                    Bid minimal: <strong>{formatPrice(nextMinBid)}</strong>
+                  </div>
+                  
+                  {bidError && <div className="alert alert-error">{bidError}</div>}
+                  {bidSuccess && <div className="alert alert-success">✓ Penawaran berhasil ditempatkan!</div>}
+
+                  <div className="bid-input-group">
+                    <input
+                      type="number"
+                      className="bid-input"
+                      placeholder={`Minimal: ${formatPrice(nextMinBid)}`}
+                      value={bidAmount}
+                      onChange={(e) => setBidAmount(e.target.value)}
+                      disabled={submittingBid}
+                      min={nextMinBid}
+                    />
+                    <button 
+                      className="bid-submit-btn"
+                      onClick={handlePlaceBid}
+                      disabled={submittingBid || !bidAmount}
+                    >
+                      {submittingBid ? 'Memproses...' : 'Tawar Sekarang'}
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* Minimum Bid Requirement */}
-              <div className="minimum-bid-info">
-                Bid minimal: <strong>{formatPrice(auction.current_price + (auction.min_increment || 0))}</strong>
-              </div>
-              
-              {bidError && <div className="alert alert-error">{bidError}</div>}
-              {bidSuccess && <div className="alert alert-success">Penawaran berhasil ditempatkan!</div>}
-
-              <div className="bid-input-group">
-                <input
-                  type="number"
-                  className="bid-input"
-                  placeholder={`Minimal: ${formatPrice(auction.current_price + (auction.min_increment || 0))}`}
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
-                  disabled={submittingBid}
-                  min={auction.current_price + (auction.min_increment || 0)}
-                />
-                <button 
-                  className="bid-submit-btn"
-                  onClick={handlePlaceBid}
-                  disabled={submittingBid || !bidAmount || auction.status !== 'active'}
-                >
-                  {submittingBid ? 'Memproses...' : 'Tawar Sekarang'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Seller Actions */}
-          {isSeller && (
-            <div className="seller-actions">
-              {auction.status === 'active' && bids.length === 0 && (
-                <button 
-                  className="btn btn-cancel"
-                  onClick={() => handleStopAuction('cancel')}
-                  disabled={cancelLoading}
-                >
-                  {cancelLoading ? 'Membatalkan...' : 'Batalkan Lelang'}
-                </button>
+              {/* Auction Status Messages */}
+              {auction.status === 'scheduled' && (
+                <div className="alert alert-info">
+                  ⏱️ Lelang akan dimulai pada {new Date(auction.start_time).toLocaleString('id-ID')}
+                </div>
               )}
-              {auction.status === 'active' && bids.length > 0 && (
-                <button 
-                  className="btn btn-stop"
-                  onClick={() => setShowCancelModal(true)}
-                  disabled={cancelLoading}
-                >
-                  Hentikan Lelang
-                </button>
+
+              {auction.status === 'ended' && (
+                <div className="winner-card">
+                  <h3>🏆 Lelang Berakhir</h3>
+                  {auction.winner_id && (
+                    <>
+                      <p className="winner-info">Pemenang: <strong>{auction.winner_name || 'Pembeli'}</strong></p>
+                      <p className="winner-price">Harga Akhir: <strong>{formatPrice(auction.current_price)}</strong></p>
+                    </>
+                  )}
+                  {!auction.winner_id && (
+                    <p className="no-winner">Tidak ada pemenang (tidak ada bid)</p>
+                  )}
+                </div>
               )}
-            </div>
+
+              {auction.status === 'cancelled' && (
+                <div className="alert alert-error">
+                  ❌ Lelang telah dibatalkan oleh penjual
+                </div>
+              )}
+            </>
           )}
 
-          {/* Status Badges */}
-          {auction.status === 'scheduled' && (
-            <div className="alert alert-info">
-              ⏱️ Lelang akan dimulai {new Date(auction.start_time).toLocaleString('id-ID')}
-            </div>
-          )}
+          {/* SELLER SECTION */}
+          {isSeller && currentUser && (
+            <>
+              {auction.status === 'active' && (
+                <div className="seller-actions">
+                  {bids.length === 0 && (
+                    <button 
+                      className="btn btn-danger btn-cancel"
+                      onClick={() => {
+                        setCancelAction('cancel');
+                        setShowCancelModal(true);
+                      }}
+                      disabled={cancelLoading}
+                    >
+                      ❌ Batalkan Lelang (Tidak ada Bid)
+                    </button>
+                  )}
+                  {bids.length > 0 && (
+                    <button 
+                      className="btn btn-warning btn-stop"
+                      onClick={() => {
+                        setCancelAction('stop');
+                        setShowCancelModal(true);
+                      }}
+                      disabled={cancelLoading}
+                    >
+                      ⏹️ Hentikan Lelang Sekarang
+                    </button>
+                  )}
+                </div>
+              )}
 
-          {auction.status === 'ended' && (
-            <div className="alert alert-success">
-              🏆 Lelang berakhir. Pemenang: {auction.winner_id ? 'Ada' : 'Tidak ada'}
-            </div>
-          )}
+              {auction.status === 'ended' && (
+                <div className="seller-result-card">
+                  <h3>🏆 Lelang Berakhir</h3>
+                  {auction.winner_id && (
+                    <>
+                      <p className="winner-info">Pemenang: <strong>{auction.winner_name || 'Pembeli'}</strong></p>
+                      <p className="winner-price">Harga Akhir: <strong>{formatPrice(auction.current_price)}</strong></p>
+                      <p className="hint">✓ Order otomatis dibuat. Pembeli akan melakukan pembayaran.</p>
+                    </>
+                  )}
+                  {!auction.winner_id && (
+                    <p className="no-winner">❌ Tidak ada pemenang (tidak ada bid diterima)</p>
+                  )}
+                </div>
+              )}
 
-          {auction.status === 'cancelled' && (
-            <div className="alert alert-error">
-              ❌ Lelang telah dibatalkan
-            </div>
+              {auction.status === 'cancelled' && (
+                <div className="alert alert-success">
+                  ✓ Lelang dibatalkan
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* Cancel Modal */}
+      {/* Cancel Confirmation Modal */}
       {showCancelModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>Hentikan Lelang?</h3>
-            <p>Apakah Anda yakin ingin menghentikan lelang ini? Tindakan ini tidak dapat dibatalkan.</p>
+            <h3>Konfirmasi {cancelAction === 'cancel' ? 'Pembatalan' : 'Penghentian'} Lelang</h3>
+            {cancelAction === 'cancel' && (
+              <p>Apakah Anda yakin ingin <strong>MEMBATALKAN</strong> lelang ini? Tindakan ini tidak dapat dibatalkan.</p>
+            )}
+            {cancelAction === 'stop' && (
+              <p>Apakah Anda yakin ingin <strong>MENGHENTIKAN</strong> lelang ini sekarang? Penawar tertinggi saat ini akan menjadi pemenang.</p>
+            )}
             <div className="modal-actions">
               <button 
                 className="btn btn-secondary"
@@ -550,41 +748,41 @@ const AuctionDetail = () => {
                 Batal
               </button>
               <button 
-                className="btn btn-danger"
-                onClick={() => handleStopAuction('stop')}
+                className={`btn ${cancelAction === 'cancel' ? 'btn-danger' : 'btn-warning'}`}
+                onClick={() => handleStopAuction(cancelAction)}
                 disabled={cancelLoading}
               >
-                {cancelLoading ? 'Memproses...' : 'Hentikan Lelang'}
+                {cancelLoading ? 'Memproses...' : (cancelAction === 'cancel' ? '❌ Batalkan' : '⏹️ Hentikan')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Bids Section with Enhanced Features */}
-      <div className="bids-section">
-        <h2>Penawaran (<span className="bid-count">{bids.length}</span>) - Total Penawar: {new Set(bids.map(b => b.bidder_id)).size}</h2>
+      {/* Bids History Section */}
+      <div className={`bids-section ${newBidAnimation ? 'new-bid-flash' : ''}`}>
+        <h2>📊 Riwayat Penawaran ({bids.length}) - {new Set(bids.map(b => b.bidder_id)).size} Penawar</h2>
         
         {bids.length > 0 ? (
           <div className="bids-container">
-            {bids.slice(0, 10).map((bid, index) => (
+            {bids.map((bid, index) => (
               <div 
-                key={bid.bid_id} 
-                className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''}`}
+                key={`${bid.bid_id}-${index}`}
+                className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''} ${index === 0 ? 'highest-bid' : ''}`}
               >
-                <div className="bid-rank">#{index + 1}</div>
+                <div className="bid-rank">#{index + 1}{index === 0 ? ' 👑' : ''}</div>
                 <div className="bid-content">
                   <div className="bid-top">
                     <span className="bidder-name">
-                      {bid.bidder_id === currentUser?.user_id ? '👤 Anda' : bid.bidder_name || 'Anonymous'}
+                      {bid.bidder_id === currentUser?.user_id ? '👤 Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
                     </span>
                     <span className="bid-time">
                       {new Date(bid.bid_time).toLocaleString('id-ID', {
-                        year: 'numeric',
                         month: 'short',
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
+                        second: '2-digit'
                       })}
                     </span>
                   </div>
@@ -595,16 +793,14 @@ const AuctionDetail = () => {
           </div>
         ) : (
           <div className="no-bids-container">
-            <p>📭 Belum ada penawaran untuk lelang ini</p>
-            {auction.status === 'active' && !isSeller && <p className="subtext">Jadilah yang pertama untuk menawar!</p>}
+            <p>📭 Belum ada penawaran</p>
+            {auction.status === 'active' && !isSeller && (
+              <p className="subtext">Jadilah yang pertama untuk menawar! 🚀</p>
+            )}
+            {isSeller && auction.status === 'active' && (
+              <p className="subtext">Tunggu pembeli untuk menawar produk Anda...</p>
+            )}
           </div>
-        )}
-
-        {/* Load More Button */}
-        {bids.length > 10 && (
-          <button className="load-more-btn">
-            Lihat {bids.length - 10} penawaran lainnya
-          </button>
         )}
       </div>
     </div>

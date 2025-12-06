@@ -7,6 +7,7 @@ function initProductManagementPage() {
     let store = null;
     let products = [];
     let allCategories = [];
+    let auctionStatus = { activeAuction: null, history: {} }; // NEW: Store auction status
 
     // DOM Elements
     const mainContent = document.getElementById('mainContent');
@@ -17,6 +18,9 @@ function initProductManagementPage() {
     const categoryFilter = document.getElementById('categoryFilter');
     const sortOrder = document.getElementById('sortOrder');
     const searchInput = document.getElementById('searchInput');
+    const globalAuctionStatusBar = document.getElementById('globalAuctionStatusBar'); 
+    const monitorLiveBtn = document.getElementById('monitorLiveBtn'); 
+    const activeAuctionProductName = document.getElementById('activeAuctionProductName'); 
     let searchTerm = '';
 
     // Toast Notification
@@ -159,6 +163,7 @@ function initProductManagementPage() {
             console.log('Products loaded:', products.length);
 
             await loadCategoriesFilter();
+            await syncAuctionStatus();
             renderProducts();
 
         } catch (error) {
@@ -179,6 +184,101 @@ function initProductManagementPage() {
             }
         } catch (error) {
             console.error('Error loading categories:', error);
+        }
+    }
+
+    async function syncAuctionStatus() {
+        try {
+            console.log('Syncing auction status...');
+            
+            // Get current user ID from PHP backend
+            let userId = null;
+            try {
+                const userResponse = await fetch('/api/me', {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const userData = await userResponse.json();
+                if (userData.authenticated && userData.user) {
+                    userId = userData.user.id;
+                    console.log('Got user_id from /api/me:', userId);
+                }
+            } catch (err) {
+                console.error('Failed to get user_id:', err);
+            }
+
+            if (!userId) {
+                console.warn('No user_id available, skipping auction status sync');
+                auctionStatus = { activeAuction: null, history: {} };
+                return;
+            }
+
+            // GET request dengan user_id di query param
+            const response = await fetch(`http://localhost:3000/api/node/seller/auction/status?user_id=${userId}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(localStorage.getItem('token') && {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    })
+                }
+            });
+
+            const result = await response.json();
+            console.log('Auction status response:', result);
+            
+            if (result && result.ok && result.data) {
+                auctionStatus = result.data;
+                console.log('✅ Auction status synced:', auctionStatus);
+                updateGlobalAuctionBar();
+            } else {
+                console.warn('Unexpected response structure:', result);
+                auctionStatus = { activeAuction: null, history: {} };
+            }
+        } catch (error) {
+            console.error('Error syncing auction status:', error);
+            // Silently fail - not critical
+            auctionStatus = { activeAuction: null, history: {} };
+        }
+    }
+
+    // NEW: Update global status bar visibility and content
+    function updateGlobalAuctionBar() {
+        if (!globalAuctionStatusBar) return;
+
+        const viewLiveAuctionBtn = document.getElementById('viewLiveAuctionBtn');
+
+        if (auctionStatus.activeAuction) {
+            // Show bar
+            globalAuctionStatusBar.style.display = 'block';
+            const productName = auctionStatus.activeAuction.product_name || 'Produk';
+            activeAuctionProductName.textContent = productName;
+            
+            // Show Lihat Live Auction button in header
+            if (viewLiveAuctionBtn) {
+                viewLiveAuctionBtn.style.display = 'block';
+                viewLiveAuctionBtn.onclick = () => {
+                    window.location.href = `/auction/${auctionStatus.activeAuction.auction_id}`;
+                };
+            }
+            
+            // Set monitor button click handler
+            if (monitorLiveBtn) {
+                monitorLiveBtn.onclick = () => {
+                    window.location.href = `/auction/${auctionStatus.activeAuction.auction_id}`;
+                };
+            }
+        } else {
+            // Hide bar
+            globalAuctionStatusBar.style.display = 'none';
+            
+            // Hide Lihat Live Auction button in header
+            if (viewLiveAuctionBtn) {
+                viewLiveAuctionBtn.style.display = 'none';
+            }
         }
     }
 
@@ -297,6 +397,15 @@ function initProductManagementPage() {
 
         const formattedPrice = `Rp ${parseInt(product.price).toLocaleString('id-ID')}`;
 
+        // NEW: Check if there's a global active auction
+        const hasActiveAuction = !!auctionStatus.activeAuction;
+        
+        // NEW: Check if this product has history
+        const productHistory = auctionStatus.history[product.product_id];
+        const historyLabel = productHistory 
+            ? `Last Auction (${productHistory.status})`
+            : null;
+
         card.innerHTML = `
             <div class="product-card-image">
                 <img 
@@ -313,6 +422,14 @@ function initProductManagementPage() {
                     <span class="product-card-stock">Stok: ${product.stock}</span>
                     <span class="product-card-status ${availabilityStatus.class}">${availabilityStatus.text}</span>
                 </div>
+                <!-- NEW: History link if available -->
+                ${productHistory ? `
+                    <div class="product-card-history">
+                        <a href="/auction/${productHistory.last_auction_id}" class="history-link" title="View last auction">
+                            📋 ${historyLabel}
+                        </a>
+                    </div>
+                ` : ''}
             </div>
             <div class="product-card-actions">
                 <button class="btn-card-edit" data-product-id="${product.product_id}" title="Edit produk">
@@ -321,11 +438,16 @@ function initProductManagementPage() {
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                 </button>
-                <button class="btn-card-auction" data-product-id="${product.product_id}" title="Mulai lelang untuk produk ini">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M8 11h.01M12 11h.01M16 11h.01M9 17a3 3 0 0 0 6 0M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"></path>
-                    </svg>
-                </button>
+                <!-- NEW: Hide auction button if active auction exists -->
+                ${!hasActiveAuction ? `
+                    <button class="btn-card-auction" 
+                            data-product-id="${product.product_id}" 
+                            title="Mulai lelang untuk produk ini">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 11h.01M12 11h.01M16 11h.01M9 17a3 3 0 0 0 6 0M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"></path>
+                        </svg>
+                    </button>
+                ` : ''}
                 <button class="btn-card-delete" data-product-id="${product.product_id}" title="Hapus produk">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
@@ -340,7 +462,10 @@ function initProductManagementPage() {
         const deleteBtn = card.querySelector('.btn-card-delete');
 
         editBtn.addEventListener('click', () => handleEdit(product.product_id));
-        auctionBtn.addEventListener('click', () => handleAuction(product.product_id, store.store_id));
+        // Only attach auction handler if button exists (no active auction)
+        if (auctionBtn) {
+            auctionBtn.addEventListener('click', () => handleAuction(product.product_id, store.store_id));
+        }
         deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name));
 
         return card;

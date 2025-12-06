@@ -43,6 +43,7 @@ router.post('/auction', verifyUser, auctionController.createAuction);
  * Seller history routes
  */
 router.get('/seller/auction/active', verifyUser, auctionController.getSellerActiveAuction);
+router.get('/seller/auction/status', verifyUser, auctionController.getSellerAuctionStatus);
 router.get('/seller/auctions', verifyUser, auctionController.getSellerAuctions);
 
 /**
