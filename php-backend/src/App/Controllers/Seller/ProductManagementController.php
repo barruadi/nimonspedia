@@ -655,4 +655,55 @@ class ProductManagementController
             ];
         }
     }
+
+    // Show auction creation form for a specific product
+    public static function showAuctionForm($productId): array
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $user = $_SESSION['user'] ?? null;
+        
+        if (!$user || $user['role'] !== 'seller') {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized'];
+        }
+
+        // Get product details
+        $product = Product::findById($productId);
+        
+        if (!$product) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Product not found'];
+        }
+
+        // Get seller's store
+        $store = Store::findByOwnerId($user['user_id']);
+
+        if (!$store || $product['store_id'] !== $store['store_id']) {
+            http_response_code(403);
+            return ['ok' => false, 'error' => 'Unauthorized: Product does not belong to your store'];
+        }
+
+        // Return product data for the view (will be used by AuctionForm.js)
+        http_response_code(200);
+        return [
+            'ok' => true,
+            'data' => [
+                'product' => [
+                    'product_id' => $product['product_id'],
+                    'name' => $product['name'],
+                    'image_path' => $product['image_path'],
+                    'price' => $product['price'],
+                    'stock' => $product['stock'],
+                    'description' => $product['description'] ?? ''
+                ],
+                'store' => [
+                    'store_id' => $store['store_id'],
+                    'store_name' => $store['store_name']
+                ]
+            ]
+        ];
+    }
 }

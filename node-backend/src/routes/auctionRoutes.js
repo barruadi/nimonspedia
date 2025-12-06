@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auctionController = require('../controllers/auctionController');
+const verifyUser = require('../middlewares/authMiddleware');
 
 
 /**
@@ -26,29 +27,29 @@ router.post('/auction/:id/bids', auctionController.placeBid);
 /**
  * Stop auction (seller action - ends with current winner)
  */
-router.put('/auction/:id/stop', auctionController.stopAuction);
+router.put('/auction/:id/stop', verifyUser, auctionController.stopAuction);
 
 /**
  * Cancel auction (seller action - only if no bids)
  */
-router.put('/auction/:id/cancel', auctionController.cancelAuction);
+router.put('/auction/:id/cancel', verifyUser, auctionController.cancelAuction);
 
 /**
  * Create auction (seller action)
  */
-router.post('/auction', auctionController.createAuction);
+router.post('/auction', verifyUser, auctionController.createAuction);
 
 /**
  * Seller history routes
  */
-router.get('/seller/auction/active', auctionController.getSellerActiveAuction);
-router.get('/seller/auctions', auctionController.getSellerAuctions);
+router.get('/seller/auction/active', verifyUser, auctionController.getSellerActiveAuction);
+router.get('/seller/auctions', verifyUser, auctionController.getSellerAuctions);
 
 /**
  * Buyer history routes
  */
-router.get('/buyer/bids', auctionController.getBuyerBidHistory);
-router.get('/buyer/won-auctions', auctionController.getBuyerWonAuctions);
+router.get('/buyer/bids', verifyUser, auctionController.getBuyerBidHistory);
+router.get('/buyer/won-auctions', verifyUser, auctionController.getBuyerWonAuctions);
 
 
 

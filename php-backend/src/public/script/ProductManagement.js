@@ -279,7 +279,9 @@ function initProductManagementPage() {
         
         filteredProducts.forEach(product => {
             const card = createProductCard(product);
-            productGridContainer.appendChild(card);
+            if (card) {
+                productGridContainer.appendChild(card);
+            }
         });
         
         console.log(`Rendered ${filteredProducts.length} products`);
@@ -319,6 +321,11 @@ function initProductManagementPage() {
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                 </button>
+                <button class="btn-card-auction" data-product-id="${product.product_id}" title="Mulai lelang untuk produk ini">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 11h.01M12 11h.01M16 11h.01M9 17a3 3 0 0 0 6 0M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"></path>
+                    </svg>
+                </button>
                 <button class="btn-card-delete" data-product-id="${product.product_id}" title="Hapus produk">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
@@ -329,9 +336,11 @@ function initProductManagementPage() {
         `;
 
         const editBtn = card.querySelector('.btn-card-edit');
+        const auctionBtn = card.querySelector('.btn-card-auction');
         const deleteBtn = card.querySelector('.btn-card-delete');
 
         editBtn.addEventListener('click', () => handleEdit(product.product_id));
+        auctionBtn.addEventListener('click', () => handleAuction(product.product_id, store.store_id));
         deleteBtn.addEventListener('click', () => handleDelete(product.product_id, product.name));
 
         return card;
@@ -367,6 +376,13 @@ function initProductManagementPage() {
     function handleEdit(productId) {
         console.log('Edit product:', productId);
         window.location.href = `/seller/products/edit/${productId}`;
+    }
+
+    async function handleAuction(productId, storeId) {
+        console.log('Starting auction for product:', productId);
+        
+        // Directly redirect to auction form - validation will happen on submit
+        window.location.href = `/seller/products/auction/${productId}`;
     }
 
     function handleDelete(productId, productName) {

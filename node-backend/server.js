@@ -16,7 +16,15 @@ const setupAuctionSocket = require('./src/sockets/auctionSocket');
 const setupChatSocket = require('./src/sockets/chatSocket');
 
 const app = express();
-app.use(cors());
+
+// Configure CORS to accept requests with credentials from any origin
+app.use(cors({
+    origin: "*", // Allow all origins
+    credentials: false, // Note: cannot use credentials:true with origin:"*", so we handle cookies manually
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-User-ID']
+}));
+
 app.use(express.json());
 
 const server = http.createServer(app);

@@ -34,7 +34,7 @@ class Auction {
         FROM auctions a
         JOIN products p ON a.product_id = p.product_id
         JOIN stores s ON p.store_id = s.store_id
-        LEFT JOIN bids b ON a.auction_id = b.auction_id
+        LEFT JOIN auction_bids b ON a.auction_id = b.auction_id
         WHERE 1=1
       `;
 

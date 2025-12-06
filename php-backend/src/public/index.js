@@ -42,6 +42,10 @@ const routes = {
     page: '/pages/EditProductPage.html',
     script: '/script/EditProduct.js',
   },
+  '/seller/products/auction/:id': {
+    page: '/pages/AuctionFormPage.html',
+    script: '/script/AuctionForm.js',
+  },
   '/product/:id': {
     page: '/pages/ProductDetailPage.html',
     script: '/script/ProductDetail.js',
