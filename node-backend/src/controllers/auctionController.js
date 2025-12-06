@@ -196,7 +196,7 @@ class AuctionController {
       }
 
       // Check if seller already has an active auction
-      // ✅ CRITICAL VALIDATION: Seller can only have 1 active auction at a time
+      //  CRITICAL VALIDATION: Seller can only have 1 active auction at a time
       const activeAuctionCheck = await Auction.getPool().query(
         `SELECT COUNT(*) as count FROM auctions a
          JOIN products p ON a.product_id = p.product_id
@@ -211,6 +211,29 @@ class AuctionController {
         return res.status(400).json({
           ok: false,
           error: 'Seller already has an active auction'
+        });
+      }
+
+      // Check for overlapping time ranges in the same store
+      // Two time ranges overlap if: A.start < B.end AND A.end > B.start
+      const storeId = productCheck.rows[0].store_id;
+      const overlappingCheck = await Auction.getPool().query(
+        `SELECT a.auction_id, p.product_id, p.name as product_name, a.start_time, a.end_time, a.status
+         FROM auctions a
+         JOIN products p ON a.product_id = p.product_id
+         WHERE p.store_id = $1 
+           AND a.status IN ('active', 'scheduled')
+           AND a.end_time IS NOT NULL
+           AND a.start_time < $3
+           AND a.end_time > $2`,
+        [storeId, auctionData.start_time, auctionData.end_time]
+      );
+
+      if (overlappingCheck.rows.length > 0) {
+        const overlappingAuction = overlappingCheck.rows[0];
+        return res.status(409).json({
+          ok: false,
+          error: `Jadwal lelang bertabrakan dengan lelang lain "${overlappingAuction.product_name}" (${new Date(overlappingAuction.start_time).toLocaleString('id-ID')} - ${new Date(overlappingAuction.end_time).toLocaleString('id-ID')}). Pilih waktu yang berbeda.`
         });
       }
 

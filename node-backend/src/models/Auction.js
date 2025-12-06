@@ -190,19 +190,24 @@ class Auction {
         status = 'scheduled'
       } = auctionData;
 
-      // ✅ Validate required fields sesuai schema
+      //  Validate required fields sesuai schema
       if (!product_id || starting_price === undefined || !quantity || !start_time || !end_time) {
         throw new Error('Missing required fields: product_id, starting_price, quantity, start_time, end_time');
       }
 
-      // Validate that product exists
+      // Validate that product exists and has enough stock
       const productCheck = await client.query(
-        'SELECT product_id FROM products WHERE product_id = $1 AND is_deleted = FALSE',
+        'SELECT product_id, stock FROM products WHERE product_id = $1 AND is_deleted = FALSE',
         [product_id]
       );
 
       if (productCheck.rows.length === 0) {
         throw new Error('Product not found or is deleted');
+      }
+
+      const productStock = productCheck.rows[0].stock;
+      if (productStock < quantity) {
+        throw new Error(`Insufficient stock. Available: ${productStock}, Requested: ${quantity}`);
       }
 
       // Validate status
@@ -228,13 +233,13 @@ class Auction {
         throw new Error('Quantity must be > 0');
       }
 
-      // ✅ Schema: current_price >= starting_price
+      //  Schema: current_price >= starting_price
       const finalCurrentPrice = current_price !== undefined ? current_price : starting_price;
       if (finalCurrentPrice < starting_price) {
         throw new Error('Current price must be >= starting price');
       }
 
-      // ✅ Insert dengan semua fields dari schema
+      //  Insert dengan semua fields dari schema
       const query = `
         INSERT INTO auctions 
           (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
@@ -255,6 +260,14 @@ class Auction {
         end_time,
         status
       ]);
+
+      // Deduct stock from product when auction is created
+      const updateStockQuery = `
+        UPDATE products 
+        SET stock = stock - $1 
+        WHERE product_id = $2
+      `;
+      await client.query(updateStockQuery, [quantity, product_id]);
 
       await client.query('COMMIT');
 
@@ -418,9 +431,9 @@ class Auction {
     try {
       await client.query('BEGIN');
 
-      // Check if auction exists
+      // Get auction details (product_id and quantity) before deleting
       const auctionCheck = await client.query(
-        'SELECT auction_id, status FROM auctions WHERE auction_id = $1',
+        'SELECT auction_id, status, product_id, quantity FROM auctions WHERE auction_id = $1',
         [auctionId]
       );
 
@@ -454,11 +467,19 @@ class Auction {
 
       const result = await client.query(deleteQuery, [auctionId]);
 
+      // Refund stock to product
+      const refundStockQuery = `
+        UPDATE products 
+        SET stock = stock + $1 
+        WHERE product_id = $2
+      `;
+      await client.query(refundStockQuery, [auction.quantity, auction.product_id]);
+
       await client.query('COMMIT');
 
       return {
         success: true,
-        message: `Auction ${auctionId} deleted successfully`,
+        message: `Auction ${auctionId} deleted successfully and stock refunded`,
         deleted_id: result.rows[0].auction_id
       };
 
@@ -500,7 +521,7 @@ class Auction {
         throw new Error(`Cannot place bid on auction with status: ${auction.status}`);
       }
 
-      // ✅ Check if auction hasn't ended (end_time is nullable)
+      //  Check if auction hasn't ended (end_time is nullable)
       const now = new Date();
       if (auction.end_time && new Date(auction.end_time) < now) {
         throw new Error('Auction has ended');
