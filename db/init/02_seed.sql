@@ -259,6 +259,48 @@ INSERT INTO auctions (product_id, starting_price, current_price, min_increment, 
 SELECT p.product_id, p.price - 300000, p.price - 100000, 15000, 1, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day', 'ended', u.user_id
 FROM p CROSS JOIN u;
 
+-- 4. Scheduled Auction 1 (Starts in 3 days) - Wireless Mouse Logitech
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Wireless Mouse Logitech' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 30000, price - 30000, 5000, 10, NOW() + INTERVAL '3 days', NOW() + INTERVAL '5 days', 'scheduled'
+FROM p;
+
+-- 5. Scheduled Auction 2 (Starts in 2 days, ends in 5 days) - Women's Floral Dress
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Women''s Floral Dress' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 80000, price - 80000, 15000, 3, NOW() + INTERVAL '2 days', NOW() + INTERVAL '5 days', 'scheduled'
+FROM p;
+
+-- 6. Scheduled Auction 3 (Starts in 4 days, ends in 7 days) - Arabica Coffee Beans
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Arabica Coffee Beans (500g)' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 20000, price - 20000, 5000, 8, NOW() + INTERVAL '4 days', NOW() + INTERVAL '7 days', 'scheduled'
+FROM p;
+
+-- 7. Scheduled Auction 4 (Starts tomorrow, ends in 3 days) - Mechanical Keyboard RGB (berbeda dengan active)
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Power Bank 20000mAh' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 50000, price - 50000, 10000, 6, NOW() + INTERVAL '1 day', NOW() + INTERVAL '3 days', 'scheduled'
+FROM p;
+
+-- 8. Scheduled Auction 5 (Starts in 5 days) - USB-C Hub
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'USB-C Hub 7-in-1' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 60000, price - 60000, 12000, 4, NOW() + INTERVAL '5 days', NOW() + INTERVAL '8 days', 'scheduled'
+FROM p;
+
+-- 9. Scheduled Auction 6 (Starts in 6 days) - Men's Formal Shirt Blue
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Men''s Formal Shirt Blue' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 40000, price - 40000, 8000, 5, NOW() + INTERVAL '6 days', NOW() + INTERVAL '9 days', 'scheduled'
+FROM p;
+
+-- 10. Scheduled Auction 7 (Starts in 1.5 days) - True Wireless Earbuds
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'True Wireless Earbuds' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 100000, price - 100000, 15000, 3, NOW() + INTERVAL '36 hours', NOW() + INTERVAL '4 days', 'scheduled'
+FROM p;
+
 
 -- ============================================================
 -- 7. AUCTION BIDS (NEW!)
