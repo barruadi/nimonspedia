@@ -214,10 +214,6 @@ class AuctionController {
         });
       }
 
-      // NOTE: No overlap checking needed anymore!
-      // Since end_time is determined by bids (15s timer), overlaps are not an issue for scheduled auctions.
-      // Only active auctions (with bids) compete for time slots, and seller can't have multiple active auctions anyway.
-
       const newAuction = await Auction.create(auctionData);
 
       return res.status(201).json({
