@@ -1,12 +1,32 @@
-// Auction WebSocket Handlers - Mockup
-const Auction = require('../models/Auction');
+/**
+ * Auction WebSocket Handlers - Real-time Bidding System
+ * 
+ * Features:
+ * - Database transactions with row-level locking
+ * - 15-second anti-sniping timer
+ * - Automatic balance deduction & refund
+ * - Order auto-creation on auction end
+ * - Real-time bid broadcasting
+ */
 
+const pool = require('../config/db');
+
+// Map to track active auction timers: { auctionId: timeoutHandle }
+const auctionTimers = new Map();
+
+/**
+ * Initialize auction socket handlers
+ * @param {Socket.IO} io - Socket.IO instance
+ */
 const setupAuctionSocket = (io) => {
   io.on('connection', (socket) => {
-    console.log('[Auction] User connected:', socket.id);
+    console.log(`[Auction Socket] User connected: ${socket.id}`);
 
     /**
-     * Join auction room
+     * EVENT: auction:join
+     * Client joins auction room to receive real-time updates
+     * 
+     * Payload: { auctionId: number, userId: number }
      */
     socket.on('auction:join', (data, callback) => {
       try {
@@ -20,14 +40,13 @@ const setupAuctionSocket = (io) => {
         }
 
         socket.join(`auction-${auctionId}`);
+        socket.auctionId = auctionId;
         socket.userId = userId;
-        socket.currentAuction = auctionId;
 
-        console.log(`[Auction] User ${userId} (socket: ${socket.id}) joined auction ${auctionId}`);
+        console.log(`[Auction Socket] User ${userId} joined auction ${auctionId} (socket: ${socket.id})`);
 
         io.to(`auction-${auctionId}`).emit('auction:user-joined', {
           userId,
-          socketId: socket.id,
           timestamp: new Date().toISOString()
         });
 
@@ -37,7 +56,7 @@ const setupAuctionSocket = (io) => {
         });
 
       } catch (error) {
-        console.error('[Auction] Error in join:', error.message);
+        console.error('[Auction Socket] Error in join:', error.message);
         callback?.({
           success: false,
           error: 'Failed to join auction room'
@@ -46,8 +65,10 @@ const setupAuctionSocket = (io) => {
     });
 
     /**
-     * Leave auction room
-     * Client emits: { auctionId: number }
+     * EVENT: auction:leave
+     * Client leaves auction room
+     * 
+     * Payload: { auctionId: number }
      */
     socket.on('auction:leave', (data, callback) => {
       try {
@@ -61,16 +82,12 @@ const setupAuctionSocket = (io) => {
         }
 
         socket.leave(`auction-${auctionId}`);
-        console.log(`[Auction] User ${socket.userId} (socket: ${socket.id}) left auction ${auctionId}`);
+        console.log(`[Auction Socket] User ${socket.userId} left auction ${auctionId}`);
 
-        // Notify others that user left
         io.to(`auction-${auctionId}`).emit('auction:user-left', {
           userId: socket.userId,
-          socketId: socket.id,
           timestamp: new Date().toISOString()
         });
-
-        socket.currentAuction = null;
 
         callback?.({
           success: true,
@@ -78,7 +95,7 @@ const setupAuctionSocket = (io) => {
         });
 
       } catch (error) {
-        console.error('[Auction] Error in leave:', error);
+        console.error('[Auction Socket] Error in leave:', error);
         callback?.({
           success: false,
           error: 'Failed to leave auction room'
@@ -87,21 +104,36 @@ const setupAuctionSocket = (io) => {
     });
 
     /**
-     * Place bid with real-time validation and broadcasting
-     * + 15-second anti-sniping rule
+     * EVENT: auction:place-bid
+     * Place a bid with ACID transaction guarantees
      * 
-     * Client emits: { auctionId: number, bidderId: number, bidAmount: number }
+     * Payload: { auctionId: number, bidderId: number, bidAmount: number }
      * Callback: { success: boolean, error?: string, data?: {...} }
+     * 
+     * TRANSACTION STEPS:
+     * 1. Lock buyer row (FOR UPDATE) & check balance
+     * 2. Lock auction row (FOR UPDATE) & check status
+     * 3. Validate bid amount
+     * 4. Deduct balance from buyer
+     * 5. Refund previous highest bidder (if exists)
+     * 6. Insert new bid record
+     * 7. Update auction: current_price + reset end_time to NOW + 15s
+     * 8. COMMIT
+     * 9. Broadcast to room
      */
     socket.on('auction:place-bid', async (data, callback) => {
+      const client = await pool.connect();
+      
       try {
         const { auctionId, bidderId, bidAmount } = data;
 
-        // Validate input
+        console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
+
+        // ===== VALIDATION =====
         if (!auctionId || !bidderId || !bidAmount) {
           return callback?.({
             success: false,
-            error: 'Missing required fields: auctionId, bidderId, bidAmount'
+            error: 'Missing required fields'
           });
         }
 
@@ -112,588 +144,384 @@ const setupAuctionSocket = (io) => {
           });
         }
 
-        console.log(`[Auction] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
+        // ===== BEGIN TRANSACTION =====
+        await client.query('BEGIN');
+        console.log(`[Auction Socket] Transaction started for auction ${auctionId}`);
 
-        // Get auction details BEFORE placing bid
-        const auctionBefore = await Auction.findById(auctionId);
-        if (!auctionBefore) {
+        // STEP 1: LOCK BUYER USER ROW & CHECK BALANCE
+        const buyerQuery = `
+          SELECT user_id, balance, full_name 
+          FROM users 
+          WHERE user_id = $1 
+          FOR UPDATE
+        `;
+        const buyerResult = await client.query(buyerQuery, [bidderId]);
+        
+        if (buyerResult.rows.length === 0) {
+          await client.query('ROLLBACK');
           return callback?.({
             success: false,
-            error: 'Auction not found'
+            error: 'Bidder user not found'
           });
         }
 
-        const now = new Date();
+        const buyer = buyerResult.rows[0];
         
-        // NEW LOGIC: Check if this is the FIRST BID (end_time is NULL)
-        const isFirstBid = auctionBefore.end_time === null;
-        console.log(`[Auction] Is first bid? ${isFirstBid}, Current end_time: ${auctionBefore.end_time}`);
-
-        // Get previous bids to check if this will be the first bid
-        const previousBids = await Auction.getBids(auctionId);
-        const previousHighestBid = previousBids.length > 0 ? previousBids[0] : null;
-
-        // Place new bid
-        const result = await Auction.placeBid(auctionId, {
-          bidder_id: bidderId,
-          bid_amount: bidAmount
-        });
-
-        // NEW LOGIC: Set/Reset end_time to 15 seconds from now
-        let newEndTime = new Date(now.getTime() + 15 * 1000); // 15 seconds from now
-        let timerInitialized = false;
-
-        try {
-          // Update auction end_time in database - THIS ALWAYS HAPPENS NOW (not just for last-second bids)
-          await Auction.update(auctionId, {
-            end_time: newEndTime.toISOString()
+        if (buyer.balance < bidAmount) {
+          await client.query('ROLLBACK');
+          console.log(`[Auction Socket] Insufficient balance: ${buyer.balance} < ${bidAmount}`);
+          return callback?.({
+            success: false,
+            error: 'Saldo tidak cukup untuk menempatkan bid'
           });
-          
-          if (isFirstBid) {
-            console.log(`[Auction] ✅ FIRST BID TRIGGER! Auction ${auctionId} timer started. End time set to: ${newEndTime.toISOString()}`);
-            timerInitialized = true;
-          } else {
-            console.log(`[Auction] ⏱️ BID RESET TIMER! Auction ${auctionId} timer reset. New end time: ${newEndTime.toISOString()}`);
-          }
-        } catch (updateError) {
-          console.error('[Auction] Error setting/resetting auction time:', updateError);
-          // Log error but don't fail the bid - it's already recorded
         }
 
-        // **AUTOMATIC REFUND**: Refund previous bidder's balance
-        if (previousHighestBid && previousHighestBid.bidder_id !== bidderId) {
-          try {
-            await Auction.refundPreviousBid(auctionId, previousHighestBid.bidder_id);
-            
-            // Notify previous bidder via socket
-            io.to(`user-${previousHighestBid.bidder_id}`).emit('auction:outbid', {
-              auction_id: auctionId,
-              new_bid_amount: bidAmount,
-              new_bidder_id: bidderId,
-              refunded_amount: previousHighestBid.bid_amount
-            });
-          } catch (refundError) {
-            console.error('Error refunding previous bid:', refundError);
-          }
+        // STEP 2: LOCK AUCTION ROW & CHECK STATUS
+        const auctionQuery = `
+          SELECT 
+            auction_id, status, current_price, min_increment, 
+            product_id, quantity, start_time, end_time, seller_id
+          FROM auctions 
+          WHERE auction_id = $1 
+          FOR UPDATE
+        `;
+        const auctionResult = await client.query(auctionQuery, [auctionId]);
+        
+        if (auctionResult.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return callback?.({
+            success: false,
+            error: 'Lelang tidak ditemukan'
+          });
         }
 
-        // Success callback
+        const auction = auctionResult.rows[0];
+        
+        if (auction.status !== 'active') {
+          await client.query('ROLLBACK');
+          return callback?.({
+            success: false,
+            error: 'Lelang tidak sedang berlangsung'
+          });
+        }
+
+        // STEP 3: VALIDATE BID AMOUNT
+        const minimumBid = auction.current_price + auction.min_increment;
+        
+        if (bidAmount < minimumBid) {
+          await client.query('ROLLBACK');
+          return callback?.({
+            success: false,
+            error: `Bid minimal: Rp ${minimumBid.toLocaleString('id-ID')}`
+          });
+        }
+
+        // STEP 4: GET PREVIOUS HIGHEST BIDDER
+        const highestBidQuery = `
+          SELECT bidder_id, bid_amount 
+          FROM auction_bids 
+          WHERE auction_id = $1 
+          ORDER BY bid_amount DESC, bid_id DESC 
+          LIMIT 1
+        `;
+        const highestBidResult = await client.query(highestBidQuery, [auctionId]);
+        const previousBid = highestBidResult.rows[0] || null;
+
+        // STEP 5: DEDUCT BALANCE FROM BUYER
+        const deductQuery = `
+          UPDATE users 
+          SET balance = balance - $1, updated_at = NOW()
+          WHERE user_id = $2
+        `;
+        await client.query(deductQuery, [bidAmount, bidderId]);
+        console.log(`[Auction Socket] Deducted ${bidAmount} from bidder ${bidderId}`);
+
+        // STEP 6: REFUND PREVIOUS BIDDER (if exists)
+        if (previousBid && previousBid.bidder_id !== bidderId) {
+          const refundQuery = `
+            UPDATE users 
+            SET balance = balance + $1, updated_at = NOW()
+            WHERE user_id = $2
+          `;
+          await client.query(refundQuery, [previousBid.bid_amount, previousBid.bidder_id]);
+          console.log(`[Auction Socket] Refunded ${previousBid.bid_amount} to previous bidder ${previousBid.bidder_id}`);
+        }
+
+        // STEP 7: INSERT NEW BID
+        const insertBidQuery = `
+          INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+          VALUES ($1, $2, $3, NOW())
+          RETURNING bid_id, bid_time
+        `;
+        const bidResult = await client.query(insertBidQuery, [auctionId, bidderId, bidAmount]);
+        const newBid = bidResult.rows[0];
+
+        // STEP 8: UPDATE AUCTION - SET NEW PRICE & RESET TIMER (15 seconds)
+        const newEndTime = new Date();
+        newEndTime.setSeconds(newEndTime.getSeconds() + 15);
+
+        const updateAuctionQuery = `
+          UPDATE auctions 
+          SET current_price = $1, end_time = $2, updated_at = NOW()
+          WHERE auction_id = $3
+        `;
+        await client.query(updateAuctionQuery, [bidAmount, newEndTime.toISOString(), auctionId]);
+        console.log(`[Auction Socket] Auction ${auctionId} updated: price=${bidAmount}, end_time=${newEndTime.toISOString()}`);
+
+        // STEP 9: FETCH UPDATED BID HISTORY
+        const bidHistoryQuery = `
+          SELECT 
+            ab.bid_id, ab.auction_id, ab.bidder_id, ab.bid_amount, ab.bid_time,
+            u.full_name as bidder_name
+          FROM auction_bids ab
+          LEFT JOIN users u ON ab.bidder_id = u.user_id
+          WHERE ab.auction_id = $1
+          ORDER BY ab.bid_amount DESC, ab.bid_id DESC
+        `;
+        const bidHistoryResult = await client.query(bidHistoryQuery, [auctionId]);
+
+        // COMMIT TRANSACTION
+        await client.query('COMMIT');
+        console.log(`[Auction Socket] Transaction committed for auction ${auctionId}`);
+
+        // Clear old timer if exists
+        if (auctionTimers.has(auctionId)) {
+          clearTimeout(auctionTimers.get(auctionId));
+        }
+
+        // Set new 15-second timer
+        const timer = setTimeout(() => {
+          closeAuction(io, auctionId);
+        }, 15000);
+        auctionTimers.set(auctionId, timer);
+        console.log(`[Auction Socket] 15s timer set for auction ${auctionId}`);
+
+        // SUCCESS - Callback to bidder
         callback?.({
           success: true,
           data: {
-            bid_id: result.bid.bid_id,
-            bid_amount: result.auction_current_price,
-            bid_time: result.bid.bid_time,
-            timer_initialized: timerInitialized,
-            new_end_time: newEndTime.toISOString(),
-            is_first_bid: isFirstBid
-          },
-          message: 'Bid placed successfully'
+            newBalance: buyer.balance - bidAmount,
+            bidId: newBid.bid_id,
+            newPrice: bidAmount
+          }
         });
 
-        // Broadcast new bid to all users in auction room
-        // CRITICAL: Include the new end_time so client-side timer updates
+        // BROADCAST TO ROOM
         io.to(`auction-${auctionId}`).emit('auction:bid-update', {
           auction_id: auctionId,
           bidder_id: bidderId,
-          bid_amount: result.auction_current_price,
-          bid_id: result.bid.bid_id,
-          bid_time: result.bid.bid_time,
-          total_bids: await getAuctionBidCount(auctionId),
-          new_end_time: newEndTime.toISOString(), // ALWAYS send the new end_time
-          is_first_bid: isFirstBid,
-          timestamp: new Date().toISOString()
+          bidder_name: buyer.full_name,
+          bid_amount: bidAmount,
+          bid_time: newBid.bid_time,
+          new_end_time: newEndTime.toISOString(),
+          is_first_bid: !previousBid,
+          bid_history: bidHistoryResult.rows
         });
 
-        console.log(`[Auction] Bid successful - Auction ${auctionId}, New price: ${result.auction_current_price}, New end_time: ${newEndTime.toISOString()}`);
+        console.log(`[Auction Socket] Broadcast bid-update to auction ${auctionId}`);
 
       } catch (error) {
-        console.error('[Auction] Error in place-bid:', error);
+        // ROLLBACK on error
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackErr) {
+          console.error('[Auction Socket] Rollback error:', rollbackErr);
+        }
 
-        // Error callback
+        console.error('[Auction Socket] Error in place-bid:', error.message);
         callback?.({
           success: false,
-          error: error.message || 'Failed to place bid'
+          error: error.message || 'Gagal menempatkan penawaran'
         });
 
-        // Notify others of failed bid attempt (optional)
-        io.to(`auction-${data.auctionId}`).emit('auction:bid-failed', {
-          auction_id: data.auctionId,
-          bidder_id: data.bidderId,
-          reason: error.message,
-          timestamp: new Date().toISOString()
-        });
+      } finally {
+        client.release();
       }
     });
 
     /**
-     * Stop Auction (Seller Action)
-     * Seller can stop active auction - auction ends with current winner
-     * 
-     * Client emits: { auctionId: number, sellerId: number }
-     * Callback: { success: boolean, error?: string, data?: {...} }
-     */
-    socket.on('auction:stop', async (data, callback) => {
-      try {
-        const { auctionId, sellerId } = data;
-
-        if (!auctionId || !sellerId) {
-          return callback?.({
-            success: false,
-            error: 'Missing required fields: auctionId, sellerId'
-          });
-        }
-
-        console.log(`[Auction] Stop request - Auction ${auctionId}, Seller ${sellerId}`);
-
-        // Get auction to verify seller ownership
-        const auction = await Auction.findById(auctionId);
-        if (!auction) {
-          return callback?.({
-            success: false,
-            error: 'Auction not found'
-          });
-        }
-
-        // Verify seller ownership
-        // Check if seller owns the product/store
-        const productCheck = await Auction.verifySellerOwnership(auctionId, sellerId);
-        if (!productCheck) {
-          return callback?.({
-            success: false,
-            error: 'You do not have permission to stop this auction'
-          });
-        }
-
-        // Stop the auction
-        const result = await Auction.stopAuction(auctionId, sellerId);
-
-        // Success callback
-        callback?.({
-          success: true,
-          data: {
-            auction_id: result.auction_id,
-            status: result.status,
-            message: result.message
-          }
-        });
-
-        // Broadcast auction ended to all users in room
-        io.to(`auction-${auctionId}`).emit('auction:ended', {
-          auction_id: auctionId,
-          status: 'ended',
-          winner_id: auction.winner_id || null,
-          final_price: parseInt(auction.current_price),
-          reason: 'stopped_by_seller',
-          timestamp: new Date().toISOString()
-        });
-
-        console.log(`[Auction] Auction ${auctionId} stopped by seller ${sellerId}. Winner: ${auction.winner_id}`);
-
-      } catch (error) {
-        console.error('[Auction] Error in auction:stop:', error);
-
-        callback?.({
-          success: false,
-          error: error.message || 'Failed to stop auction'
-        });
-      }
-    });
-
-    /**
-     * Cancel Auction (Seller Action)
-     * Seller can cancel auction ONLY if no bids yet
-     * 
-     * Client emits: { auctionId: number, sellerId: number }
-     * Callback: { success: boolean, error?: string }
-     */
-    socket.on('auction:cancel', async (data, callback) => {
-      try {
-        const { auctionId, sellerId } = data;
-
-        if (!auctionId || !sellerId) {
-          return callback?.({
-            success: false,
-            error: 'Missing required fields: auctionId, sellerId'
-          });
-        }
-
-        console.log(`[Auction] Cancel request - Auction ${auctionId}, Seller ${sellerId}`);
-
-        // Get auction
-        const auction = await Auction.findById(auctionId);
-        if (!auction) {
-          return callback?.({
-            success: false,
-            error: 'Auction not found'
-          });
-        }
-
-        // Verify seller ownership
-        const productCheck = await Auction.verifySellerOwnership(auctionId, sellerId);
-        if (!productCheck) {
-          return callback?.({
-            success: false,
-            error: 'You do not have permission to cancel this auction'
-          });
-        }
-
-        // Check if auction has bids
-        const bidCount = await getAuctionBidCount(auctionId);
-        if (bidCount > 0) {
-          return callback?.({
-            success: false,
-            error: 'Cannot cancel auction with existing bids. Use "Stop" instead.'
-          });
-        }
-
-        // Cancel the auction
-        const result = await Auction.delete(auctionId);
-
-        // Success callback
-        callback?.({
-          success: true,
-          data: {
-            auction_id: auctionId,
-            message: 'Auction cancelled successfully'
-          }
-        });
-
-        // Broadcast auction cancelled to all users in room
-        io.to(`auction-${auctionId}`).emit('auction:cancelled', {
-          auction_id: auctionId,
-          status: 'cancelled',
-          reason: 'cancelled_by_seller',
-          timestamp: new Date().toISOString()
-        });
-
-        console.log(`[Auction] Auction ${auctionId} cancelled by seller ${sellerId}`);
-
-      } catch (error) {
-        console.error('[Auction] Error in auction:cancel:', error);
-
-        callback?.({
-          success: false,
-          error: error.message || 'Failed to cancel auction'
-        });
-      }
-    });
-
-    /**
-     * Time Synchronization
+     * EVENT: auction:request-time-sync
      * Client requests server time to sync countdown timer
      * 
-     * Client emits: { auctionId: number }
-     * Callback: { success: boolean, server_time: string, end_time: string, time_remaining: number }
+     * Payload: { auctionId: number }
+     * Response: { server_time: ISO8601, end_time: ISO8601, auction_id: number }
      */
-    socket.on('auction:sync-time', async (data, callback) => {
+    socket.on('auction:request-time-sync', async (data, callback) => {
       try {
         const { auctionId } = data;
 
         if (!auctionId) {
           return callback?.({
-            success: false,
             error: 'Missing auctionId'
           });
         }
 
-        // Get auction to get end_time
-        const auction = await Auction.findById(auctionId);
-        if (!auction) {
+        const query = `
+          SELECT end_time FROM auctions WHERE auction_id = $1
+        `;
+        const result = await pool.query(query, [auctionId]);
+
+        if (result.rows.length === 0) {
           return callback?.({
-            success: false,
             error: 'Auction not found'
           });
         }
 
-        const serverTime = new Date();
-        const endTime = new Date(auction.end_time);
-        const timeRemaining = Math.max(0, (endTime - serverTime) / 1000); // in seconds
-
-        console.log(`[Auction] Time sync - Auction ${auctionId}: ${timeRemaining.toFixed(2)}s remaining`);
-
         callback?.({
-          success: true,
-          data: {
-            auction_id: auctionId,
-            server_time: serverTime.toISOString(),
-            end_time: auction.end_time,
-            time_remaining: Math.ceil(timeRemaining),
-            auction_status: auction.status
-          }
+          server_time: new Date().toISOString(),
+          end_time: result.rows[0].end_time,
+          auction_id: auctionId
         });
 
       } catch (error) {
-        console.error('[Auction] Error in sync-time:', error);
-
+        console.error('[Auction Socket] Error in time-sync:', error);
         callback?.({
-          success: false,
           error: 'Failed to sync time'
         });
       }
     });
 
-    /**
-     * Get current auction stats (for countdown timer updates)
-     * Client emits: { auctionId: number }
-     */
-    socket.on('auction:get-stats', async (data, callback) => {
-      try {
-        const { auctionId } = data;
-
-        if (!auctionId) {
-          return callback?.({
-            success: false,
-            error: 'Missing auctionId'
-          });
-        }
-
-        const stats = await Auction.getAuctionStats(auctionId);
-        const auction = await Auction.findById(auctionId);
-        const minBid = await Auction.getMinimumBidAmount(auctionId);
-
-        if (!auction) {
-          return callback?.({
-            success: false,
-            error: 'Auction not found'
-          });
-        }
-
-        const serverTime = new Date();
-        const endTime = new Date(auction.end_time);
-        const timeRemaining = Math.max(0, (endTime - serverTime) / 1000);
-
-        callback?.({
-          success: true,
-          data: {
-            auction_id: auctionId,
-            current_price: parseInt(auction.current_price),
-            status: auction.status,
-            end_time: auction.end_time,
-            time_remaining: Math.ceil(timeRemaining),
-            minimum_bid_amount: minBid?.minimum_bid_amount || null,
-            total_bids: parseInt(stats.total_bids) || 0,
-            unique_bidders: parseInt(stats.unique_bidders) || 0,
-            highest_bid: stats.highest_bid ? parseInt(stats.highest_bid) : null,
-            server_time: serverTime.toISOString(),
-            timestamp: new Date().toISOString()
-          }
-        });
-
-      } catch (error) {
-        console.error('[Auction] Error in get-stats:', error.message);
-        callback?.({
-          success: false,
-          error: 'Failed to get auction stats'
-        });
-      }
-    });
-
-    /**
-     * Get latest bids (for bid history)
-     * Client emits: { auctionId: number, limit: number }
-     */
-    socket.on('auction:get-bids', async (data, callback) => {
-      try {
-        const { auctionId, limit = 10 } = data;
-
-        if (!auctionId) {
-          return callback?.({
-            success: false,
-            error: 'Missing auctionId'
-          });
-        }
-
-        const bids = await Auction.getBids(auctionId);
-
-        callback?.({
-          success: true,
-          data: {
-            auction_id: auctionId,
-            bids: bids.slice(0, limit).map(bid => ({
-              bid_id: bid.bid_id,
-              bidder_id: bid.bidder_id,
-              bidder_name: bid.bidder_name,
-              bid_amount: parseInt(bid.bid_amount),
-              bid_time: bid.bid_time
-            })),
-            total_bids: bids.length
-          }
-        });
-
-      } catch (error) {
-        console.error('[Auction] Error in get-bids:', error.message);
-        callback?.({
-          success: false,
-          error: 'Failed to get bid history'
-        });
-      }
-    });
-
-    /**
-     * Subscribe to real-time bid updates
-     * Client emits: { auctionId: number }
-     * Server emits: 'auction:bid-update' events to this socket
-     */
-    socket.on('auction:subscribe-updates', (data, callback) => {
-      try {
-        const { auctionId } = data;
-
-        if (!auctionId) {
-          return callback?.({
-            success: false,
-            error: 'Missing auctionId'
-          });
-        }
-
-        socket.join(`auction-updates-${auctionId}`);
-        console.log(`[Auction] User ${socket.userId} subscribed to updates for auction ${auctionId}`);
-
-        callback?.({
-          success: true,
-          message: 'Subscribed to auction updates'
-        });
-
-      } catch (error) {
-        console.error('[Auction] Error in subscribe-updates:', error);
-        callback?.({
-          success: false,
-          error: 'Failed to subscribe to updates'
-        });
-      }
-    });
-
-    /**
-     * Unsubscribe from real-time bid updates
-     */
-    socket.on('auction:unsubscribe-updates', (data, callback) => {
-      try {
-        const { auctionId } = data;
-
-        if (!auctionId) {
-          return callback?.({
-            success: false,
-            error: 'Missing auctionId'
-          });
-        }
-
-        socket.leave(`auction-updates-${auctionId}`);
-        console.log(`[Auction] User ${socket.userId} unsubscribed from updates for auction ${auctionId}`);
-
-        callback?.({
-          success: true,
-          message: 'Unsubscribed from auction updates'
-        });
-
-      } catch (error) {
-        console.error('[Auction] Error in unsubscribe-updates:', error);
-        callback?.({
-          success: false,
-          error: 'Failed to unsubscribe'
-        });
-      }
-    });
-
-    /**
-     * Update Auction Status (Admin or Seller Action)
-     * Client emits: { auctionId: number, status: string }
-     * Callback: { success: boolean, error?: string, data?: {...} }
-     */
-    socket.on('auction:update-status', async (data, callback) => {
-      try {
-        const { auctionId, status } = data;
-        
-        // Validate status change
-        const validTransitions = {
-          'scheduled': ['active', 'cancelled'],
-          'active': ['ended', 'cancelled'],
-          'ended': [],
-          'cancelled': []
-        };
-
-        const auction = await Auction.findById(auctionId);
-        if (!validTransitions[auction.status].includes(status)) {
-          return callback?.({
-            success: false,
-            error: `Cannot transition from ${auction.status} to ${status}`
-          });
-        }
-
-        const updated = await Auction.updateAuctionStatus(auctionId, status);
-
-        callback?.({
-          success: true,
-          data: updated
-        });
-
-        // Broadcast status change to all users
-        io.to(`auction-${auctionId}`).emit('auction:status-changed', {
-          auction_id: auctionId,
-          old_status: auction.status,
-          new_status: status,
-          timestamp: new Date().toISOString()
-        });
-
-      } catch (error) {
-        console.error('[Auction] Error in update-status:', error);
-        callback?.({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-
-    /**
-     * Disconnect handler
-     */
+    // Cleanup on disconnect
     socket.on('disconnect', () => {
-      console.log('[Auction] User disconnected:', socket.id);
+      console.log(`[Auction Socket] User ${socket.userId} disconnected (socket: ${socket.id})`);
       
-      // Notify auction room that user left
-      if (socket.currentAuction) {
-        io.to(`auction-${socket.currentAuction}`).emit('auction:user-left', {
-          userId: socket.userId,
-          socketId: socket.id,
-          timestamp: new Date().toISOString()
+      if (socket.auctionId) {
+        io.to(`auction-${socket.auctionId}`).emit('auction:user-left', {
+          userId: socket.userId
         });
       }
     });
   });
-
-  /**
-   * Background Job: Process ended auctions every 30 seconds
-   */
-  const backgroundJobInterval = setInterval(async () => {
-    try {
-      console.log('[Background Job] Running processEndedAuctions...');
-      await Auction.processEndedAuctions(io);
-
-    } catch (error) {
-      console.error('[Background Job] Error:', error.message);
-    }
-  }, 30000);
-
-  process.on('SIGTERM', () => {
-    clearInterval(backgroundJobInterval);
-  });
-
-  process.on('SIGINT', () => {
-    clearInterval(backgroundJobInterval);
-  });
-
-  return io;
 };
 
 /**
- * Helper function
+ * AUTO-CLOSE AUCTION (called by 15-second timer)
+ * 
+ * Steps:
+ * 1. Determine winner (highest bidder)
+ * 2. Update auction status to 'ended'
+ * 3. Create order automatically
+ * 4. Broadcast auction:ended to room
+ * 
+ * @param {Socket.IO} io
+ * @param {number} auctionId
  */
-async function getAuctionBidCount(auctionId) {
+async function closeAuction(io, auctionId) {
+  const client = await pool.connect();
+  
   try {
-    const stats = await Auction.getAuctionStats(auctionId);
-    return parseInt(stats.total_bids) || 0;
+    console.log(`[Auction Socket] ⏰ Auto-closing auction ${auctionId}`);
+
+    // BEGIN transaction
+    await client.query('BEGIN');
+
+    // LOCK auction & get details
+    const auctionQuery = `
+      SELECT 
+        auction_id, product_id, current_price, seller_id, status
+      FROM auctions 
+      WHERE auction_id = $1 
+      FOR UPDATE
+    `;
+    const auctionResult = await client.query(auctionQuery, [auctionId]);
+
+    if (auctionResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    const auction = auctionResult.rows[0];
+
+    if (auction.status !== 'active') {
+      await client.query('ROLLBACK');
+      return;
+    }
+
+    // Get highest bidder (winner)
+    const winnerQuery = `
+      SELECT bidder_id, bid_amount 
+      FROM auction_bids 
+      WHERE auction_id = $1 
+      ORDER BY bid_amount DESC, bid_id DESC 
+      LIMIT 1
+    `;
+    const winnerResult = await client.query(winnerQuery, [auctionId]);
+    const winner = winnerResult.rows[0] || null;
+
+    let winnerId = null;
+    let finalPrice = auction.current_price;
+
+    if (winner) {
+      winnerId = winner.bidder_id;
+
+      // Get product & store info
+      const productQuery = `
+        SELECT product_id, store_id FROM products WHERE product_id = $1
+      `;
+      const productResult = await client.query(productQuery, [auction.product_id]);
+      const product = productResult.rows[0];
+
+      // CREATE ORDER AUTOMATICALLY
+      const orderQuery = `
+        INSERT INTO orders (buyer_id, store_id, status, total_amount, created_at)
+        VALUES ($1, $2, 'approved', $3, NOW())
+        RETURNING order_id
+      `;
+      const orderResult = await client.query(orderQuery, [winnerId, product.store_id, finalPrice]);
+      const orderId = orderResult.rows[0].order_id;
+
+      // Insert order item
+      const orderItemQuery = `
+        INSERT INTO order_items (order_id, product_id, price_at, qty)
+        VALUES ($1, $2, $3, 1)
+      `;
+      await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice]);
+
+      console.log(`[Auction Socket] Order ${orderId} created for auction ${auctionId}`);
+    }
+
+    // UPDATE AUCTION STATUS TO ENDED
+    const updateQuery = `
+      UPDATE auctions 
+      SET status = 'ended', winner_id = $1, updated_at = NOW()
+      WHERE auction_id = $2
+    `;
+    await client.query(updateQuery, [winnerId, auctionId]);
+
+    // GET WINNER NAME
+    let winnerName = null;
+    if (winnerId) {
+      const winnerNameQuery = `SELECT full_name FROM users WHERE user_id = $1`;
+      const winnerNameResult = await client.query(winnerNameQuery, [winnerId]);
+      winnerName = winnerNameResult.rows[0]?.full_name;
+    }
+
+    // COMMIT
+    await client.query('COMMIT');
+
+    // BROADCAST auction:ended to room
+    io.to(`auction-${auctionId}`).emit('auction:ended', {
+      auction_id: auctionId,
+      status: 'ended',
+      winner_id: winnerId,
+      winner_name: winnerName,
+      final_price: finalPrice
+    });
+
+    console.log(`[Auction Socket] ✅ Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
+
+    // Clean up timer
+    auctionTimers.delete(auctionId);
+
   } catch (error) {
-    console.error('Error getting bid count:', error.message);
-    return 0;
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackErr) {
+      console.error('[Auction Socket] Rollback error in closeAuction:', rollbackErr);
+    }
+    console.error('[Auction Socket] Error closing auction:', error);
+  } finally {
+    client.release();
   }
 }
 

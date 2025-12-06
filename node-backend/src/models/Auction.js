@@ -96,6 +96,7 @@ class Auction {
           p.image_path,
           s.store_id,
           s.store_name,
+          s.owner_id as seller_id,
           u.full_name as winner_name
         FROM auctions a
         JOIN products p ON a.product_id = p.product_id

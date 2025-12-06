@@ -108,7 +108,8 @@ class AuctionController {
             end_time: auction.end_time,
             status: auction.status,
             winner_id: auction.winner_id,
-            winner_name: auction.winner_name || null
+            winner_name: auction.winner_name || null,
+            seller_id: parseInt(auction.seller_id)
           },
           product: {
             product_id: auction.product_id,
