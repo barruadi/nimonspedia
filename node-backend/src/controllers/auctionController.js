@@ -151,11 +151,11 @@ class AuctionController {
     try {
       const auctionData = req.body;
 
-      // Validate required fields
-      if (!auctionData.product_id || !auctionData.starting_price || !auctionData.start_time || !auctionData.end_time) {
+      // Validate required fields (end_time is NOT required - will be set on first bid)
+      if (!auctionData.product_id || !auctionData.starting_price || !auctionData.start_time) {
         return res.status(400).json({
           ok: false,
-          error: 'Missing required fields: product_id, starting_price, start_time, end_time'
+          error: 'Missing required fields: product_id, starting_price, start_time'
         });
       }
 
@@ -195,22 +195,22 @@ class AuctionController {
         });
       }
 
-      // Check if seller already has an active auction
-      //  CRITICAL VALIDATION: Seller can only have 1 active auction at a time
-      const activeAuctionCheck = await Auction.getPool().query(
+      // Check if seller already has an active OR scheduled auction (GLOBAL RULE)
+      // BUSINESS RULE: Seller dapat hanya memiliki SATU lelang aktif/terjadwal secara global
+      const globalAuctionCheck = await Auction.getPool().query(
         `SELECT COUNT(*) as count FROM auctions a
          JOIN products p ON a.product_id = p.product_id
          JOIN stores s ON p.store_id = s.store_id
-         WHERE s.owner_id = $1 AND a.status = $2`,
-        [sellerId, 'active']
+         WHERE s.owner_id = $1 AND a.status IN ('active', 'scheduled')`,
+        [sellerId]
       );
 
-      const activeAuctionCount = parseInt(activeAuctionCheck.rows[0].count);
+      const globalAuctionCount = parseInt(globalAuctionCheck.rows[0].count);
 
-      if (activeAuctionCount > 0) {
+      if (globalAuctionCount > 0) {
         return res.status(400).json({
           ok: false,
-          error: 'Seller already has an active auction'
+          error: 'Anda sedang memiliki lelang berjalan. Harap selesaikan terlebih dahulu.'
         });
       }
 
@@ -683,6 +683,88 @@ class AuctionController {
       return res.status(400).json({
         ok: false,
         error: error.message || 'Failed to place bid'
+      });
+    }
+  }
+
+  /**
+   * Get seller's auction status (for Product Management page)
+   * Returns: Current active/scheduled auction + Last auction history per product
+   * 
+   * Endpoint: GET /api/node/seller/auction/status?seller_id={ID}
+   */
+  static async getSellerAuctionStatus(req, res) {
+    try {
+      const sellerId = req.userId;
+
+      if (!sellerId) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Unauthorized: User not authenticated'
+        });
+      }
+
+      // 1. Get active or scheduled auction (if any)
+      const activeAuctionQuery = await Auction.getPool().query(
+        `SELECT a.auction_id, a.product_id, a.status, p.name as product_name
+         FROM auctions a
+         JOIN products p ON a.product_id = p.product_id
+         JOIN stores s ON p.store_id = s.store_id
+         WHERE s.owner_id = $1 AND a.status IN ('active', 'scheduled')
+         LIMIT 1`,
+        [sellerId]
+      );
+
+      const activeAuction = activeAuctionQuery.rows.length > 0 
+        ? {
+            auction_id: activeAuctionQuery.rows[0].auction_id,
+            product_id: activeAuctionQuery.rows[0].product_id,
+            product_name: activeAuctionQuery.rows[0].product_name,
+            status: activeAuctionQuery.rows[0].status
+          }
+        : null;
+
+      // 2. Get last auction (ended or cancelled) for each product
+      // This shows auction history for each product
+      const historyQuery = await Auction.getPool().query(
+        `SELECT DISTINCT ON (p.product_id)
+           p.product_id,
+           a.auction_id,
+           a.status,
+           a.created_at
+         FROM products p
+         LEFT JOIN auctions a ON p.product_id = a.product_id 
+           AND a.status IN ('ended', 'cancelled')
+         JOIN stores s ON p.store_id = s.store_id
+         WHERE s.owner_id = $1
+         ORDER BY p.product_id, a.created_at DESC`,
+        [sellerId]
+      );
+
+      // Transform history into object: { product_id: { last_auction_id, status } }
+      const history = {};
+      historyQuery.rows.forEach(row => {
+        if (row.auction_id) { // Only add if auction exists
+          history[row.product_id] = {
+            last_auction_id: row.auction_id,
+            status: row.status
+          };
+        }
+      });
+
+      return res.status(200).json({
+        ok: true,
+        data: {
+          activeAuction,
+          history
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in getSellerAuctionStatus:', error);
+      return res.status(400).json({
+        ok: false,
+        error: error.message || 'Failed to get auction status'
       });
     }
   }
