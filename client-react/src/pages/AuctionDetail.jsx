@@ -18,7 +18,6 @@ const AuctionDetail = () => {
   
   // Timer & Countdown
   const [timeLeft, setTimeLeft] = useState('');
-  const [antiSnipingCountdown, setAntiSnipingCountdown] = useState(null);
   
   // Bid Form
   const [bidAmount, setBidAmount] = useState('');
@@ -113,72 +112,82 @@ const AuctionDetail = () => {
 
     const calculateTimeLeft = () => {
       const now = new Date();
-      let targetTime;
       
       if (auction.status === 'active') {
-        // Use anti-sniping countdown if available (15s after last bid)
-        if (antiSnipingCountdown) {
-          const remaining = antiSnipingCountdown - Math.floor(Date.now() / 1000);
-          if (remaining <= 0) {
-            setTimeLeft('Berakhir');
-            return;
-          }
-          setTimeLeft(`${remaining}s (Anti-sniping)`);
+        // NEW LOGIC: If end_time is NULL, auction is waiting for first bid
+        if (auction.end_time === null) {
+          setTimeLeft('Menunggu Penawar Pertama');
           return;
         }
-        targetTime = new Date(auction.end_time);
+
+        const targetTime = new Date(auction.end_time);
+        const diff = targetTime - now;
+
+        if (diff <= 0) {
+          setTimeLeft('Berakhir');
+          return;
+        }
+
+        const seconds = Math.floor(diff / 1000);
+        if (seconds < 60) {
+          setTimeLeft(`${seconds}s`);
+        } else {
+          const minutes = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          setTimeLeft(`${minutes}m ${secs}s`);
+        }
       } else {
-        targetTime = new Date(auction.start_time);
+        const targetTime = new Date(auction.start_time);
+        if (targetTime <= now) {
+          setTimeLeft('Dimulai');
+        } else {
+          const diff = targetTime - now;
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          
+          if (days > 0) {
+            setTimeLeft(`${days}d ${hours}h ${minutes}m`);
+          } else if (hours > 0) {
+            setTimeLeft(`${hours}h ${minutes}m`);
+          } else {
+            setTimeLeft(`${minutes}m`);
+          }
+        }
       }
-
-      if (targetTime <= now) {
-        setTimeLeft(auction.status === 'active' ? 'Berakhir' : 'Dimulai');
-        return;
-      }
-
-      const diff = targetTime - now;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      let result = '';
-      if (days > 0) result = `${days}d ${hours}h ${minutes}m`;
-      else if (hours > 0) result = `${hours}h ${minutes}m ${seconds}s`;
-      else if (minutes > 0) result = `${minutes}m ${seconds}s`;
-      else result = `${seconds}s`;
-
-      setTimeLeft(result);
     };
 
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [auction, antiSnipingCountdown]);
+  }, [auction]);
 
   // WebSocket real-time updates
   useEffect(() => {
     if (!socket) return;
 
-    const handleBidPlaced = (data) => {
-      console.log('[AuctionDetail] Real-time bid placed:', data);
+    // NEW EVENT: auction:bid-update (replaces bid:placed)
+    // Emitted every time a bid is placed, with new_end_time
+    const handleBidUpdate = (data) => {
+      console.log('[AuctionDetail] Bid update received:', data);
       
       if (data.auction_id === parseInt(id)) {
-        // Update auction current price
+        // Update auction current price and end_time
         setAuction(prev => ({
           ...prev,
-          current_price: data.new_price || prev.current_price
+          current_price: data.bid_amount,
+          end_time: data.new_end_time, // CRITICAL: Update end_time from socket (was NULL, now has value)
+          status: 'active' // Ensure auction is marked as active since someone bid
         }));
 
-        // Reset anti-sniping countdown to 15 seconds
-        setAntiSnipingCountdown(Math.floor(Date.now() / 1000) + 15);
+        console.log(`✅ Auction ${id} end_time updated to: ${data.new_end_time} (is_first_bid: ${data.is_first_bid})`);
 
         // Refresh bids
         fetch(`${API_BASE_URL}/auction/${id}/bids`)
           .then(res => res.json())
-          .then(data => {
-            if (data.ok) setBids(data.data || []);
+          .then(bidsData => {
+            if (bidsData.ok) setBids(bidsData.data || []);
           })
           .catch(err => console.warn('Failed to refresh bids:', err));
       }
@@ -197,11 +206,11 @@ const AuctionDetail = () => {
       }
     };
 
-    socket.on('bid:placed', handleBidPlaced);
+    socket.on('auction:bid-update', handleBidUpdate);
     socket.on('auction:ended', handleAuctionEnded);
 
     return () => {
-      socket.off('bid:placed', handleBidPlaced);
+      socket.off('auction:bid-update', handleBidUpdate);
       socket.off('auction:ended', handleAuctionEnded);
     };
   }, [socket, id]);
@@ -273,18 +282,6 @@ const AuctionDetail = () => {
 
       setBidSuccess(true);
       setBidAmount('');
-
-      // Refresh bids
-      const bidsResponse = await fetch(`${API_BASE_URL}/auction/${id}/bids`);
-      if (bidsResponse.ok) {
-        const bidsData = await bidsResponse.json();
-        if (bidsData.ok) {
-          setBids(bidsData.data || []);
-        }
-      }
-
-      // Reset anti-sniping countdown
-      setAntiSnipingCountdown(Math.floor(Date.now() / 1000) + 15);
 
       setTimeout(() => setBidSuccess(false), 3000);
 

@@ -8,6 +8,13 @@ const AuctionCard = ({ auction, onViewDetail }) => {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
+      
+      // NEW LOGIC: If end_time is NULL, auction is waiting for first bid
+      if (isActive && auction.end_time === null) {
+        setTimeLeft('Menunggu Penawar Pertama');
+        return;
+      }
+
       const targetTime = isActive 
         ? new Date(auction.end_time) 
         : new Date(auction.start_time);

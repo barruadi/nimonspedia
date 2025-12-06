@@ -114,7 +114,7 @@ const setupAuctionSocket = (io) => {
 
         console.log(`[Auction] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
 
-        // Get auction details BEFORE placing bid (for time check)
+        // Get auction details BEFORE placing bid
         const auctionBefore = await Auction.findById(auctionId);
         if (!auctionBefore) {
           return callback?.({
@@ -124,12 +124,12 @@ const setupAuctionSocket = (io) => {
         }
 
         const now = new Date();
-        const endTime = new Date(auctionBefore.end_time);
-        const timeRemaining = (endTime - now) / 1000; // in seconds
+        
+        // NEW LOGIC: Check if this is the FIRST BID (end_time is NULL)
+        const isFirstBid = auctionBefore.end_time === null;
+        console.log(`[Auction] Is first bid? ${isFirstBid}, Current end_time: ${auctionBefore.end_time}`);
 
-        console.log(`[Auction] Time remaining before bid: ${timeRemaining}s`);
-
-        // Get previous highest bidder
+        // Get previous bids to check if this will be the first bid
         const previousBids = await Auction.getBids(auctionId);
         const previousHighestBid = previousBids.length > 0 ? previousBids[0] : null;
 
@@ -138,6 +138,27 @@ const setupAuctionSocket = (io) => {
           bidder_id: bidderId,
           bid_amount: bidAmount
         });
+
+        // NEW LOGIC: Set/Reset end_time to 15 seconds from now
+        let newEndTime = new Date(now.getTime() + 15 * 1000); // 15 seconds from now
+        let timerInitialized = false;
+
+        try {
+          // Update auction end_time in database - THIS ALWAYS HAPPENS NOW (not just for last-second bids)
+          await Auction.update(auctionId, {
+            end_time: newEndTime.toISOString()
+          });
+          
+          if (isFirstBid) {
+            console.log(`[Auction] ✅ FIRST BID TRIGGER! Auction ${auctionId} timer started. End time set to: ${newEndTime.toISOString()}`);
+            timerInitialized = true;
+          } else {
+            console.log(`[Auction] ⏱️ BID RESET TIMER! Auction ${auctionId} timer reset. New end time: ${newEndTime.toISOString()}`);
+          }
+        } catch (updateError) {
+          console.error('[Auction] Error setting/resetting auction time:', updateError);
+          // Log error but don't fail the bid - it's already recorded
+        }
 
         // **AUTOMATIC REFUND**: Refund previous bidder's balance
         if (previousHighestBid && previousHighestBid.bidder_id !== bidderId) {
@@ -156,29 +177,6 @@ const setupAuctionSocket = (io) => {
           }
         }
 
-        // Anti-snipping logic (15 second rule)
-        let newEndTime = endTime;
-        let timeExtended = false;
-
-        if (timeRemaining < 15) {
-          // Extend auction end time to 15 seconds from now
-          newEndTime = new Date(now.getTime() + 15 * 1000);
-          timeExtended = true;
-
-          console.log(`[Auction] Anti-sniping triggered! Extending auction ${auctionId} by ${Math.ceil(15 - timeRemaining)}s`);
-
-          // Update auction end_time in database
-          try {
-            await Auction.update(auctionId, {
-              end_time: newEndTime.toISOString()
-            });
-            console.log(`[Auction] Auction ${auctionId} end_time extended to ${newEndTime.toISOString()}`);
-          } catch (updateError) {
-            console.error('[Auction] Error extending auction time:', updateError);
-            // Log error but don't fail the bid - it's already recorded
-          }
-        }
-
         // Success callback
         callback?.({
           success: true,
@@ -186,13 +184,15 @@ const setupAuctionSocket = (io) => {
             bid_id: result.bid.bid_id,
             bid_amount: result.auction_current_price,
             bid_time: result.bid.bid_time,
-            time_extended: timeExtended,
-            new_end_time: timeExtended ? newEndTime.toISOString() : null
+            timer_initialized: timerInitialized,
+            new_end_time: newEndTime.toISOString(),
+            is_first_bid: isFirstBid
           },
           message: 'Bid placed successfully'
         });
 
         // Broadcast new bid to all users in auction room
+        // CRITICAL: Include the new end_time so client-side timer updates
         io.to(`auction-${auctionId}`).emit('auction:bid-update', {
           auction_id: auctionId,
           bidder_id: bidderId,
@@ -200,12 +200,12 @@ const setupAuctionSocket = (io) => {
           bid_id: result.bid.bid_id,
           bid_time: result.bid.bid_time,
           total_bids: await getAuctionBidCount(auctionId),
-          time_extended: timeExtended,
-          new_end_time: timeExtended ? newEndTime.toISOString() : null,
+          new_end_time: newEndTime.toISOString(), // ALWAYS send the new end_time
+          is_first_bid: isFirstBid,
           timestamp: new Date().toISOString()
         });
 
-        console.log(`[Auction] Bid successful - Auction ${auctionId}, New price: ${result.auction_current_price}`);
+        console.log(`[Auction] Bid successful - Auction ${auctionId}, New price: ${result.auction_current_price}, New end_time: ${newEndTime.toISOString()}`);
 
       } catch (error) {
         console.error('[Auction] Error in place-bid:', error);

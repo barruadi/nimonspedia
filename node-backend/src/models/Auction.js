@@ -186,13 +186,13 @@ class Auction {
         min_increment = 1000,
         quantity,
         start_time,
-        end_time,
+        end_time = null, // NEW LOGIC: end_time is optional, will be set when first bid comes
         status = 'scheduled'
       } = auctionData;
 
-      //  Validate required fields sesuai schema
-      if (!product_id || starting_price === undefined || !quantity || !start_time || !end_time) {
-        throw new Error('Missing required fields: product_id, starting_price, quantity, start_time, end_time');
+      // NEW VALIDATION: end_time is NOT required anymore
+      if (!product_id || starting_price === undefined || !quantity || !start_time) {
+        throw new Error('Missing required fields: product_id, starting_price, quantity, start_time');
       }
 
       // Validate that product exists and has enough stock
@@ -216,12 +216,21 @@ class Auction {
         throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
       }
 
-      // Validate dates
+      // Validate start_time (but NOT end_time anymore since it can be NULL)
       const startDate = new Date(start_time);
-      const endDate = new Date(end_time);
+      if (isNaN(startDate.getTime())) {
+        throw new Error('Invalid start_time format');
+      }
 
-      if (endDate <= startDate) {
-        throw new Error('End time must be after start time');
+      // If end_time is provided, validate it
+      if (end_time) {
+        const endDate = new Date(end_time);
+        if (isNaN(endDate.getTime())) {
+          throw new Error('Invalid end_time format');
+        }
+        if (endDate <= startDate) {
+          throw new Error('End time must be after start time');
+        }
       }
 
       // Validate prices
