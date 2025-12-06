@@ -244,6 +244,7 @@ async function initAuctionFormPage() {
             // Get current user ID from PHP backend
             let currentUser = null;
             try {
+                console.log('Fetching /api/me...');
                 const userResponse = await fetch('/api/me', {
                     credentials: 'include',
                     headers: {
@@ -251,7 +252,11 @@ async function initAuctionFormPage() {
                     }
                 });
 
+                console.log('/api/me response status:', userResponse.status);
+
                 const userData = await userResponse.json();
+                console.log('User data received:', JSON.stringify(userData, null, 2));
+
                 if (userData.authenticated && userData.user) {
                     currentUser = userData.user;
                     
@@ -262,11 +267,14 @@ async function initAuctionFormPage() {
                     
                     auctionData.user_id = currentUser.id;
                     console.log('Added user_id to auctionData:', auctionData.user_id, 'Role:', currentUser.role);
+                    console.log('Full auctionData now:', JSON.stringify(auctionData, null, 2));
                 } else {
+                    console.log('/api/me returned authenticated=false or no user:', userData);
                     throw new Error('Gagal mendapatkan informasi penjual');
                 }
             } catch (err) {
-                console.error('Error fetching user:', err);
+                console.error('Error in /api/me fetch:', err);
+                hideLoading();
                 throw new Error('Gagal mengidentifikasi penjual: ' + err.message);
             }
 
