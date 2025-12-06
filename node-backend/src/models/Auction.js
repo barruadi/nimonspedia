@@ -297,8 +297,11 @@ class Auction {
         winner_id
       } = auctionData;
 
-      // Prevent updating active or ended auctions
-      if (['active', 'ended'].includes(currentAuction.status)) {
+      // Special case: Allow updating end_time on active auctions (for anti-sniping)
+      const isOnlyUpdatingEndTime = Object.keys(auctionData).length === 1 && end_time;
+
+      // Prevent updating active or ended auctions (except for end_time on active auctions)
+      if (['active', 'ended'].includes(currentAuction.status) && !isOnlyUpdatingEndTime) {
         throw new Error(`Cannot update auction with status: ${currentAuction.status}`);
       }
 
