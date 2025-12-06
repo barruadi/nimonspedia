@@ -4,13 +4,14 @@ const db = require('../config/db');
 /**
  * Simplified Authentication Middleware
  * 
- * Strategy: Frontend validates user via /api/me, then sends user_id in request body
+ * Strategy: Frontend validates user via /api/me, then sends user_id in request body or query
  * This middleware verifies user_id exists in database and attaches to request
  * 
  * Priority order:
  * 1. JWT Token (Admin via React Dashboard) - Primary
- * 2. user_id from request body (PHP frontend after /api/me validation)
- * 3. Reject Request (401 Unauthorized)
+ * 2. user_id from request body (PHP frontend for POST requests)
+ * 3. user_id from query params (PHP frontend for GET requests)
+ * 4. Reject Request (401 Unauthorized)
  */
 const verifyUser = async (req, res, next) => {
   try {
@@ -36,10 +37,16 @@ const verifyUser = async (req, res, next) => {
       }
     }
 
-    // Strategy 2: Check user_id from request body (PHP frontend)
+    // Strategy 2: Check user_id from request body (PHP frontend for POST)
     if (!userId && req.body && req.body.user_id) {
       userId = req.body.user_id;
       console.log(`[Auth/Body] Using user_id from request body: ${userId}`);
+    }
+
+    // Strategy 3: Check user_id from query params (PHP frontend for GET)
+    if (!userId && req.query && req.query.user_id) {
+      userId = parseInt(req.query.user_id);
+      console.log(`[Auth/Query] Using user_id from query param: ${userId}`);
     }
 
     // If we have a user_id, verify it exists in database
