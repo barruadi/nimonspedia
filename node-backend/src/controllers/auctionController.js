@@ -159,6 +159,61 @@ class AuctionController {
         });
       }
 
+      // Get seller_id from auth middleware
+      const sellerId = req.userId;
+
+      if (!sellerId) {
+        return res.status(401).json({
+          ok: false,
+          error: 'Unauthorized: User not authenticated'
+        });
+      }
+
+      // Get seller's store ID from product
+      const productCheck = await Auction.getPool().query(
+        `SELECT p.product_id, p.store_id, s.owner_id 
+         FROM products p 
+         JOIN stores s ON p.store_id = s.store_id 
+         WHERE p.product_id = $1`,
+        [auctionData.product_id]
+      );
+
+      if (productCheck.rows.length === 0) {
+        return res.status(404).json({
+          ok: false,
+          error: 'Product not found'
+        });
+      }
+
+      const ownerId = productCheck.rows[0].owner_id;
+
+      // Verify that the authenticated user is the owner of this product's store
+      if (ownerId !== sellerId) {
+        return res.status(403).json({
+          ok: false,
+          error: 'Unauthorized: You do not own this product'
+        });
+      }
+
+      // Check if seller already has an active auction
+      // ✅ CRITICAL VALIDATION: Seller can only have 1 active auction at a time
+      const activeAuctionCheck = await Auction.getPool().query(
+        `SELECT COUNT(*) as count FROM auctions a
+         JOIN products p ON a.product_id = p.product_id
+         JOIN stores s ON p.store_id = s.store_id
+         WHERE s.owner_id = $1 AND a.status = $2`,
+        [sellerId, 'active']
+      );
+
+      const activeAuctionCount = parseInt(activeAuctionCheck.rows[0].count);
+
+      if (activeAuctionCount > 0) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Seller already has an active auction'
+        });
+      }
+
       const newAuction = await Auction.create(auctionData);
 
       return res.status(201).json({
