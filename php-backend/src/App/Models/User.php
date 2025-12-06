@@ -136,23 +136,27 @@ class User {
     ): bool
     {
         $hash = password_hash($new_password, PASSWORD_DEFAULT);
-        
+
         $query = "
             UPDATE users
             SET password_hash = :password_hash,
                 updated_at    = NOW()
             WHERE user_id = :user_id
         ";
-        
+
         $row_affected = Database::executeQuery($query, [
             ':password_hash' => $hash,
             ':user_id'       => $user_id,
         ]);
-        
-        $user = self::findById($user_id);
-        unset($user['password_hash']);
-        $_SESSION['user']      = $user;
-        
+
+        if ($row_affected === 1) {
+            $user = self::findById($user_id);
+            if (!empty($user)) {
+                unset($user['password_hash']);
+                $_SESSION['user'] = $user;
+            }
+        }
+
         return $row_affected === 1;
     }
     
@@ -167,16 +171,20 @@ class User {
                 updated_at    = NOW()
             WHERE user_id = :user_id
         ";
-        
+
         $row_affected = Database::executeQuery($query, [
             ':name' => $newUsername,
             ':user_id' => $userId
         ]);
-        
-        $user = self::findById($userId);
-        unset($user['password_hash']);
-        $_SESSION['user']      = $user;
-        
+
+        if ($row_affected === 1) {
+            $user = self::findById($userId);
+            if (!empty($user)) {
+                unset($user['password_hash']);
+                $_SESSION['user'] = $user;
+            }
+        }
+
         return $row_affected === 1;
     }
     
@@ -185,23 +193,29 @@ class User {
     {
         $db = Database::getInstance();
         $stmt = $db->prepare("
-            UPDATE users 
+            UPDATE users
             SET balance = :amount,
                 updated_at = NOW()
             WHERE user_id = :user_id
             AND (balance + :amount) >= 0
         ");
-        
+
         $stmt->execute([
             'user_id' => $userId,
             'amount' => $amount
         ]);
-        
-        $user = self::findById($userId);
-        unset($user['password_hash']);
-        $_SESSION['user']      = $user;
 
-        return true;
+        $rowCount = $stmt->rowCount();
+
+        if ($rowCount > 0) {
+            $user = self::findById($userId);
+            if (!empty($user)) {
+                unset($user['password_hash']);
+                $_SESSION['user'] = $user;
+            }
+        }
+
+        return $rowCount > 0;
     }
 
     // Get user balance as integer

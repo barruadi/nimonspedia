@@ -72,6 +72,27 @@ import { api } from '/utils/api.js';
   wireModalClose(nameModal);
   wireModalClose(pwModal);
 
+  function setupPasswordToggles() {
+    const toggleButtons = document.querySelectorAll('.toggle-pw');
+    toggleButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+
+        const isVisible = btn.getAttribute('data-visible') === 'true';
+        if (isVisible) {
+          input.type = 'password';
+          btn.setAttribute('data-visible', 'false');
+        } else {
+          input.type = 'text';
+          btn.setAttribute('data-visible', 'true');
+        }
+      });
+    });
+  }
+  setupPasswordToggles();
+
   /* ---------- load profile ---------- */
   try {
     const res = await api.get('/me');

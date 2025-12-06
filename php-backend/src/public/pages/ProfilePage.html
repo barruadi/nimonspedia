@@ -58,13 +58,43 @@
 
         <form id="pwForm" class="modal-form">
           <label class="modal-label" for="oldPwInput">Password lama</label>
-          <input id="oldPwInput" class="modal-input" type="password" placeholder="Masukkan password lama" required />
+          <div class="password-field">
+            <input id="oldPwInput" class="modal-input" type="password" placeholder="Masukkan password lama" required />
+            <button type="button" class="toggle-pw" data-target="oldPwInput" aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path class="eye-open" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-open" cx="12" cy="12" r="3"/>
+                <path class="eye-closed" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line class="eye-closed" x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
 
           <label class="modal-label" for="newPwInput">Password baru</label>
-          <input id="newPwInput" class="modal-input" type="password" placeholder="Masukkan password baru" required />
+          <div class="password-field">
+            <input id="newPwInput" class="modal-input" type="password" placeholder="Masukkan password baru" required />
+            <button type="button" class="toggle-pw" data-target="newPwInput" aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path class="eye-open" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-open" cx="12" cy="12" r="3"/>
+                <path class="eye-closed" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line class="eye-closed" x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
 
           <label class="modal-label" for="newPwConfirmInput">Ulangi password baru</label>
-          <input id="newPwConfirmInput" class="modal-input" type="password" placeholder="Ulangi password baru" required />
+          <div class="password-field">
+            <input id="newPwConfirmInput" class="modal-input" type="password" placeholder="Ulangi password baru" required />
+            <button type="button" class="toggle-pw" data-target="newPwConfirmInput" aria-label="Toggle password visibility">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path class="eye-open" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-open" cx="12" cy="12" r="3"/>
+                <path class="eye-closed" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line class="eye-closed" x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
 
           <div class="modal-actions">
             <button type="button" class="cancel-btn" data-close>Batal</button>
@@ -226,6 +256,36 @@
 
 .modal-form { display: flex; flex-direction: column; gap: .75rem; }
 .modal-label { font-weight: 600; font-size: .95rem; color: #000; }
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-field .modal-input {
+  flex: 1;
+  padding-right: 2.5rem;
+}
+.toggle-pw {
+  position: absolute;
+  right: .5rem;
+  background: transparent;
+  border: 0;
+  padding: .25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: color .2s;
+}
+.toggle-pw:hover { color: var(--green); }
+.toggle-pw[data-visible="true"] .eye-open { display: none; }
+.toggle-pw[data-visible="true"] .eye-closed { display: block; }
+
+.eye-closed {
+  display: none;
+}
+
 .modal-input {
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -285,3 +345,16 @@
   }
 }
 </style>
+
+<script>
+  document.querySelectorAll('.toggle-pw').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+
+      const reveal = input.type === 'password';
+      input.type = reveal ? 'text' : 'password';
+
+      btn.setAttribute('data-visible', reveal);
+    });
+  });
+</script>
