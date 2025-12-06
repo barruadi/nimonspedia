@@ -26,6 +26,10 @@ const routes = {
     page: '/pages/DashboardPage.html',
     script: '/script/Dashboard.js',
   },
+  '/seller/profile': {
+    page: '/pages/SellerProfilePage.html',
+    script: '/script/SellerProfile.js',
+  },
   '/seller/products': {
     page: '/pages/ProductManagementPage.html',
     script: '/script/ProductManagement.js',
