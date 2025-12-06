@@ -24,7 +24,7 @@ const AuctionCard = ({ auction, onViewDetail }) => {
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
       if (days > 0) {
-        setTimeLeft(`${days}h ${hours}m ${minutes}s`);
+        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
       } else if (hours > 0) {
         setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
       } else {
