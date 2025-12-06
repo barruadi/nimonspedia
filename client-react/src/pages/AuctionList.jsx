@@ -13,9 +13,51 @@ const AuctionList = () => {
   const [page, setPage] = useState(1);
   const [auctions, setAuctions] = useState([]);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Initialize socket
   const socket = useSocket();
+
+  // Check user role on mount
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('http://localhost/api/me', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.data) {
+            setCurrentUser(data.data);
+            
+            // Redirect seller to product management
+            if (data.data.role === 'seller') {
+              navigate('/product-management', { replace: true });
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[AuctionList] Failed to fetch current user:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [navigate]);
+
+  // If still loading or redirecting, show nothing
+  if (loading) {
+    return <div className="auction-list-page"><p>Memuat...</p></div>;
+  }
+
+  // If seller, should have been redirected above
+  if (!currentUser || currentUser.role === 'seller') {
+    return <div className="auction-list-page"><p>Akses ditolak</p></div>;
+  }
 
   // Debounce search input
   useEffect(() => {
@@ -28,7 +70,7 @@ const AuctionList = () => {
   }, [searchInput]);
 
   // Fetch auctions based on filters (REST API)
-  const { auctions: apiAuctions, loading, error, pagination } = useAuctions(
+  const { auctions: apiAuctions, loading: loadingAuctions, error, pagination } = useAuctions(
     activeTab,
     page,
     search
@@ -202,7 +244,7 @@ const AuctionList = () => {
       </div>
 
       {/* Loading State */}
-      {loading && (
+      {loadingAuctions && (
         <div className="loading-container">
           <p>Memuat lelang...</p>
         </div>
@@ -216,7 +258,7 @@ const AuctionList = () => {
       )}
 
       {/* Auctions Grid */}
-      {!loading && !error && auctions.length > 0 && (
+      {!loadingAuctions && !error && auctions.length > 0 && (
         <div className="auctions-grid">
           {auctions.map((auction) => (
             <AuctionCard
@@ -229,14 +271,14 @@ const AuctionList = () => {
       )}
 
       {/* Empty State */}
-      {!loading && !error && auctions.length === 0 && (
+      {!loadingAuctions && !error && auctions.length === 0 && (
         <div className="empty-state">
           <p>Tidak ada lelang ditemukan</p>
         </div>
       )}
 
       {/* Pagination */}
-      {!loading && pagination.totalPages > 1 && (
+      {!loadingAuctions && pagination.totalPages > 1 && (
         <div className="pagination">
           <button
             className="pagination-btn"
