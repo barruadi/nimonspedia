@@ -75,6 +75,44 @@ body {
     color: #111827;
 }
 
+.header-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-view-live-auction {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    animation: slideIn 0.3s ease-out;
+}
+
+.btn-view-live-auction:hover {
+    background-color: #d97706;
+}
+
+.btn-view-live-auction:active {
+    transform: scale(0.98);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 .btn-add-product {
     background-color: #10b981;
     color: white;
@@ -92,6 +130,75 @@ body {
 }
 
 .btn-add-product:active {
+    transform: scale(0.98);
+}
+
+/* Global Auction Status Bar */
+.global-auction-status-bar {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.status-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.status-message {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.status-icon {
+    font-size: 1.25rem;
+}
+
+.status-text strong {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.btn-monitor-live {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-monitor-live:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-monitor-live:active {
     transform: scale(0.98);
 }
 
@@ -326,6 +433,65 @@ body {
 .btn-card-edit:active,
 .btn-card-delete:active {
     transform: scale(0.95);
+}
+
+/* NEW: Auction Button Styles */
+.btn-card-auction {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: transparent;
+    flex-shrink: 0;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+.btn-card-auction:hover:not(:disabled) {
+    background-color: #f0fdf4;
+    border-color: #059669;
+}
+
+.btn-card-auction:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+/* Disabled state when seller has active auction */
+.btn-card-auction.btn-disabled,
+.btn-card-auction:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #9ca3af;
+    border-color: #e5e7eb;
+}
+
+/* NEW: Product History Link Styles */
+.product-card-history {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.history-link {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.history-link:hover {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    text-decoration: underline;
 }
 
 /* Empty State */

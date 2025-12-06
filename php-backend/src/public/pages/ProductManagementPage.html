@@ -28,9 +28,27 @@
         <!-- Header Section -->
         <div class="page-header">
           <h1 class="page-title">Manajemen Produk</h1>
-          <button type="button" id="addProductBtn" class="btn-add-product">
-            + Tambah Produk
-          </button>
+          <div class="header-actions">
+            <button type="button" id="viewLiveAuctionBtn" class="btn-view-live-auction" style="display: none;">
+              📡 Lihat Live Auction
+            </button>
+            <button type="button" id="addProductBtn" class="btn-add-product">
+              + Tambah Produk
+            </button>
+          </div>
+        </div>
+
+        <!-- Global Auction Status Bar -->
+        <div id="globalAuctionStatusBar" class="global-auction-status-bar" style="display: none;">
+          <div class="status-content">
+            <div class="status-message">
+              <span class="status-icon">🔨</span>
+              <span class="status-text">Lelang Sedang Berjalan: <strong id="activeAuctionProductName">-</strong></span>
+            </div>
+            <button type="button" id="monitorLiveBtn" class="btn-monitor-live">
+              📡 Pantau Live
+            </button>
+          </div>
         </div>
 
         <!-- Filter & Search Bar -->
