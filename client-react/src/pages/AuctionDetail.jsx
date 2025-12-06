@@ -60,19 +60,35 @@ const AuctionDetail = () => {
           throw new Error(data.error || 'Gagal memuat lelang');
         }
 
-        setAuction(data.data);
+        // Response structure: { ok: true, data: { auction: {...}, product: {...}, store: {...}, stats: {...}, bid_history: [...] } }
+        const responseData = data.data;
+        
+        // Flatten the nested structure for easier access in component
+        const auctionData = {
+          auction_id: responseData.auction.auction_id,
+          product_id: responseData.auction.product_id,
+          starting_price: responseData.auction.starting_price,
+          current_price: responseData.auction.current_price,
+          min_increment: responseData.auction.min_increment || 1000,
+          quantity: responseData.auction.quantity,
+          start_time: responseData.auction.start_time,
+          end_time: responseData.auction.end_time,
+          status: responseData.auction.status,
+          winner_id: responseData.auction.winner_id,
+          winner_name: responseData.auction.winner_name,
+          product_name: responseData.product.name,
+          image_path: responseData.product.image_path,
+          store_id: responseData.store.store_id,
+          store_name: responseData.store.store_name
+        };
 
-        // Fetch bids
-        try {
-          const bidsResponse = await fetch(`${API_BASE_URL}/auction/${id}/bids`);
-          if (bidsResponse.ok) {
-            const bidsData = await bidsResponse.json();
-            if (bidsData.ok) {
-              setBids(bidsData.data || []);
-            }
-          }
-        } catch (bidErr) {
-          console.warn('Failed to fetch bids:', bidErr);
+        setAuction(auctionData);
+        
+        // Bids from response
+        if (responseData.bid_history && responseData.bid_history.length > 0) {
+          setBids(responseData.bid_history);
+        } else {
+          setBids([]);
         }
 
         // TODO: Fetch current user from auth context
