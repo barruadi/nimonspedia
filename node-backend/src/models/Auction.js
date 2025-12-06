@@ -34,7 +34,7 @@ class Auction {
         FROM auctions a
         JOIN products p ON a.product_id = p.product_id
         JOIN stores s ON p.store_id = s.store_id
-        LEFT JOIN bids b ON a.auction_id = b.auction_id
+        LEFT JOIN auction_bids b ON a.auction_id = b.auction_id
         WHERE 1=1
       `;
 
@@ -297,11 +297,8 @@ class Auction {
         winner_id
       } = auctionData;
 
-      // Special case: Allow updating end_time on active auctions (for anti-sniping)
-      const isOnlyUpdatingEndTime = Object.keys(auctionData).length === 1 && end_time;
-
-      // Prevent updating active or ended auctions (except for end_time on active auctions)
-      if (['active', 'ended'].includes(currentAuction.status) && !isOnlyUpdatingEndTime) {
+      // Prevent updating active or ended auctions
+      if (['active', 'ended'].includes(currentAuction.status)) {
         throw new Error(`Cannot update auction with status: ${currentAuction.status}`);
       }
 
