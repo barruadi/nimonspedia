@@ -21,12 +21,25 @@ class ProductController
 
         $store = Store::findById($product['store_id']);
 
+        $db = Database::getInstance();
+        $auctionStmt = $db->prepare("
+            SELECT auction_id, status, start_time, end_time
+            FROM auctions
+            WHERE product_id = :product_id
+            AND status IN ('scheduled', 'active')
+            ORDER BY start_time DESC
+            LIMIT 1
+        ");
+        $auctionStmt->execute(['product_id' => $productId]);
+        $auction = $auctionStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
         http_response_code(200);
         return [
             'ok' => true,
             'data' => [
                 'product' => $product,
-                'store' => $store ?? null
+                'store' => $store ?? null,
+                'auction' => $auction
             ]
         ];
     }

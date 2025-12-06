@@ -199,8 +199,8 @@ class Product
     public static function countFiltered(
         ?string $q,
         array $categories = [],
-        ?float $minPrice,
-        ?float $maxPrice
+        ?float $minPrice = null,
+        ?float $maxPrice = null
     ): int
     {
         $db = self::getDB();
@@ -260,10 +260,10 @@ class Product
     public static function findFiltered(
         ?string $q,
         array $categories = [],
-        ?float $minPrice,
-        ?float $maxPrice,
-        int $limit,
-        int $offset
+        ?float $minPrice = null,
+        ?float $maxPrice = null,
+        int $limit = 20,
+        int $offset = 0
     ): array
     {
         $db = self::getDB();

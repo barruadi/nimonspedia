@@ -87,7 +87,6 @@ class AppNavbar extends HTMLElement {
         <a class="mobile-menu-item" href="/register" data-nav data-mobile-item>Daftar</a>
       `;
     } else if (role === 'seller') {
-      // --- Seller view (Dashboard, Produk, Orders, Saldo, Logout) ---
       rightHTML = `
         <a class="nav-link hide-mobile" href="/seller/dashboard" data-nav>Dashboard</a>
         <a class="nav-link hide-mobile" href="/seller/products" data-nav>Produk</a>
@@ -95,7 +94,23 @@ class AppNavbar extends HTMLElement {
         <span class="saldo seller-saldo hide-mobile">
           Saldo: <span class="val">${balance}</span>
         </span>
-        <button id="logout-btn" class="logout-btn hide-mobile" type="button">Logout</button>
+        <div class="profile-dropdown hide-mobile">
+          <button class="profile-trigger" type="button" id="profile-trigger" title="${this.escape(name)}">
+            <div class="avatar-circle">${initials}</div>
+            <span class="profile-name">Hi, ${this.escape(name)}</span>
+            <div class="dropdown-arrow"></div>
+          </button>
+          <div class="dropdown-menu" id="profile-dropdown">
+            <a class="dropdown-item" href="/seller/profile" data-nav data-dropdown-item>
+              <div class="dropdown-icon icon-profile"></div>
+              <span>Profil</span>
+            </a>
+            <button class="dropdown-item logout-item" type="button" id="logout-btn">
+              <div class="dropdown-icon icon-logout"></div>
+              <span>Keluar</span>
+            </button>
+          </div>
+        </div>
       `;
       mobileMenuHTML = `
         <a class="mobile-menu-item" href="/seller/dashboard" data-nav data-mobile-item>Dashboard</a>
@@ -104,7 +119,8 @@ class AppNavbar extends HTMLElement {
         <div class="mobile-menu-item mobile-saldo seller-mobile-saldo">
           Saldo: <span class="val">${balance}</span>
         </div>
-        <button class="mobile-menu-item mobile-logout" id="logout-btn-mobile" type="button">Logout</button>
+        <a class="mobile-menu-item" href="/seller/profile" data-nav data-mobile-item>Profil</a>
+        <button class="mobile-menu-item mobile-logout" id="logout-btn-mobile" type="button">Keluar</button>
       `;
     } else {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
@@ -198,7 +214,9 @@ class AppNavbar extends HTMLElement {
       if (role === 'buyer') {
         this.wireBalanceModal();
       }
-      this.wireDropdown();
+      if (role === 'buyer' || role === 'seller') {
+        this.wireDropdown();
+      }
     }
   }
 

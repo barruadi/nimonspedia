@@ -14,6 +14,8 @@ function initProductDetailPage() {
     const storeLogo = document.getElementById('storeLogo');
     const storeName = document.getElementById('storeName');
     const storeDescription = document.getElementById('storeDescription');
+    const chatStoreBtn = document.getElementById('chatStoreBtn');
+    const goToAuctionBtn = document.getElementById('goToAuctionBtn');
 
     const qtyDecrement = document.getElementById('qtyDecrement');
     const qtyIncrement = document.getElementById('qtyIncrement');
@@ -53,9 +55,11 @@ function initProductDetailPage() {
             if (result && result.ok) {
                 currentProduct = result.data.product;
                 const store = result.data.store;
+                const auction = result.data.auction;
 
                 renderProduct(currentProduct, store);
                 setupPurchaseBox(currentProduct);
+                setupStoreActions(store, auction);
 
                 hideLoading();
             } else {
@@ -240,6 +244,35 @@ async function handleAddToCart() {
     }
     
     addToCartBtn.addEventListener('click', handleAddToCart);
+
+    function setupStoreActions(store, auction) {
+        if (!store) return;
+
+        if (chatStoreBtn) {
+            chatStoreBtn.addEventListener('click', () => {
+                if (!isUserLoggedIn) {
+                    showToast('Silakan login terlebih dahulu', 'Anda harus login untuk memulai chat', 'error');
+                    return;
+                }
+                window.location.href = `/chat?store_id=${store.store_id}`;
+            });
+
+            if (!isUserLoggedIn) {
+                chatStoreBtn.disabled = true;
+            }
+        }
+
+        if (goToAuctionBtn) {
+            if (auction && (auction.status === 'scheduled' || auction.status === 'active')) {
+                goToAuctionBtn.disabled = false;
+                goToAuctionBtn.addEventListener('click', () => {
+                    window.location.href = `/auction/${auction.auction_id}`;
+                });
+            } else {
+                goToAuctionBtn.disabled = true;
+            }
+        }
+    }
 
     function showLoading() {
         loadingState.style.display = 'block';
