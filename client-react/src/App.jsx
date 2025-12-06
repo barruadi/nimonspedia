@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import './App.css'
-import AuctionPage from './components/auction/AuctionPage'
 import ChatPage from './components/chat/ChatPage'
+import AuctionPage from './components/auction/AuctionPage'
+import AuctionList from './pages/AuctionList'
+import AuctionDetail from './pages/AuctionDetail'
 
 function HomePage() {
   return (
@@ -50,6 +52,8 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/auction" element={<AuctionPage />} />
+        <Route path="/auctions" element={<AuctionList />} />
+        <Route path="/auction/:id" element={<AuctionDetail />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
