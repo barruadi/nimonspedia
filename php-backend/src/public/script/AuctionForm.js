@@ -202,6 +202,13 @@ async function initAuctionFormPage() {
                 status: 'scheduled'
             };
 
+            console.log('[AuctionForm] DEBUG min_increment:', {
+                inputValue: minIncrementInput.value,
+                parsed: parseFloat(minIncrementInput.value),
+                type: typeof parseFloat(minIncrementInput.value),
+                inData: auctionData.min_increment
+            });
+
             console.log('✅ Submitting auction data (end_time will be NULL until first bid):', auctionData);
 
             showLoading('Mengidentifikasi Penjual...', 'Mempersiapkan data lelang');

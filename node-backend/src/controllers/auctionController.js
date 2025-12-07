@@ -159,6 +159,14 @@ class AuctionController {
     try {
       const auctionData = req.body;
 
+      // DEBUG: Log the entire request body
+      console.log('[auctionController.createAuction] Full request body:', JSON.stringify(auctionData, null, 2));
+      console.log('[auctionController.createAuction] min_increment:', {
+        value: auctionData.min_increment,
+        type: typeof auctionData.min_increment,
+        isNumber: typeof auctionData.min_increment === 'number'
+      });
+
       // Validate required fields (end_time is NOT required - will be set on first bid)
       if (!auctionData.product_id || !auctionData.starting_price || !auctionData.start_time) {
         return res.status(400).json({
