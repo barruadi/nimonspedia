@@ -240,72 +240,30 @@ ON CONFLICT (category_id, product_id) DO NOTHING;
 -- ============================================================
 -- 6. AUCTIONS (NEW!)
 -- ============================================================
--- 1. Active Auction (Ends in 2 days) - Mechanical Keyboard
+-- 1. Active Auction (Gadget Hub - Rina) - Mechanical Keyboard RGB
 WITH p AS (SELECT product_id, price FROM products WHERE name = 'Mechanical Keyboard RGB' LIMIT 1)
 INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
 SELECT product_id, price - 200000, price - 50000, 10000, 5, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '2 days', 'active'
 FROM p;
 
--- 2. Scheduled Auction (Starts tomorrow) - Sony Headphones
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Noise-Canceling Headphones Sony' LIMIT 1)
+-- 2. Scheduled Auction (FreshMart - Budi) - Organic Apples Fuji
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Organic Apples Fuji (1kg)' LIMIT 1)
 INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 500000, price - 500000, 25000, 2, NOW() + INTERVAL '1 day', NULL, 'scheduled'
+SELECT product_id, price - 5000, price - 5000, 1000, 10, NOW() + INTERVAL '1 day', NULL, 'scheduled'
 FROM p;
 
--- 3. Ended Auction (Winner: Alice) - JBL Speaker
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Bluetooth Speaker JBL' LIMIT 1),
+-- 3. Ended Auction (Fashionista Store - Charlie) - Women's Designer Handbag (Winner: Alice)
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Leather Shoulder Bag Classic' LIMIT 1),
      u AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
 INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status, winner_id)
-SELECT p.product_id, p.price - 300000, p.price - 100000, 15000, 1, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day', 'ended', u.user_id
+SELECT p.product_id, p.price - 300000, p.price - 100000, 50000, 1, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day', 'ended', u.user_id
 FROM p CROSS JOIN u;
-
--- 4. Scheduled Auction 1 (Starts in 3 days) - Wireless Mouse Logitech
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Wireless Mouse Logitech' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 30000, price - 30000, 5000, 10, NOW() + INTERVAL '3 days', NOW() + INTERVAL '5 days', 'scheduled'
-FROM p;
-
--- 5. Scheduled Auction 2 (Starts in 2 days, ends in 5 days) - Women's Floral Dress
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Women''s Floral Dress' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 80000, price - 80000, 15000, 3, NOW() + INTERVAL '2 days', NOW() + INTERVAL '5 days', 'scheduled'
-FROM p;
-
--- 6. Scheduled Auction 3 (Starts in 4 days, ends in 7 days) - Arabica Coffee Beans
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Arabica Coffee Beans (500g)' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 20000, price - 20000, 5000, 8, NOW() + INTERVAL '4 days', NOW() + INTERVAL '7 days', 'scheduled'
-FROM p;
-
--- 7. Scheduled Auction 4 (Starts tomorrow, ends in 3 days) - Mechanical Keyboard RGB (berbeda dengan active)
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Power Bank 20000mAh' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 50000, price - 50000, 10000, 6, NOW() + INTERVAL '1 day', NOW() + INTERVAL '3 days', 'scheduled'
-FROM p;
-
--- 8. Scheduled Auction 5 (Starts in 5 days) - USB-C Hub
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'USB-C Hub 7-in-1' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 60000, price - 60000, 12000, 4, NOW() + INTERVAL '5 days', NOW() + INTERVAL '8 days', 'scheduled'
-FROM p;
-
--- 9. Scheduled Auction 6 (Starts in 6 days) - Men's Formal Shirt Blue
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Men''s Formal Shirt Blue' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 40000, price - 40000, 8000, 5, NOW() + INTERVAL '6 days', NOW() + INTERVAL '9 days', 'scheduled'
-FROM p;
-
--- 10. Scheduled Auction 7 (Starts in 1.5 days) - True Wireless Earbuds
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'True Wireless Earbuds' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 100000, price - 100000, 15000, 3, NOW() + INTERVAL '36 hours', NOW() + INTERVAL '4 days', 'scheduled'
-FROM p;
 
 
 -- ============================================================
 -- 7. AUCTION BIDS (NEW!)
 -- ============================================================
--- Bids for Active Auction (Keyboard)
+-- Bids for Active Auction (Gadget Hub - Mechanical Keyboard)
 WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'active' LIMIT 1),
      bob AS (SELECT user_id FROM users WHERE email = 'bob@buyer.com'),
      carol AS (SELECT user_id FROM users WHERE email = 'carol@buyer.com')
@@ -316,7 +274,7 @@ UNION ALL
 SELECT a.auction_id, carol.user_id, a.starting_price + 50000, NOW() - INTERVAL '10 minutes'
 FROM a CROSS JOIN carol;
 
--- Bids for Ended Auction (Speaker)
+-- Bids for Ended Auction (Fashionista Store - Handbag)
 WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'ended' LIMIT 1),
      alice AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
 INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
