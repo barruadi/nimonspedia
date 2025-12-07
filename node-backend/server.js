@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require('cors');
-require('dotenv').config();
 
 // Import database singleton
 const db = require('./src/config/db');
@@ -10,6 +9,7 @@ const db = require('./src/config/db');
 // Import routes
 const auctionRoutes = require('./src/routes/auctionRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
+const pushRoutes = require('./src/routes/push');
 
 // Import socket handlers
 const setupAuctionSocket = require('./src/sockets/auctionSocket');
@@ -50,6 +50,7 @@ app.get('/', (req, res) => {
 // Mount auction and chat routes
 app.use('/api/node', auctionRoutes);
 app.use('/api/node', chatRoutes);
+app.use('/api/node', pushRoutes);
 
 // Setup WebSocket handlers
 setupAuctionSocket(io);
