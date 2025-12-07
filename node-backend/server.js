@@ -40,6 +40,9 @@ const io = new Server(server, {
     }
 });
 
+// Make io instance available globally
+global.ioInstance = io;
+
 db.testConnection();
 
 // API Routes

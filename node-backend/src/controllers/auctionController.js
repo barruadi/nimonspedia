@@ -224,6 +224,29 @@ class AuctionController {
 
       const newAuction = await Auction.create(auctionData);
 
+      // Emit Socket.IO event to notify all connected clients about new auction
+      if (global.ioInstance) {
+        console.log('[auctionController] Emitting auction:created event for auction', newAuction.auction_id);
+        
+        // Get complete auction data with store name for real-time list
+        const fullAuction = await Auction.findById(newAuction.auction_id);
+        
+        global.ioInstance.emit('auction:created', {
+          auction_id: newAuction.auction_id,
+          product_id: newAuction.product_id,
+          product_name: fullAuction?.product_name,
+          image_path: fullAuction?.image_path,
+          starting_price: parseInt(newAuction.starting_price),
+          current_price: parseInt(newAuction.current_price),
+          start_time: newAuction.start_time,
+          end_time: newAuction.end_time,
+          status: newAuction.status,
+          store_name: fullAuction?.store_name,
+          bid_count: 0,
+          winner_id: null
+        });
+      }
+
       return res.status(201).json({
         ok: true,
         message: 'Auction created successfully',
@@ -531,6 +554,14 @@ class AuctionController {
 
       // Cancel the auction
       const result = await Auction.delete(auctionId);
+
+      // Emit Socket.IO event to notify all connected clients about cancelled auction
+      if (global.ioInstance) {
+        console.log('[auctionController] Emitting auction:deleted event for auction', auctionId);
+        global.ioInstance.emit('auction:deleted', {
+          auction_id: auctionId
+        });
+      }
 
       return res.status(200).json({
         ok: true,

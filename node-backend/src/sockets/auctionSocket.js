@@ -124,10 +124,13 @@ const setupAuctionSocket = (io) => {
      * 9. Broadcast to room
      */
     socket.on('auction:place-bid', async (data, callback) => {
-      const client = await pool.connect();
+      const pgPool = pool.getInstance();
+      let client;
       
       try {
         const { auctionId, bidderId, bidAmount } = data;
+        
+        client = await pgPool.connect();
 
         console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
 
@@ -325,7 +328,7 @@ const setupAuctionSocket = (io) => {
         // SEND PUSH NOTIFICATION TO SELLER
         try {
           const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
-          const productResult = await pool.query(productQuery, [auctionId]);
+          const productResult = await pgPool.query(productQuery, [auctionId]);
           const productName = productResult.rows[0]?.product_name || 'produk';
 
           const sellerQuery = `
@@ -335,7 +338,7 @@ const setupAuctionSocket = (io) => {
             JOIN stores s ON p.store_id = s.store_id
             WHERE a.auction_id = $1
           `;
-          const sellerResult = await pool.query(sellerQuery, [auctionId]);
+          const sellerResult = await pgPool.query(sellerQuery, [auctionId]);
           const sellerId = sellerResult.rows[0]?.owner_id;
 
           if (sellerId) {
@@ -354,7 +357,9 @@ const setupAuctionSocket = (io) => {
       } catch (error) {
         // ROLLBACK on error
         try {
-          await client.query('ROLLBACK');
+          if (client) {
+            await client.query('ROLLBACK');
+          }
         } catch (rollbackErr) {
           console.error('[Auction Socket] Rollback error:', rollbackErr);
         }
@@ -366,7 +371,9 @@ const setupAuctionSocket = (io) => {
         });
 
       } finally {
-        client.release();
+        if (client) {
+          client.release();
+        }
       }
     });
 
@@ -390,7 +397,8 @@ const setupAuctionSocket = (io) => {
         const query = `
           SELECT end_time FROM auctions WHERE auction_id = $1
         `;
-        const result = await pool.query(query, [auctionId]);
+        const pgPool = pool.getInstance();
+        const result = await pgPool.query(query, [auctionId]);
 
         if (result.rows.length === 0) {
           return callback?.({
@@ -438,7 +446,8 @@ const setupAuctionSocket = (io) => {
  * @param {number} auctionId
  */
 async function closeAuction(io, auctionId) {
-  const client = await pool.connect();
+  const pgPool = pool.getInstance();
+  const client = await pgPool.connect();
   
   try {
     console.log(`[Auction Socket] ⏰ Auto-closing auction ${auctionId}`);
