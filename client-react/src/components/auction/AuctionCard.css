@@ -47,8 +47,18 @@
   background: #05AA5B;
 }
 
+.status-badge.active:hover {
+  background: #048a4a;
+  cursor: default;
+}
+
 .status-badge.scheduled {
   background: #2196F3;
+}
+
+.status-badge.scheduled:hover {
+  background: #0b7dda;
+  cursor: default;
 }
 
 .card-content {
@@ -84,7 +94,7 @@
 .current-price {
   font-size: 16px;
   font-weight: 700;
-  color: #FF6B6B;
+  color: #05AA5B;
 }
 
 .auction-info {
@@ -120,7 +130,7 @@
 .detail-btn {
   width: 100%;
   padding: 10px;
-  background: #FF6B6B;
+  background: #05AA5B;
   color: white;
   border: none;
   border-radius: 4px;
@@ -131,7 +141,7 @@
 }
 
 .detail-btn:hover {
-  background: #ff5252;
+  background: #048a4a;
 }
 
 .detail-btn:active {

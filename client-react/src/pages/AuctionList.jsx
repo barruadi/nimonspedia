@@ -289,12 +289,6 @@ const AuctionList = () => {
       <header className="list-header">
         <h1>Lelang Produk</h1>
         <p>Jelajahi berbagai produk yang sedang atau akan diluncurkan</p>
-        
-        {/* Socket connection indicator */}
-        <div className={`socket-status ${socketConnected ? 'connected' : 'disconnected'}`}>
-          <span className="status-dot"></span>
-          {socketConnected ? '🟢 Live Update Aktif' : '🔴 Live Update Offline'}
-        </div>
       </header>
 
       {/* Tab Navigation */}

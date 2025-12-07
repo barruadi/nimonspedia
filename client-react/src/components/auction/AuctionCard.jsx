@@ -87,7 +87,7 @@ const AuctionCard = ({ auction, onViewDetail }) => {
           alt={auction.product_name}
         />
         <span className={`status-badge ${auction.status}`}>
-          {auction.status === 'active' ? '🔴 Berlangsung' : auction.status === 'scheduled' ? '⏱️ Akan Datang' : 'Status Lainnya'}
+          {auction.status === 'active' ? 'Berlangsung' : auction.status === 'scheduled' ? 'Akan Datang' : 'Status Lainnya'}
         </span>
       </div>
 
