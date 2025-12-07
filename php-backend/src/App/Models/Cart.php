@@ -67,7 +67,7 @@ class Cart
     public static function getByUserId(int $userId): array
     {
         $cartId = self::getCardByUserId($userId);
-        
+
         $sql = "
             SELECT
                 ci.product_id,
@@ -77,17 +77,24 @@ class Cart
                 p.stock,
                 p.image_path,
                 p.store_id,
+                p.is_deleted,
                 s.store_name,
-                (ci.qty * p.price) AS line_total
+                (ci.qty * p.price) AS line_total,
+                CASE
+                    WHEN p.is_deleted = TRUE THEN 'deleted'
+                    WHEN p.stock = 0 THEN 'out_of_stock'
+                    WHEN p.stock < ci.qty THEN 'insufficient_stock'
+                    ELSE 'available'
+                END AS availability_status
             FROM cart_items ci
-            JOIN products p ON p.product_id = ci.product_id
+            LEFT JOIN products p ON p.product_id = ci.product_id
             LEFT JOIN stores  s ON s.store_id = p.store_id
             WHERE ci.cart_id = :cartId
             ORDER BY ci.updated_at DESC, ci.created_at DESC
         ";
         $stmt = self::db()->prepare($sql);
         $stmt->execute(['cartId' => $cartId]);
-    
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -366,7 +373,7 @@ class Cart
 
         $in = implode(',', array_fill(0, count($pids), '?'));
         $st = $db->prepare("
-            SELECT p.product_id, p.store_id, p.name, p.price, p.stock, p.image_path, s.store_name
+            SELECT p.product_id, p.store_id, p.name, p.price, p.stock, p.image_path, p.is_deleted, s.store_name
                 FROM products p
                 LEFT JOIN stores s ON s.store_id = p.store_id
                 WHERE p.product_id IN ($in)
@@ -377,9 +384,15 @@ class Cart
         $items = []; $sub = 0.0;
         foreach ($rows as $r) {
             $pid    = (int)$r['product_id'];
+            $isDeleted = (bool)($r['is_deleted'] ?? false);
+
+            if ($isDeleted) continue;
+
             $wanted = (int)($qtys[$pid] ?? 1);
-            $qty    = max(1, min($wanted, (int)$r['stock']));
-            if ($qty <= 0) continue;
+            $stock  = (int)$r['stock'];
+            $qty    = max(1, min($wanted, $stock));
+
+            if ($qty <= 0 || $stock <= 0) continue;
 
             $price = (float)$r['price'];
             $items[] = [
@@ -434,27 +447,45 @@ class Cart
     
         $db->beginTransaction();
         try {
-            // 1) Lock-in stock and remove from cart
+            $checkProduct = $db->prepare("
+                SELECT is_deleted, stock FROM products WHERE product_id = :pid FOR UPDATE
+            ");
+
             $upd = $db->prepare("
                 UPDATE products
                 SET stock = stock - :q, updated_at = NOW()
-                WHERE product_id = :pid AND stock >= :q
+                WHERE product_id = :pid AND stock >= :q AND is_deleted = FALSE
             ");
-    
+
             $delCart = $db->prepare("
                 DELETE FROM cart_items
                 WHERE cart_id = :cid AND product_id = :pid
             ");
-    
+
             foreach ($snap['items'] as $it) {
                 $pid = (int)$it['product_id'];
                 $qty = (int)$it['qty'];
-    
+
+                $checkProduct->execute(['pid' => $pid]);
+                $productData = $checkProduct->fetch(PDO::FETCH_ASSOC);
+
+                if (!$productData) {
+                    throw new \RuntimeException("Produk tidak ditemukan, silakan refresh keranjang.");
+                }
+
+                if ((bool)$productData['is_deleted']) {
+                    throw new \RuntimeException("Produk sudah tidak tersedia, silakan refresh keranjang.");
+                }
+
+                if ((int)$productData['stock'] < $qty) {
+                    throw new \RuntimeException("Stok tidak mencukupi untuk produk #$pid, silakan refresh keranjang.");
+                }
+
                 $upd->execute(['q'=>$qty, 'pid'=>$pid]);
                 if ($upd->rowCount() === 0) {
                     throw new \RuntimeException("Stok berubah untuk produk #$pid, silakan ulangi.");
                 }
-    
+
                 $delCart->execute(['cid'=>$cartId, 'pid'=>$pid]);
             }
     

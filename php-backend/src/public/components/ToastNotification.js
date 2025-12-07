@@ -31,19 +31,20 @@ class AppToast extends HTMLElement {
     this.secondaryEl = this.shadowRoot.getElementById('toastSecondaryMessage');
     this.closeBtn = this.shadowRoot.getElementById('toastCloseBtn');
 
-    this.hideHandler = () => this.hide();
-    
-    this.closeBtn.addEventListener('click', this.hideHandler);
-    this.backdrop.addEventListener('click', this.hideHandler);
+    this.closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.hide();
+    });
+    this.backdrop.addEventListener('click', () => this.hide());
 
     const oldHandler = this._showHandler;
     if (oldHandler) {
       window.removeEventListener('show-toast', oldHandler);
     }
-    
+
     this._showHandler = this.handleShowEvent.bind(this);
     window.addEventListener('show-toast', this._showHandler);
-    
+
     console.log('Toast component connected');
   }
 

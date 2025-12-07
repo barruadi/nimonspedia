@@ -56,17 +56,13 @@
   text-decoration: none;
 }
 
-/* ERROR BOX */
-.register-page .error-box {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-  border-radius: .6rem;
-  padding: .6rem .8rem;
-  font-size: .8rem;
-  line-height: 1.3rem;
-  margin: 0 auto 1rem;
-  max-width: 600px;
+.register-page .field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+  line-height: 1.2;
 }
 
 /* STEP VISIBILITY */
@@ -380,10 +376,11 @@
 }
 .register-page .error-message {
   display: block;
-  color: #b91c1c;
-  font-size: .85rem;
-  margin-top: .25rem;
-  min-height: 1.1em;
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+  line-height: 1.2;
 }
 
 /* Quill container spacing (uses Quill's own styles for internals) */
@@ -392,4 +389,47 @@
   border: 2px solid var(--border);
   border-radius: var(--radius-field);
   min-height: 180px;
+}
+
+.register-page .pw-criteria {
+  margin-top: .35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem .6rem;
+}
+
+.register-page .pw-rule {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  padding-left: 0.85rem;
+  position: relative;
+}
+
+.register-page .pw-rule::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: .15rem;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.register-page .pw-rule.invalid {
+  color: #dc2626;
+}
+
+.register-page .pw-rule.invalid::before {
+  background: transparent;
+  border-color: #dc2626;
+}
+
+.register-page .pw-rule.valid {
+  color: #16a34a;
+}
+
+.register-page .pw-rule.valid::before {
+  background: #16a34a;
+  border-color: #16a34a;
 }

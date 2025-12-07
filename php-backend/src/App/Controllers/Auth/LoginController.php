@@ -29,29 +29,49 @@ class LoginController
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
-        $email      = $req['body']['email'] ?? '';
+
+        $email      = trim($req['body']['email'] ?? '');
         $password   = $req['body']['password'] ?? '';
-        
-        if ($email === '' || $password === '') {
-            return [];
-        }
-        
-        $user = User::authenticate($email, $password);
-        
-        if (!$user) {
+
+        if (empty($email)) {
+            http_response_code(400);
             return [
                 'ok' => false,
-                'error' => 'gagal login '
+                'error' => 'Email wajib diisi'
             ];
         }
-        
-        // setup session
-        $_SESSION['user']      = $user;
-        
+
+        if (empty($password)) {
+            http_response_code(400);
+            return [
+                'ok' => false,
+                'error' => 'Password wajib diisi'
+            ];
+        }
+
+        $existingUser = User::findByEmail($email);
+        if (empty($existingUser)) {
+            http_response_code(401);
+            return [
+                'ok' => false,
+                'error' => 'Email tidak terdaftar'
+            ];
+        }
+
+        if (!password_verify($password, $existingUser['password_hash'])) {
+            http_response_code(401);
+            return [
+                'ok' => false,
+                'error' => 'Password salah'
+            ];
+        }
+
+        unset($existingUser['password_hash']);
+        $_SESSION['user'] = $existingUser;
+
         return [
             'ok' => true,
-            'data' => $user
+            'data' => $existingUser
         ];
     }
 }

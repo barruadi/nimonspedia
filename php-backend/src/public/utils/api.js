@@ -56,13 +56,10 @@ function request(path, {
     xhr.onreadystatechange = function () {
       if (xhr.readyState !== 4) return;
 
-      // Network or aborted
       if (xhr.status === 0) {
         reject(new Error('Network error or aborted'));
         return;
       }
-
-      const ok = xhr.status >= 200 && xhr.status < 300;
 
       const raw = xhr.responseText || '';
       let data = null;
@@ -72,11 +69,6 @@ function request(path, {
         } catch {
           data = { raw };
         }
-      }
-
-      if (!ok) {
-        resolve(null);
-        return;
       }
 
       resolve(data);

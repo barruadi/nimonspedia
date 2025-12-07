@@ -21,9 +21,6 @@
           </p>
         </header>
 
-        <!-- error box -->
-        <div id="errorBox" class="error-box" style="display:none"></div>
-
         <!-- STEP 1: ROLE PICK -->
         <section class="step active" id="step-role">
           <div class="role-list">
@@ -60,6 +57,7 @@
               <div class="input-wrap">
                 <input id="fullNameInput" type="text" placeholder="Masukkan nama akun" maxlength="200" required />
               </div>
+              <span class="field-error" id="fullNameError"></span>
             </div>
 
             <div class="field">
@@ -67,6 +65,7 @@
               <div class="input-wrap">
                 <input id="emailInput" type="email" placeholder="Masukkan alamat email" required />
               </div>
+              <span class="field-error" id="emailError"></span>
             </div>
 
             <div class="field">
@@ -77,10 +76,14 @@
                   <img class="eye-icon" src="/uploads/auth/eye-icon.png" alt="" aria-hidden="true" />
                 </button>
               </div>
-              <!-- Password requirements indicator -->
               <div id="regPasswordCriteria" class="pw-criteria" aria-live="polite">
-                
+                <div id="rp-length" class="pw-rule invalid">Minimal 8 karakter</div>
+                <div id="rp-upper" class="pw-rule invalid">Huruf besar</div>
+                <div id="rp-lower" class="pw-rule invalid">Huruf kecil</div>
+                <div id="rp-number" class="pw-rule invalid">Angka</div>
+                <div id="rp-symbol" class="pw-rule invalid">Simbol</div>
               </div>
+              <span class="field-error" id="passwordError"></span>
             </div>
 
             <div class="field">
@@ -91,13 +94,15 @@
                   <img class="eye-icon" src="/uploads/auth/eye-icon.png" alt="" aria-hidden="true" />
                 </button>
               </div>
+              <span class="field-error" id="confirmPasswordError"></span>
             </div>
-            
+
             <div class="field">
-              <label>Address*</label>
-              <div class="input-wrap with-icon">
+              <label>Alamat*</label>
+              <div class="input-wrap">
                 <input id="address" type="text" placeholder="Masukkan alamat anda" required />
               </div>
+              <span class="field-error" id="addressError"></span>
             </div>
           </div>
 

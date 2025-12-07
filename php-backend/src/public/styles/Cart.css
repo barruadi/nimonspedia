@@ -347,6 +347,49 @@ h1 {
   }
 }
 
+.row-unavailable {
+  opacity: 0.6;
+  background-color: #f9fafb;
+}
+
+.row-unavailable .chk {
+  cursor: not-allowed;
+}
+
+.row-unavailable .qty .btn-qty,
+.row-unavailable .qty .inp-qty {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+.status-deleted {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.status-out {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.status-insufficient {
+  background: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;

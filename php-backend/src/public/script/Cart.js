@@ -46,10 +46,10 @@ import { api } from '/utils/api.js';
       return [...map.values()];
     }
 
-    /** compute store-level selection (all lines selected) */
     function storeAllSelected(group) {
-      return group.items.length > 0
-        && group.items.every(it => state.selected.has(it.product_id));
+      const availableItems = group.items.filter(it => (it.availability_status || 'available') === 'available');
+      return availableItems.length > 0
+        && availableItems.every(it => state.selected.has(it.product_id));
     }
 
     /* ---------- render ---------- */
@@ -75,14 +75,29 @@ import { api } from '/utils/api.js';
       elGroups.innerHTML = groups.map(g => {
         const sChecked = storeAllSelected(g) ? 'checked' : '';
         const rows = g.items.map(i => {
-          const checked = state.selected.has(i.product_id) ? 'checked' : '';
+          const status = i.availability_status || 'available';
+          const isUnavailable = status !== 'available';
+          const checked = !isUnavailable && state.selected.has(i.product_id) ? 'checked' : '';
+          const disabledCheckbox = isUnavailable ? 'disabled' : '';
+          const disabledQty = isUnavailable ? 'disabled' : '';
+
+          let statusBadge = '';
+          if (status === 'deleted') {
+            statusBadge = '<span class="status-badge status-deleted">Produk Tidak Tersedia</span>';
+          } else if (status === 'out_of_stock') {
+            statusBadge = '<span class="status-badge status-out">Stok Habis</span>';
+          } else if (status === 'insufficient_stock') {
+            statusBadge = `<span class="status-badge status-insufficient">Stok Terbatas (${i.stock} tersedia)</span>`;
+          }
+
           return `
-            <div class="row" data-id="${i.product_id}">
-              <input type="checkbox" class="chk chk-line" ${checked} aria-label="Pilih produk">
+            <div class="row ${isUnavailable ? 'row-unavailable' : ''}" data-id="${i.product_id}">
+              <input type="checkbox" class="chk chk-line" ${checked} ${disabledCheckbox} aria-label="Pilih produk">
               <img class="thumb" src="${i.image_path || '/placeholder.png'}" alt="">
               <div class="info">
                 <div class="title">${i.name}</div>
                 <div class="muted">${i.store_name ?? ''}</div>
+                ${statusBadge}
               </div>
               <div class="right">
                 <div class="price">${rupiah(i.price)}</div>
@@ -93,9 +108,9 @@ import { api } from '/utils/api.js';
                   </svg>
                 </button>
                 <div class="qty">
-                  <button class="btn-qty btn-dec" aria-label="Kurangi">−</button>
-                  <input class="inp-qty" type="number" min="1" value="${i.qty}">
-                  <button class="btn-qty btn-inc" aria-label="Tambah">+</button>
+                  <button class="btn-qty btn-dec" ${disabledQty} aria-label="Kurangi">−</button>
+                  <input class="inp-qty" type="number" min="1" value="${i.qty}" ${disabledQty}>
+                  <button class="btn-qty btn-inc" ${disabledQty} aria-label="Tambah">+</button>
                 </div>
               </div>
             </div>
@@ -128,17 +143,16 @@ import { api } from '/utils/api.js';
         });
       });
 
-      // Store-level toggles
       elGroups.querySelectorAll('.chk-store').forEach(chk => {
         chk.addEventListener('change', e => {
           const groupEl = e.target.closest('.group');
-          const lines = groupEl.querySelectorAll('.row');
+          const lines = groupEl.querySelectorAll('.row:not(.row-unavailable)');
           if (e.target.checked) {
             lines.forEach(r => state.selected.add(Number(r.dataset.id)));
           } else {
             lines.forEach(r => state.selected.delete(Number(r.dataset.id)));
           }
-          render(); // simpler: re-render to update all checks & summary
+          render();
         });
       });
 
@@ -164,13 +178,15 @@ import { api } from '/utils/api.js';
     }
 
     function reflectCheckAll() {
-      const ids = state.items.map(i => i.product_id);
-      const allSelected = ids.length && ids.every(id => state.selected.has(id));
+      const availableIds = state.items
+        .filter(i => (i.availability_status || 'available') === 'available')
+        .map(i => i.product_id);
+      const allSelected = availableIds.length && availableIds.every(id => state.selected.has(id));
       elCheckAll.checked = allSelected;
     }
     function reflectStoreChecks() {
       elGroups.querySelectorAll('.group').forEach(g => {
-        const rows = g.querySelectorAll('.row');
+        const rows = g.querySelectorAll('.row:not(.row-unavailable)');
         const all = rows.length && [...rows].every(r => state.selected.has(Number(r.dataset.id)));
         const chk = g.querySelector('.chk-store');
         if (chk) chk.checked = all;
@@ -215,13 +231,14 @@ import { api } from '/utils/api.js';
       await load();
     }
 
-    /* ---------- summary ---------- */
     function updateSummary() {
-      const chosen = state.items.filter(i => state.selected.has(i.product_id));
+      const chosen = state.items.filter(i => {
+        const status = i.availability_status || 'available';
+        return state.selected.has(i.product_id) && status === 'available';
+      });
       const totalQty = chosen.reduce((a,b)=>a + Number(b.qty), 0);
       const subtotal = chosen.reduce((a,b)=>a + Number(b.qty)*Number(b.price), 0);
 
-      // per-store lines
       const byStore = {};
       for (const it of chosen) {
         const key = String(it.store_id ?? 0);
@@ -247,8 +264,16 @@ import { api } from '/utils/api.js';
 
     /* ---------- top actions ---------- */
     elCheckAll.addEventListener('change', () => {
-      if (elCheckAll.checked) state.items.forEach(i => state.selected.add(i.product_id));
-      else state.selected.clear();
+      if (elCheckAll.checked) {
+        state.items.forEach(i => {
+          const status = i.availability_status || 'available';
+          if (status === 'available') {
+            state.selected.add(i.product_id);
+          }
+        });
+      } else {
+        state.selected.clear();
+      }
       render();
     });
 
@@ -274,8 +299,16 @@ import { api } from '/utils/api.js';
 
     elBtnCheckout.addEventListener('click', async () => {
       const chosen = state.items
-        .filter(i => state.selected.has(i.product_id))
+        .filter(i => {
+          const status = i.availability_status || 'available';
+          return state.selected.has(i.product_id) && status === 'available';
+        })
         .map(i => ({ product_id: i.product_id, qty: Number(i.qty) }));
+
+      if (chosen.length === 0) {
+        alert('Tidak ada produk yang tersedia untuk checkout. Silakan periksa keranjang Anda.');
+        return;
+      }
 
       const res = await api.post('/checkout/selection', { items: chosen });
       if (!res || res.ok === false) { alert(res?.error || 'Gagal memulai checkout'); return; }

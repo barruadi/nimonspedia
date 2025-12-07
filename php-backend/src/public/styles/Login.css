@@ -103,17 +103,13 @@
   text-decoration: none;
 }
 
-/* ERROR BOX */
-.login-page .error-box {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-  border-radius: .6rem;
-  padding: .6rem .8rem;
-  font-size: .8rem;
-  line-height: 1.3rem;
-  margin: 0 0 1rem;
-  text-align: center;
+.login-page .field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  min-height: 1rem;
+  line-height: 1.2;
 }
 
 /* FORM */
