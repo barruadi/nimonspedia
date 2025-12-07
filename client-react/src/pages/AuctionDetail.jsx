@@ -537,13 +537,13 @@ const AuctionDetail = () => {
     isSeller: isSeller,
     auctionSellerId: auctionSellerId,
     currentUserId: currentUserId,
-    button_should_be: isSeller ? 'Kembali' : 'Kembali ke Lelang'
+    button_should_be: isSeller ? 'Kembali ke Product Management' : 'Kembali ke Lelang'
   });
 
   return (
     <div className="auction-detail-page">
       {isSeller ? (
-        <button className="back-btn" onClick={() => navigate(-1)}>← Kembali</button>
+        <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>← Kembali ke Product Management</button>
       ) : (
         <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
       )}
