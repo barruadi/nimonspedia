@@ -362,7 +362,35 @@ class Order
                 throw new Exception('Order cannot be rejected. Current status: ' . $order['status']);
             }
 
-            // 2. Refund buyer balance
+            // 2. Get order items to restore stock
+            $itemsStmt = $db->prepare("
+                SELECT product_id, qty
+                FROM order_items
+                WHERE order_id = :order_id
+            ");
+            $itemsStmt->execute(['order_id' => $orderId]);
+            $orderItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Restore stock for each product
+            $restoreStockStmt = $db->prepare("
+                UPDATE products
+                SET stock = stock + :qty,
+                    updated_at = NOW()
+                WHERE product_id = :product_id
+            ");
+
+            foreach ($orderItems as $item) {
+                $restoreResult = $restoreStockStmt->execute([
+                    'qty' => $item['qty'],
+                    'product_id' => $item['product_id']
+                ]);
+
+                if (!$restoreResult) {
+                    throw new Exception('Failed to restore stock for product ID: ' . $item['product_id']);
+                }
+            }
+
+            // 4. Refund buyer balance
             $refundStmt = $db->prepare("
                 UPDATE users 
                 SET balance = balance + :amount,
@@ -378,7 +406,7 @@ class Order
                 throw new Exception('Failed to refund buyer balance');
             }
 
-            // 3. Update order status to rejected
+            // 5. Update order status to rejected
             $updateStmt = $db->prepare("
                 UPDATE orders 
                 SET status = 'rejected',
