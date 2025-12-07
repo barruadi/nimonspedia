@@ -15,6 +15,7 @@ $router->group([
   $r->post('/login',    fn($req) => (new LoginController())->login($req));
   $r->get('/register',  fn($req) => (new RegisterController())->show());
   $r->post('/register', fn($req) => (new RegisterController())->register($req));
+  $r->post('/register/check-email', fn($req) => (new RegisterController())->checkEmail($req));
 });
 
 $router->post('/api/logout', fn($req) => (new LogoutController())->logout(), [$auth]);

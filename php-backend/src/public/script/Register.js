@@ -62,8 +62,12 @@ const rpLower = document.getElementById('rp-lower');
 const rpNumber = document.getElementById('rp-number');
 const rpSymbol = document.getElementById('rp-symbol');
 
-// Error box
-const errorBox = document.getElementById('errorBox');
+// Field error elements
+const fullNameError = document.getElementById('fullNameError');
+const emailError = document.getElementById('emailError');
+const passwordError = document.getElementById('passwordError');
+const confirmPasswordError = document.getElementById('confirmPasswordError');
+const addressError = document.getElementById('addressError');
 
 // Review (buyer)
 const summaryRoleEl    = document.getElementById('summaryRole');
@@ -97,15 +101,14 @@ function showStep(whichStepEl) {
   whichStepEl.classList.add('active');
 }
 
-function showError(msg) {
-  if (!errorBox) return;
-  errorBox.textContent = msg;
-  errorBox.style.display = 'block';
-}
-function clearError() {
-  if (!errorBox) return;
-  errorBox.textContent = '';
-  errorBox.style.display = 'none';
+function clearAllErrors() {
+  if (fullNameError) fullNameError.textContent = '';
+  if (emailError) emailError.textContent = '';
+  if (passwordError) passwordError.textContent = '';
+  if (confirmPasswordError) confirmPasswordError.textContent = '';
+  if (addressError) addressError.textContent = '';
+  if (storeNameErrorEl) storeNameErrorEl.textContent = '';
+  if (storeDescErrorEl) storeDescErrorEl.textContent = '';
 }
 
 function fillReview() {
@@ -124,32 +127,73 @@ function fillReview() {
 }
 
 function validateBaseFields() {
+  clearAllErrors();
+  let isValid = true;
+
   const fullName  = fullNameInput.value.trim();
   const email     = emailInput.value.trim();
   const password  = passwordInput.value;
   const confirm   = confirmPasswordInput ? confirmPasswordInput.value : '';
+  const address   = addressInput.value.trim();
 
-  if (!fullName || !email || !password || !confirm) {
-    showError('Lengkapi semua data.');
-    return false;
+  if (!fullName) {
+    fullNameError.textContent = 'Nama wajib diisi';
+    isValid = false;
+  } else if (fullName.length > 200) {
+    fullNameError.textContent = 'Maksimal 200 karakter';
+    isValid = false;
   }
-  if (password !== confirm) {
-    showError('Password dan konfirmasi password tidak sama.');
-    return false;
+
+  if (!email) {
+    emailError.textContent = 'Email wajib diisi';
+    isValid = false;
+  } else {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      emailError.textContent = 'Format email tidak valid';
+      isValid = false;
+    }
   }
-  // password policy check
-  const policy = {
-    length: password.length >= 8,
-    upper: /[A-Z]/.test(password),
-    lower: /[a-z]/.test(password),
-    number: /[0-9]/.test(password),
-    symbol: /[^A-Za-z0-9]/.test(password),
-  };
-  if (!policy.length || !policy.upper || !policy.lower || !policy.number || !policy.symbol) {
-    showError('Password tidak memenuhi persyaratan.');
-    return false;
+
+  if (!password) {
+    passwordError.textContent = 'Password wajib diisi';
+    isValid = false;
+  } else {
+    const policy = {
+      length: password.length >= 8,
+      upper: /[A-Z]/.test(password),
+      lower: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      symbol: /[^A-Za-z0-9]/.test(password),
+    };
+
+    const passwordErrors = [];
+    if (!policy.length) passwordErrors.push('min 8 karakter');
+    if (!policy.upper) passwordErrors.push('huruf besar');
+    if (!policy.lower) passwordErrors.push('huruf kecil');
+    if (!policy.number) passwordErrors.push('angka');
+    if (!policy.symbol) passwordErrors.push('simbol');
+
+    if (passwordErrors.length > 0) {
+      passwordError.textContent = 'Perlu: ' + passwordErrors.join(', ');
+      isValid = false;
+    }
   }
-  return true;
+
+  if (!confirm) {
+    confirmPasswordError.textContent = 'Konfirmasi password wajib diisi';
+    isValid = false;
+  } else if (password !== confirm) {
+    confirmPasswordError.textContent = 'Password tidak sama';
+    isValid = false;
+  }
+
+  if (!address) {
+    addressError.textContent = 'Alamat wajib diisi';
+    isValid = false;
+  }
+
+  return isValid;
 }
 
 function updateRegisterPasswordCriteria(password) {
@@ -160,16 +204,26 @@ function updateRegisterPasswordCriteria(password) {
     number: /[0-9]/.test(password),
     symbol: /[^A-Za-z0-9]/.test(password),
   };
-  if (rpLength) rpLength.classList.toggle('valid', s.length); rpLength.classList.toggle('invalid', !s.length);
-  if (rpUpper) rpUpper.classList.toggle('valid', s.upper); rpUpper.classList.toggle('invalid', !s.upper);
-  if (rpLower) rpLower.classList.toggle('valid', s.lower); rpLower.classList.toggle('invalid', !s.lower);
-  if (rpNumber) rpNumber.classList.toggle('valid', s.number); rpNumber.classList.toggle('invalid', !s.number);
-  if (rpSymbol) rpSymbol.classList.toggle('valid', s.symbol); rpSymbol.classList.toggle('invalid', !s.symbol);
-  if (rpLength) { rpLength.classList.toggle('valid', s.length); rpLength.classList.toggle('invalid', !s.length); }
-  if (rpUpper)  { rpUpper.classList.toggle('valid', s.upper); rpUpper.classList.toggle('invalid', !s.upper); }
-  if (rpLower)  { rpLower.classList.toggle('valid', s.lower); rpLower.classList.toggle('invalid', !s.lower); }
-  if (rpNumber) { rpNumber.classList.toggle('valid', s.number); rpNumber.classList.toggle('invalid', !s.number); }
-  if (rpSymbol) { rpSymbol.classList.toggle('valid', s.symbol); rpSymbol.classList.toggle('invalid', !s.symbol); }
+  if (rpLength) {
+    rpLength.classList.toggle('valid', s.length);
+    rpLength.classList.toggle('invalid', !s.length);
+  }
+  if (rpUpper) {
+    rpUpper.classList.toggle('valid', s.upper);
+    rpUpper.classList.toggle('invalid', !s.upper);
+  }
+  if (rpLower) {
+    rpLower.classList.toggle('valid', s.lower);
+    rpLower.classList.toggle('invalid', !s.lower);
+  }
+  if (rpNumber) {
+    rpNumber.classList.toggle('valid', s.number);
+    rpNumber.classList.toggle('invalid', !s.number);
+  }
+  if (rpSymbol) {
+    rpSymbol.classList.toggle('valid', s.symbol);
+    rpSymbol.classList.toggle('invalid', !s.symbol);
+  }
 }
 
 // simple loading helper for buttons
@@ -303,12 +357,14 @@ function bindLogoUpload() {
 }
 
 function handleLogoFile(file) {
+  if (storeNameErrorEl) storeNameErrorEl.textContent = '';
+
   if (!VALID_IMAGE_TYPES.includes(file.type)) {
-    showError('Format file tidak valid! Gunakan JPG, PNG, atau WEBP.');
+    if (storeNameErrorEl) storeNameErrorEl.textContent = 'Format tidak valid. Gunakan JPG, PNG, atau WEBP';
     return;
   }
   if (file.size > MAX_IMAGE_SIZE) {
-    showError('Ukuran file terlalu besar! Maksimal 2MB.');
+    if (storeNameErrorEl) storeNameErrorEl.textContent = 'Ukuran file terlalu besar. Maksimal 2MB';
     return;
   }
 
@@ -370,7 +426,13 @@ function validateSellerFields() {
 
   const logoFile = storeLogoInput?.files?.[0];
   if (!logoFile) {
-    showError('Logo toko wajib diunggah!');
+    storeNameErrorEl.textContent = 'Logo toko wajib diunggah';
+    ok = false;
+  } else if (!VALID_IMAGE_TYPES.includes(logoFile.type)) {
+    storeNameErrorEl.textContent = 'Format tidak valid. Gunakan JPG, PNG, atau WEBP';
+    ok = false;
+  } else if (logoFile.size > MAX_IMAGE_SIZE) {
+    storeNameErrorEl.textContent = 'Ukuran terlalu besar. Maksimal 2MB';
     ok = false;
   }
 
@@ -379,44 +441,53 @@ function validateSellerFields() {
 
 // --------------------------- SUBMITS ---------------------------
 async function submitBuyer() {
-  clearError();
   if (!validateBaseFields()) return;
 
   const full_name = fullNameInput.value.trim();
   const email     = emailInput.value.trim();
   const password  = passwordInput.value;
-  const address   = addressInput.value;
+  const address   = addressInput.value.trim();
 
-  // show tiny loading state for UX
   setButtonLoading(submitBuyerBtn, true);
   await new Promise(r => setTimeout(r, 700));
 
-  const res = await api.post('/register', { 
-    full_name, 
-    email, 
-    password, 
+  const res = await api.post('/register', {
+    full_name,
+    email,
+    password,
     address,
-    role: 'buyer' 
+    role: 'buyer'
   });
+
   if (!res || res.ok === false) {
     setButtonLoading(submitBuyerBtn, false);
-    showError(res?.error?.message || 'Pendaftaran gagal');
+    const errorMsg = res?.error || 'Pendaftaran gagal, silakan coba lagi';
+    if (errorMsg.includes('Email sudah terdaftar') || errorMsg.includes('email')) {
+      emailError.textContent = errorMsg;
+    } else if (errorMsg.includes('Password') || errorMsg.includes('password')) {
+      passwordError.textContent = errorMsg;
+    } else if (errorMsg.includes('Nama')) {
+      fullNameError.textContent = errorMsg;
+    } else if (errorMsg.includes('Alamat')) {
+      addressError.textContent = errorMsg;
+    } else {
+      emailError.textContent = errorMsg;
+    }
     return;
   }
+
   window.location.href = '/products';
 }
 
 async function submitSeller() {
-  clearError();
   if (!validateBaseFields()) return;
   if (!validateSellerFields()) return;
 
-  // Build FormData
   const fd = new FormData();
   fd.set('full_name', fullNameInput.value.trim());
   fd.set('email', emailInput.value.trim());
   fd.set('password', passwordInput.value);
-  fd.set('address', addressInput.value);
+  fd.set('address', addressInput.value.trim());
   fd.set('role', 'seller');
 
   fd.set('store_name', storeNameInput.value.trim());
@@ -429,12 +500,30 @@ async function submitSeller() {
   await new Promise(r => setTimeout(r, 700));
 
   const res = await api.post('/register', fd);
+
   if (!res || res.ok === false) {
     setButtonLoading(submitSellerBtn, false);
-    showError(res?.error?.message || 'Pendaftaran gagal');
+    const errorMsg = res?.error || 'Pendaftaran gagal, silakan coba lagi';
+    if (errorMsg.includes('Email sudah terdaftar') || errorMsg.includes('email')) {
+      emailError.textContent = errorMsg;
+    } else if (errorMsg.includes('Password') || errorMsg.includes('password')) {
+      passwordError.textContent = errorMsg;
+    } else if (errorMsg.includes('Nama toko') || errorMsg.includes('store')) {
+      storeNameErrorEl.textContent = errorMsg;
+    } else if (errorMsg.includes('Deskripsi toko')) {
+      storeDescErrorEl.textContent = errorMsg;
+    } else if (errorMsg.includes('Logo')) {
+      storeNameErrorEl.textContent = errorMsg;
+    } else if (errorMsg.includes('Nama')) {
+      fullNameError.textContent = errorMsg;
+    } else if (errorMsg.includes('Alamat')) {
+      addressError.textContent = errorMsg;
+    } else {
+      emailError.textContent = errorMsg;
+    }
     return;
   }
-  
+
   window.location.href = '/seller/dashboard';
 }
 
@@ -457,42 +546,59 @@ function bindRolePick() {
 function bindNav() {
   toStep2Btn.addEventListener('click', () => {
     if (!selectedRole) return;
-    clearError();
+    clearAllErrors();
     showStep(stepUser);
   });
 
   backToStep1Btn.addEventListener('click', () => {
-    clearError();
+    clearAllErrors();
     showStep(stepRole);
   });
 
   toNextAfterUserBtn.addEventListener('click', async () => {
-    clearError();
     if (!validateBaseFields()) return;
 
-    if (selectedRole === 'seller') {
-      try {
-        if (!storeQuill) {
-          await initStoreQuillEditor();   // lazy-load Quill here
-        }
-      } catch (e) {
-        console.error('Quill failed to load:', e);
-        showError('Editor deskripsi toko tidak bisa dimuat. Coba lagi.');
+    const email = emailInput.value.trim();
+    setButtonLoading(toNextAfterUserBtn, true);
+
+    try {
+      const checkRes = await api.post('/register/check-email', { email });
+      setButtonLoading(toNextAfterUserBtn, false);
+
+      if (!checkRes || checkRes.ok === false) {
+        const errorMsg = checkRes?.error || 'Email sudah terpakai';
+        emailError.textContent = errorMsg;
+        return;
       }
-      showStep(stepStore);
-    } else {
-      fillReview();
-      showStep(stepReview);
+
+      if (selectedRole === 'seller') {
+        try {
+          if (!storeQuill) {
+            await initStoreQuillEditor();
+          }
+        } catch (e) {
+          console.error('Quill failed to load:', e);
+          storeNameErrorEl.textContent = 'Editor tidak bisa dimuat. Coba lagi.';
+          return;
+        }
+        showStep(stepStore);
+      } else {
+        fillReview();
+        showStep(stepReview);
+      }
+    } catch (err) {
+      setButtonLoading(toNextAfterUserBtn, false);
+      emailError.textContent = 'Gagal memeriksa email. Coba lagi.';
     }
   });
 
   backToStep2Btn.addEventListener('click', () => {
-    clearError();
+    clearAllErrors();
     showStep(stepUser);
   });
 
   backToStep2FromReviewBtn.addEventListener('click', () => {
-    clearError();
+    clearAllErrors();
     showStep(stepUser);
   });
 
