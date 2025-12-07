@@ -1,0 +1,209 @@
+.message-bubble {
+  margin-bottom: 12px;
+  display: flex;
+}
+
+.message-bubble.own {
+  justify-content: flex-end;
+}
+
+.message-bubble.other {
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 70%;
+  background-color: white;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.message-bubble.own .message-content {
+  background-color: #007bff;
+  color: white;
+}
+
+.message-sender {
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #666;
+}
+
+.message-bubble.own .message-sender {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sender-name {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.sender-role {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.message-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.message-image {
+  max-width: 300px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.message-product {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 280px;
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+}
+
+.message-product.clickable {
+  cursor: pointer;
+}
+
+.message-product.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #007bff;
+}
+
+.message-product.clickable:active {
+  transform: translateY(0);
+}
+
+.message-bubble.own .message-product {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.message-bubble.own .message-product.clickable:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.message-product .product-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.product-info {
+  padding: 12px;
+}
+
+.product-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.message-bubble.own .product-info h4 {
+  color: white;
+}
+
+.product-price {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #28a745;
+}
+
+.message-bubble.own .product-price {
+  color: #a8f5c8;
+}
+
+.product-stock {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.message-bubble.own .product-stock {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.product-cta {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.message-bubble.own .product-cta {
+  border-top-color: rgba(255, 255, 255, 0.2);
+}
+
+.view-details {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #007bff;
+  transition: color 0.2s ease;
+}
+
+.message-bubble.own .view-details {
+  color: #ffffff;
+}
+
+.message-product.clickable:hover .view-details {
+  color: #0056b3;
+}
+
+.message-bubble.own .message-product.clickable:hover .view-details {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.message-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
+  gap: 6px;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.message-bubble.own .message-time {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.message-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.message-status.sent .check-icon,
+.message-status.delivered .check-icon {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.message-status.read .check-icon {
+  color: #4FC3F7; /* Light blue for read status */
+}
+
+.check-icon {
+  width: 16px;
+  height: 16px;
+}
