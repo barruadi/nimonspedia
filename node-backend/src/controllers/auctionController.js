@@ -95,6 +95,13 @@ class AuctionController {
       const bids = await Auction.getBids(auctionId);
       const stats = await Auction.getAuctionStats(auctionId);
 
+      console.log('[auctionController] Fetched auction from DB:', {
+        auction_id: auction.auction_id,
+        status: auction.status,
+        winner_id: auction.winner_id,
+        winner_name: auction.winner_name
+      });
+
       // Return all relevant information regarding the auction
       return res.status(200).json({
         ok: true,
@@ -437,13 +444,17 @@ class AuctionController {
       // Stop the auction
       const result = await Auction.stopAuction(auctionId, sellerId);
 
+      // Fetch updated auction to get the new winner information
+      const updatedAuction = await Auction.findById(auctionId);
+
       return res.status(200).json({
         ok: true,
         data: {
           auction_id: result.auction_id,
           status: result.status,
-          winner_id: auction.winner_id || null,
-          final_price: parseInt(auction.current_price),
+          winner_id: updatedAuction.winner_id || null,
+          winner_name: updatedAuction.winner_name || null,
+          final_price: parseInt(updatedAuction.current_price),
           message: result.message
         }
       });
@@ -492,11 +503,11 @@ class AuctionController {
         });
       }
 
-      // Verify auction is active
-      if (auction.status !== 'active') {
+      // Verify auction is scheduled or active
+      if (auction.status !== 'scheduled' && auction.status !== 'active') {
         return res.status(400).json({
           ok: false,
-          error: `Cannot cancel auction with status '${auction.status}'. Only active auctions can be cancelled.`
+          error: `Cannot cancel auction with status '${auction.status}'. Only scheduled or active auctions can be cancelled.`
         });
       }
 

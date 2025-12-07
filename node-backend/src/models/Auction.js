@@ -111,7 +111,15 @@ class Auction {
         return null;
       }
 
-      return result.rows[0];
+      const row = result.rows[0];
+      console.log('[Auction.findById] Query result for auction', auctionId, ':', {
+        status: row.status,
+        winner_id: row.winner_id,
+        winner_name: row.winner_name,
+        seller_id: row.seller_id
+      });
+
+      return row;
 
     } catch (error) {
       console.error('Error in Auction.findById:', error);
@@ -751,15 +759,25 @@ class Auction {
         throw new Error('You do not have permission to stop this auction');
       }
 
-      // Update status to 'ended'
+      // Get highest bidder (winner)
+      const highestBidQuery = `
+        SELECT bidder_id FROM auction_bids
+        WHERE auction_id = $1
+        ORDER BY bid_amount DESC
+        LIMIT 1
+      `;
+      const highestBidResult = await client.query(highestBidQuery, [auctionId]);
+      const winnerId = highestBidResult.rows.length > 0 ? highestBidResult.rows[0].bidder_id : null;
+
+      // Update status to 'ended' and set winner
       const updateQuery = `
         UPDATE auctions
-        SET status = 'ended'
+        SET status = 'ended', winner_id = $2
         WHERE auction_id = $1
         RETURNING auction_id, status, winner_id
       `;
 
-      const result = await client.query(updateQuery, [auctionId]);
+      const result = await client.query(updateQuery, [auctionId, winnerId]);
 
       await client.query('COMMIT');
 
@@ -767,7 +785,8 @@ class Auction {
         success: true,
         message: `Auction ${auctionId} stopped successfully`,
         auction_id: result.rows[0].auction_id,
-        status: result.rows[0].status
+        status: result.rows[0].status,
+        winner_id: result.rows[0].winner_id
       };
 
     } catch (error) {

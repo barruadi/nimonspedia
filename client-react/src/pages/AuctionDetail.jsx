@@ -147,12 +147,20 @@ const AuctionDetail = () => {
           store_name: responseData.store.store_name
         };
 
+        console.log('[AuctionDetail] Winner data from API:', {
+          winner_id: responseData.auction.winner_id,
+          winner_name: responseData.auction.winner_name,
+          status: responseData.auction.status
+        });
+
         setAuction(auctionData);
         
         console.log('[AuctionDetail] Auction loaded:', {
           auction_id: auctionData.auction_id,
           seller_id: auctionData.seller_id,
-          product_name: auctionData.product_name
+          product_name: auctionData.product_name,
+          winner_id: auctionData.winner_id,
+          winner_name: auctionData.winner_name
         });
         
         console.log('[AuctionDetail] Setting auctionSellerId to:', auctionData.seller_id, 'type:', typeof auctionData.seller_id);
@@ -261,11 +269,11 @@ const AuctionDetail = () => {
 
   // Socket setup - join room and listen for updates
   useEffect(() => {
-    if (!socket || !auction || !currentUser) return;
+    if (!socket.socket || !auction || !currentUser) return;
 
     console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
 
-    socket.emit('auction:join', {
+    socket.socket.emit('auction:join', {
       auctionId: auction.auction_id,
       userId: currentUser.user_id
     }, (response) => {
@@ -315,17 +323,17 @@ const AuctionDetail = () => {
       setBidError(data.error || 'Gagal menempatkan penawaran');
     };
 
-    socket.on('auction:bid-update', handleBidUpdate);
-    socket.on('auction:ended', handleAuctionEnded);
-    socket.on('auction:bid-error', handleBidError);
+    socket.socket.on('auction:bid-update', handleBidUpdate);
+    socket.socket.on('auction:ended', handleAuctionEnded);
+    socket.socket.on('auction:bid-error', handleBidError);
 
     return () => {
-      socket.emit('auction:leave', { auctionId: auction.auction_id });
-      socket.off('auction:bid-update', handleBidUpdate);
-      socket.off('auction:ended', handleAuctionEnded);
-      socket.off('auction:bid-error', handleBidError);
+      socket.socket.emit('auction:leave', { auctionId: auction.auction_id });
+      socket.socket.off('auction:bid-update', handleBidUpdate);
+      socket.socket.off('auction:ended', handleAuctionEnded);
+      socket.socket.off('auction:bid-error', handleBidError);
     };
-  }, [socket, auction?.auction_id, currentUser]);
+  }, [id, currentUser?.user_id]);
 
   // Place bid via Socket.IO (with validation)
   const handlePlaceBid = useCallback(async () => {
@@ -355,14 +363,14 @@ const AuctionDetail = () => {
         return;
       }
 
-      if (!socket || !socket.connected) {
+      if (!socket.socket || !socket.connected) {
         setBidError('Koneksi socket terputus. Silakan refresh halaman.');
         return;
       }
 
       setSubmittingBid(true);
 
-      socket.emit('auction:place-bid', {
+      socket.socket.emit('auction:place-bid', {
         auctionId: auction.auction_id,
         bidderId: currentUser.user_id,
         bidAmount: bid
@@ -403,7 +411,7 @@ const AuctionDetail = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: currentUser.user_id
+          user_id: currentUser.user_id
         })
       });
 
@@ -421,7 +429,8 @@ const AuctionDetail = () => {
       setAuction(prev => ({
         ...prev,
         status: action === 'stop' ? 'ended' : 'cancelled',
-        winner_id: data.data?.winner_id
+        winner_id: data.data?.winner_id || null,
+        winner_name: data.data?.winner_name || null
       }));
 
       setShowCancelModal(false);
@@ -429,7 +438,15 @@ const AuctionDetail = () => {
 
     } catch (err) {
       console.error('[AuctionDetail] Error stopping auction:', err);
-      alert(err.message || 'Gagal menghentikan lelang');
+      const errorMsg = err.message || 'Gagal menghentikan lelang';
+      
+      // If error says there are bids, refresh page to get latest data
+      if (errorMsg.includes('existing bids')) {
+        alert('Penawaran baru telah diterima. Halaman akan di-refresh untuk menampilkan data terbaru.');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        alert(errorMsg);
+      }
     } finally {
       setCancelLoading(false);
     }
@@ -650,6 +667,7 @@ const AuctionDetail = () => {
               {auction.status === 'ended' && (
                 <div className="winner-card">
                   <h3>🏆 Lelang Berakhir</h3>
+                  {console.log('[AuctionDetail] RENDER: auction status ended, winner_id:', auction.winner_id, 'winner_name:', auction.winner_name)}
                   {auction.winner_id && (
                     <>
                       <p className="winner-info">Pemenang: <strong>{auction.winner_name || 'Pembeli'}</strong></p>
@@ -673,6 +691,21 @@ const AuctionDetail = () => {
           {/* SELLER SECTION */}
           {isSeller && currentUser && (
             <>
+              {auction.status === 'scheduled' && (
+                <div className="seller-actions">
+                  <button 
+                    className="btn btn-danger btn-cancel"
+                    onClick={() => {
+                      setCancelAction('cancel');
+                      setShowCancelModal(true);
+                    }}
+                    disabled={cancelLoading}
+                  >
+                    ❌ Batalkan Lelang
+                  </button>
+                </div>
+              )}
+
               {auction.status === 'active' && (
                 <div className="seller-actions">
                   {bids.length === 0 && (
@@ -705,6 +738,7 @@ const AuctionDetail = () => {
               {auction.status === 'ended' && (
                 <div className="seller-result-card">
                   <h3>🏆 Lelang Berakhir</h3>
+                  {console.log('[AuctionDetail] RENDER SELLER: auction status ended, winner_id:', auction.winner_id, 'winner_name:', auction.winner_name)}
                   {auction.winner_id && (
                     <>
                       <p className="winner-info">Pemenang: <strong>{auction.winner_name || 'Pembeli'}</strong></p>
