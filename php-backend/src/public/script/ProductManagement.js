@@ -46,7 +46,10 @@ function initProductManagementPage() {
                 return;
             }
 
-            this.closeBtn.addEventListener('click', () => this.hide());
+            this.closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.hide();
+            });
             this.backdrop.addEventListener('click', () => this.hide());
 
             console.log('Toast initialized');
