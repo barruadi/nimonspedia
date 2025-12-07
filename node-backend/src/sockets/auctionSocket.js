@@ -185,7 +185,7 @@ const setupAuctionSocket = (io) => {
         const auctionQuery = `
           SELECT 
             auction_id, status, current_price, min_increment, 
-            product_id, quantity, start_time, end_time, seller_id
+            product_id, quantity, start_time, end_time
           FROM auctions 
           WHERE auction_id = $1 
           FOR UPDATE
@@ -210,18 +210,7 @@ const setupAuctionSocket = (io) => {
           });
         }
 
-        // STEP 3: VALIDATE BID AMOUNT
-        const minimumBid = auction.current_price + auction.min_increment;
-        
-        if (bidAmount < minimumBid) {
-          await client.query('ROLLBACK');
-          return callback?.({
-            success: false,
-            error: `Bid minimal: Rp ${minimumBid.toLocaleString('id-ID')}`
-          });
-        }
-
-        // STEP 4: GET PREVIOUS HIGHEST BIDDER
+        // STEP 4: GET PREVIOUS HIGHEST BIDDER (do this first to determine minimum bid)
         const highestBidQuery = `
           SELECT bidder_id, bid_amount 
           FROM auction_bids 
@@ -232,10 +221,24 @@ const setupAuctionSocket = (io) => {
         const highestBidResult = await client.query(highestBidQuery, [auctionId]);
         const previousBid = highestBidResult.rows[0] || null;
 
+        // STEP 3: VALIDATE BID AMOUNT
+        // First bid must be >= starting_price, subsequent bids must be >= current_price + min_increment
+        const minimumBid = previousBid 
+          ? auction.current_price + auction.min_increment 
+          : auction.starting_price;
+        
+        if (bidAmount < minimumBid) {
+          await client.query('ROLLBACK');
+          return callback?.({
+            success: false,
+            error: `Bid minimal: Rp ${minimumBid.toLocaleString('id-ID')}`
+          });
+        }
+
         // STEP 5: DEDUCT BALANCE FROM BUYER
         const deductQuery = `
           UPDATE users 
-          SET balance = balance - $1, updated_at = NOW()
+          SET balance = balance - $1
           WHERE user_id = $2
         `;
         await client.query(deductQuery, [bidAmount, bidderId]);
@@ -245,7 +248,7 @@ const setupAuctionSocket = (io) => {
         if (previousBid && previousBid.bidder_id !== bidderId) {
           const refundQuery = `
             UPDATE users 
-            SET balance = balance + $1, updated_at = NOW()
+            SET balance = balance + $1
             WHERE user_id = $2
           `;
           await client.query(refundQuery, [previousBid.bid_amount, previousBid.bidder_id]);
@@ -267,7 +270,7 @@ const setupAuctionSocket = (io) => {
 
         const updateAuctionQuery = `
           UPDATE auctions 
-          SET current_price = $1, end_time = $2, updated_at = NOW()
+          SET current_price = $1, end_time = $2
           WHERE auction_id = $3
         `;
         await client.query(updateAuctionQuery, [bidAmount, newEndTime.toISOString(), auctionId]);
@@ -458,7 +461,7 @@ async function closeAuction(io, auctionId) {
     // LOCK auction & get details
     const auctionQuery = `
       SELECT 
-        auction_id, product_id, current_price, seller_id, status
+        auction_id, product_id, current_price, status
       FROM auctions 
       WHERE auction_id = $1 
       FOR UPDATE
@@ -523,10 +526,10 @@ async function closeAuction(io, auctionId) {
     // UPDATE AUCTION STATUS TO ENDED
     const updateQuery = `
       UPDATE auctions 
-      SET status = 'ended', winner_id = $1, updated_at = NOW()
+      SET status = 'ended', winner_id = $1
       WHERE auction_id = $2
     `;
-    await client.query(updateQuery, [winnerId, auctionId]);
+    await client.query(updateQuery, [winner?.bidder_id || null, auctionId]);
 
     // GET WINNER NAME
     let winnerName = null;

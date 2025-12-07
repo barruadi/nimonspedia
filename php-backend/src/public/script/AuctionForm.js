@@ -82,11 +82,10 @@ async function initAuctionFormPage() {
             // Set input constraints
             quantityInput.max = product.stock;
 
-            // Set minimum start time to 5 minutes from now
+            // Set minimum start time to NOW (must be > current time)
             const now = new Date();
-            const minStartTime = new Date(now.getTime() + 5 * 60000);
-            startTimeInput.min = minStartTime.toISOString().slice(0, 16);
-            startTimeInput.value = minStartTime.toISOString().slice(0, 16);
+            startTimeInput.min = now.toISOString().slice(0, 16);
+            startTimeInput.value = now.toISOString().slice(0, 16);
 
             console.log('Product data loaded successfully');
             hideLoading();
@@ -150,11 +149,10 @@ async function initAuctionFormPage() {
         } else {
             const startTime = new Date(startTimeInput.value);
             const now = new Date();
-            const minStartTime = new Date(now.getTime() + 5 * 60000);
 
-            if (startTime < minStartTime) {
+            if (startTime <= now) {
                 if (errorElements.startTime) {
-                    errorElements.startTime.textContent = 'Waktu mulai harus minimal 5 menit dari sekarang';
+                    errorElements.startTime.textContent = 'Waktu mulai harus lebih dari waktu sekarang';
                 }
                 isValid = false;
             }
