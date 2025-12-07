@@ -7,9 +7,11 @@
  * - Automatic balance deduction & refund
  * - Order auto-creation on auction end
  * - Real-time bid broadcasting
+ * - Push notifications for auction events
  */
 
 const pool = require('../config/db');
+const { sendAuctionNotification } = require('../services/pushNotificationService');
 
 // Map to track active auction timers: { auctionId: timeoutHandle }
 const auctionTimers = new Map();
@@ -320,6 +322,35 @@ const setupAuctionSocket = (io) => {
 
         console.log(`[Auction Socket] Broadcast bid-update to auction ${auctionId}`);
 
+        // SEND PUSH NOTIFICATION TO SELLER
+        try {
+          const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+          const productResult = await pool.query(productQuery, [auctionId]);
+          const productName = productResult.rows[0]?.product_name || 'produk';
+
+          const sellerQuery = `
+            SELECT s.owner_id 
+            FROM auctions a
+            JOIN products p ON a.product_id = p.product_id
+            JOIN stores s ON p.store_id = s.store_id
+            WHERE a.auction_id = $1
+          `;
+          const sellerResult = await pool.query(sellerQuery, [auctionId]);
+          const sellerId = sellerResult.rows[0]?.owner_id;
+
+          if (sellerId) {
+            await sendAuctionNotification(
+              sellerId,
+              'Penawaran Baru!',
+              `${buyer.full_name} menawar Rp ${bidAmount.toLocaleString('id-ID')} untuk ${productName}`,
+              auctionId
+            );
+            console.log(`[Auction Socket] Push notification sent to seller ${sellerId}`);
+          }
+        } catch (notifError) {
+          console.error('[Auction Socket] Error sending push notification:', notifError);
+        }
+
       } catch (error) {
         // ROLLBACK on error
         try {
@@ -509,6 +540,51 @@ async function closeAuction(io, auctionId) {
     });
 
     console.log(`[Auction Socket] ✅ Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
+
+    // SEND PUSH NOTIFICATIONS
+    try {
+      const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+      const productResult = await client.query(productQuery, [auctionId]);
+      const productName = productResult.rows[0]?.product_name || 'produk';
+
+      // Notify winner
+      if (winnerId) {
+        await sendAuctionNotification(
+          winnerId,
+          'Selamat! Anda Menang Lelang',
+          `Anda memenangkan lelang ${productName} dengan harga Rp ${finalPrice.toLocaleString('id-ID')}`,
+          auctionId
+        );
+        console.log(`[Auction Socket] Push notification sent to winner ${winnerId}`);
+      }
+
+      // Notify seller
+      const sellerQuery = `
+        SELECT s.owner_id 
+        FROM auctions a
+        JOIN products p ON a.product_id = p.product_id
+        JOIN stores s ON p.store_id = s.store_id
+        WHERE a.auction_id = $1
+      `;
+      const sellerResult = await client.query(sellerQuery, [auctionId]);
+      const sellerId = sellerResult.rows[0]?.owner_id;
+
+      if (sellerId) {
+        const message = winnerId 
+          ? `Lelang ${productName} telah berakhir. Pemenang: ${winnerName} (Rp ${finalPrice.toLocaleString('id-ID')})`
+          : `Lelang ${productName} telah berakhir tanpa pemenang`;
+        
+        await sendAuctionNotification(
+          sellerId,
+          'Lelang Berakhir',
+          message,
+          auctionId
+        );
+        console.log(`[Auction Socket] Push notification sent to seller ${sellerId}`);
+      }
+    } catch (notifError) {
+      console.error('[Auction Socket] Error sending end auction notifications:', notifError);
+    }
 
     // Clean up timer
     auctionTimers.delete(auctionId);

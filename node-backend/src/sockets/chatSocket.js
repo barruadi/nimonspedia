@@ -1,4 +1,5 @@
-// Chat WebSocket Handlers - Mockup
+// Chat WebSocket Handlers
+const { sendChatNotification } = require('../services/pushNotificationService');
 
 const setupChatSocket = (io) => {
   io.on('connection', (socket) => {
@@ -44,18 +45,47 @@ const setupChatSocket = (io) => {
     });
 
     // Send message (mockup)
-    socket.on('chat:send-message', (data) => {
-      const { chatId, userId, userName, message } = data;
+    socket.on('chat:send-message', async (data) => {
+      const { chatId, userId, userName, message, receiverId, storeId, buyerId } = data;
       console.log(`[Chat] Message sent:`, data);
 
       // Broadcast message to all users in chat room
-      io.to(`chat-${chatId}`).emit('chat:new-message', {
+      const newMessage = {
         id: Date.now(),
         userId,
         userName,
         message,
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      io.to(`chat-${chatId}`).emit('chat:new-message', newMessage);
+
+      // Send push notification to receiver if they're not in the room
+      if (receiverId) {
+        try {
+          // Check if receiver is online in this chat room
+          const roomSockets = await io.in(`chat-${chatId}`).fetchSockets();
+          const receiverOnline = roomSockets.some(s => s.data?.userId === receiverId);
+
+          if (!receiverOnline) {
+            // Receiver is not in the room, send push notification
+            const messagePreview = message.length > 50 
+              ? message.substring(0, 50) + '...' 
+              : message;
+            
+            await sendChatNotification(
+              receiverId,
+              userName,
+              messagePreview,
+              storeId,
+              buyerId
+            );
+            console.log(`[Chat] Push notification sent to user ${receiverId}`);
+          }
+        } catch (error) {
+          console.error('[Chat] Error sending push notification:', error);
+        }
+      }
     });
 
     // Typing indicator
