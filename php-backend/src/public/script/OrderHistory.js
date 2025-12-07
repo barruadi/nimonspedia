@@ -286,7 +286,7 @@ function showDetailModal(order) {
     ${
       canOrderBeReceived(order)
         ? `<div class="detail-section">
-             <button class="btn-confirm-received" data-order-id="${order.order_id}" style="width: 100%; padding: 0.75rem 1rem; background: #03ac0e; color: white; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">
+             <button class="btn-confirm-received" data-order-id="${order.order_id}" style="width: 100%; padding: 0.75rem 1rem; background: #05AA5B; color: white; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">
                Konfirmasi Penerimaan Barang
              </button>
            </div>`

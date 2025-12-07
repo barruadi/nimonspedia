@@ -71,7 +71,7 @@ body {
     gap: 1rem;
     padding: 1rem 1.5rem;
     background: white;
-    border: 2px solid #10b981;
+    border: 2px solid #05AA5B;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
     margin-bottom: 2rem;
@@ -84,7 +84,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #10b981;
+    background: #05AA5B;
     color: white;
     border-radius: 50%;
 }
@@ -131,7 +131,7 @@ body {
 }
 
 .banner-content p a {
-    color: #10b981;
+    color: #05AA5B;
     text-decoration: underline;
 }
 
@@ -141,7 +141,7 @@ body {
 
 .btn-edit-banner {
     padding: 0.5rem 1.25rem;
-    background: #10b981;
+    background: #05AA5B;
     color: white;
     border: none;
     border-radius: 6px;
@@ -248,8 +248,8 @@ body {
 
 .btn-change-logo:hover {
     background: #e5e7eb;
-    border-color: #10b981;
-    color: #10b981;
+    border-color: #05AA5B;
+    color: #05AA5B;
 }
 
 .btn-change-logo svg {
@@ -290,7 +290,7 @@ body {
 .form-group input:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
@@ -327,7 +327,7 @@ body {
 }
 
 .btn-primary {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
 }
 
@@ -417,7 +417,7 @@ body {
 .action-btn {
     width: 100%;
     padding: 1rem 1.5rem;
-    background: #10b981;
+    background: #05AA5B;
     color: white;
     border: none;
     border-radius: 10px;
@@ -506,7 +506,7 @@ body {
 /* Focus state untuk Quill editor */
 #editor:focus-within {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
@@ -527,25 +527,25 @@ body {
 .ql-toolbar button:hover,
 .ql-toolbar button:focus,
 .ql-toolbar button.ql-active {
-    color: #10b981;
+    color: #05AA5B;
 }
 
 .ql-toolbar button:hover .ql-stroke,
 .ql-toolbar button:focus .ql-stroke,
 .ql-toolbar button.ql-active .ql-stroke {
-    stroke: #10b981;
+    stroke: #05AA5B;
 }
 
 .ql-toolbar button:hover .ql-fill,
 .ql-toolbar button:focus .ql-fill,
 .ql-toolbar button.ql-active .ql-fill {
-    fill: #10b981;
+    fill: #05AA5B;
 }
 
 /* Dropdown picker */
 .ql-toolbar .ql-picker-label:hover,
 .ql-toolbar .ql-picker-label.ql-active {
-    color: #10b981;
+    color: #05AA5B;
 }
 
 .ql-toolbar .ql-picker-options {
@@ -557,7 +557,7 @@ body {
 }
 
 .ql-toolbar .ql-picker-item:hover {
-    color: #10b981;
+    color: #05AA5B;
 }
 
 /* Responsive Design */

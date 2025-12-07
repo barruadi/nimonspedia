@@ -31,7 +31,7 @@ body {
 .image-upload-container {
     width: 100%;
     aspect-ratio: 1 / 1;
-    border: 2px dashed #10b981;
+    border: 2px dashed #05AA5B;
     border-radius: 12px;
     background-color: #f8fffe;
     display: flex;
@@ -59,7 +59,7 @@ body {
 }
 
 .upload-icon {
-    color: #10b981;
+    color: #05AA5B;
     opacity: 0.6;
 }
 
@@ -88,9 +88,9 @@ body {
     width: 100%;
     padding: 0.875rem 1.5rem;
     background-color: #fff;
-    border: 2px solid #10b981;
+    border: 2px solid #05AA5B;
     border-radius: 8px;
-    color: #10b981;
+    color: #05AA5B;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -173,7 +173,7 @@ body {
     font-size: 0.875rem;
     color: #111827;
     background-color: #fff;
-    border: 2px solid #10b981;
+    border: 2px solid #05AA5B;
     border-radius: 8px;
     transition: all 0.2s ease;
     font-family: inherit;
@@ -238,8 +238,8 @@ body {
 
 .btn-cancel {
     background-color: #fff;
-    border: 2px solid #10b981;
-    color: #10b981;
+    border: 2px solid #05AA5B;
+    color: #05AA5B;
 }
 
 .btn-cancel:hover {
@@ -249,7 +249,7 @@ body {
 }
 
 .btn-submit {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: #fff;
 }
 
@@ -339,7 +339,7 @@ body {
 }
 
 .btn-modal-confirm {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
 }
 
@@ -378,7 +378,7 @@ body {
 
 #editor {
     background-color: #fff;
-    border: 2px solid #10b981;
+    border: 2px solid #05AA5B;
     border-radius: 8px;
     min-height: 150px;
     font-family: inherit;
@@ -387,7 +387,7 @@ body {
 /* Toolbar Quill */
 .ql-toolbar.ql-snow {
     border: none;
-    border-bottom: 2px solid #10b981;
+    border-bottom: 2px solid #05AA5B;
     border-radius: 8px 8px 0 0;
     background-color: #f9fafb;
     padding: 0.75rem 1rem;
@@ -426,15 +426,15 @@ body {
 
 /* Toolbar button styling */
 .ql-toolbar .ql-stroke {
-    stroke: #10b981;
+    stroke: #05AA5B;
 }
 
 .ql-toolbar .ql-fill {
-    fill: #10b981;
+    fill: #05AA5B;
 }
 
 .ql-toolbar .ql-picker-label {
-    color: #10b981;
+    color: #05AA5B;
 }
 
 /* Active/selected toolbar buttons */
@@ -464,7 +464,7 @@ body {
 
 .ql-toolbar .ql-picker-options {
     background-color: #fff;
-    border: 2px solid #10b981;
+    border: 2px solid #05AA5B;
     border-radius: 8px;
     padding: 0.5rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);

@@ -116,7 +116,7 @@ body {
 
 .reset-filter {
   margin-top: 1rem;
-  color: #10b981;
+  color: #05AA5B;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -294,7 +294,7 @@ body {
 
 .btn-detail {
   padding: 0.625rem 1.25rem;
-  background: #10b981;
+  background: #05AA5B;
   color: #fff;
   border: none;
   border-radius: 8px;

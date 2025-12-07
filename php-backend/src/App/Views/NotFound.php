@@ -15,7 +15,7 @@ $title    = '404 Not Found';
   <link rel="icon" href="<?= htmlspecialchars($logoPath) ?>" />
   <style>
     :root{
-      --green:#2f9d4a;
+      --green:#05AA5B;
       --bg:#f6f6f8;
       --text:#000;
       --muted:#6b7280;

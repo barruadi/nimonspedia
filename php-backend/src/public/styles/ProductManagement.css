@@ -114,7 +114,7 @@ body {
 }
 
 .btn-add-product {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
@@ -135,7 +135,7 @@ body {
 
 /* Global Auction Status Bar */
 .global-auction-status-bar {
-    background: linear-gradient(135deg, #03ac0e 0%, #028a0f 100%);
+    background: linear-gradient(135deg, #05AA5B 0%, #028a0f 100%);
     border-radius: 12px;
     padding: 1rem 1.5rem;
     margin-bottom: 2rem;
@@ -242,7 +242,7 @@ body {
 
 .search-input:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 .search-input::placeholder {
@@ -269,7 +269,7 @@ body {
 
 .filter-select:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 /* Product Grid - 2 Equal Width Columns */
@@ -533,7 +533,7 @@ body {
 }
 
 .btn-add-first {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
     border: none;
     padding: 0.875rem 1.75rem;
@@ -644,7 +644,7 @@ body {
 }
 
 .btn-modal-confirm {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
 }
 
