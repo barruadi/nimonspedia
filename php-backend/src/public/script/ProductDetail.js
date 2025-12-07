@@ -297,41 +297,13 @@ async function handleAddToCart() {
     }
     
     function showToast(primaryMessage, secondaryMessage = '', type = 'success') {
-        const toast = document.getElementById('toast');
-        const backdrop = document.getElementById('toastBackdrop');
-        const primaryEl = document.getElementById('toastPrimaryMessage');
-        const secondaryEl = document.getElementById('toastSecondaryMessage');
-        const closeBtn = document.getElementById('toastCloseBtn');
-        
-        if (!toast || !primaryEl || !secondaryEl || !backdrop || !closeBtn) {
-            console.error('Toast elements not found!');
-            return;
-        }
-        
-        primaryEl.textContent = primaryMessage;
-        secondaryEl.textContent = secondaryMessage;
-        toast.className = 'toast ' + type;
-        
-        backdrop.style.display = 'block';
-        toast.style.display = 'flex';
-        
-        let autoHideTimer = setTimeout(hideToast, 5000);
-        
-        const closeHandler = () => {
-            clearTimeout(autoHideTimer);
-            hideToast();
-        };
-
-        closeBtn.onclick = closeHandler;
-        backdrop.onclick = closeHandler;
-
-        function hideToast() {
-            if (toast) toast.style.display = 'none';
-            if (backdrop) backdrop.style.display = 'none';
-            
-            closeBtn.onclick = null;
-            backdrop.onclick = null;
-        }
+        window.dispatchEvent(new CustomEvent('show-toast', {
+            detail: {
+                primary: primaryMessage,
+                secondary: secondaryMessage,
+                type: type
+            }
+        }));
     }
 
     loadProductData();
