@@ -127,12 +127,19 @@ const AuctionDetail = () => {
         console.log('[AuctionDetail] seller_id from auction:', responseData.auction?.seller_id);
         console.log('[AuctionDetail] seller_id from product:', responseData.product?.seller_id);
         
+        const minIncrement = responseData.auction.min_increment || responseData.auction.minimum_increment || 1000;
+        console.log('[AuctionDetail] min_increment from API:', {
+          min_increment: responseData.auction.min_increment,
+          minimum_increment: responseData.auction.minimum_increment,
+          resolved: minIncrement
+        });
+        
         const auctionData = {
           auction_id: responseData.auction.auction_id,
           product_id: responseData.auction.product_id,
           starting_price: responseData.auction.starting_price,
           current_price: responseData.auction.current_price,
-          min_increment: responseData.auction.min_increment || 1000,
+          min_increment: minIncrement,
           quantity: responseData.auction.quantity,
           start_time: responseData.auction.start_time,
           end_time: responseData.auction.end_time,
@@ -147,12 +154,20 @@ const AuctionDetail = () => {
           store_name: responseData.store.store_name
         };
 
+        console.log('[AuctionDetail] Winner data from API:', {
+          winner_id: responseData.auction.winner_id,
+          winner_name: responseData.auction.winner_name,
+          status: responseData.auction.status
+        });
+
         setAuction(auctionData);
         
         console.log('[AuctionDetail] Auction loaded:', {
           auction_id: auctionData.auction_id,
           seller_id: auctionData.seller_id,
-          product_name: auctionData.product_name
+          product_name: auctionData.product_name,
+          winner_id: auctionData.winner_id,
+          winner_name: auctionData.winner_name
         });
         
         console.log('[AuctionDetail] Setting auctionSellerId to:', auctionData.seller_id, 'type:', typeof auctionData.seller_id);
@@ -261,11 +276,11 @@ const AuctionDetail = () => {
 
   // Socket setup - join room and listen for updates
   useEffect(() => {
-    if (!socket || !auction || !currentUser) return;
+    if (!socket.socket || !auction || !currentUser) return;
 
     console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
 
-    socket.emit('auction:join', {
+    socket.socket.emit('auction:join', {
       auctionId: auction.auction_id,
       userId: currentUser.user_id
     }, (response) => {
@@ -315,17 +330,17 @@ const AuctionDetail = () => {
       setBidError(data.error || 'Gagal menempatkan penawaran');
     };
 
-    socket.on('auction:bid-update', handleBidUpdate);
-    socket.on('auction:ended', handleAuctionEnded);
-    socket.on('auction:bid-error', handleBidError);
+    socket.socket.on('auction:bid-update', handleBidUpdate);
+    socket.socket.on('auction:ended', handleAuctionEnded);
+    socket.socket.on('auction:bid-error', handleBidError);
 
     return () => {
-      socket.emit('auction:leave', { auctionId: auction.auction_id });
-      socket.off('auction:bid-update', handleBidUpdate);
-      socket.off('auction:ended', handleAuctionEnded);
-      socket.off('auction:bid-error', handleBidError);
+      socket.socket.emit('auction:leave', { auctionId: auction.auction_id });
+      socket.socket.off('auction:bid-update', handleBidUpdate);
+      socket.socket.off('auction:ended', handleAuctionEnded);
+      socket.socket.off('auction:bid-error', handleBidError);
     };
-  }, [socket, auction?.auction_id, currentUser]);
+  }, [id, currentUser?.user_id]);
 
   // Place bid via Socket.IO (with validation)
   const handlePlaceBid = useCallback(async () => {
@@ -355,14 +370,14 @@ const AuctionDetail = () => {
         return;
       }
 
-      if (!socket || !socket.connected) {
+      if (!socket.socket || !socket.connected) {
         setBidError('Koneksi socket terputus. Silakan refresh halaman.');
         return;
       }
 
       setSubmittingBid(true);
 
-      socket.emit('auction:place-bid', {
+      socket.socket.emit('auction:place-bid', {
         auctionId: auction.auction_id,
         bidderId: currentUser.user_id,
         bidAmount: bid
@@ -403,7 +418,7 @@ const AuctionDetail = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: currentUser.user_id
+          user_id: currentUser.user_id
         })
       });
 
@@ -421,7 +436,8 @@ const AuctionDetail = () => {
       setAuction(prev => ({
         ...prev,
         status: action === 'stop' ? 'ended' : 'cancelled',
-        winner_id: data.data?.winner_id
+        winner_id: data.data?.winner_id || null,
+        winner_name: data.data?.winner_name || null
       }));
 
       setShowCancelModal(false);
@@ -429,7 +445,15 @@ const AuctionDetail = () => {
 
     } catch (err) {
       console.error('[AuctionDetail] Error stopping auction:', err);
-      alert(err.message || 'Gagal menghentikan lelang');
+      const errorMsg = err.message || 'Gagal menghentikan lelang';
+      
+      // If error says there are bids, refresh page to get latest data
+      if (errorMsg.includes('existing bids')) {
+        alert('Penawaran baru telah diterima. Halaman akan di-refresh untuk menampilkan data terbaru.');
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        alert(errorMsg);
+      }
     } finally {
       setCancelLoading(false);
     }
@@ -449,11 +473,11 @@ const AuctionDetail = () => {
   // Format timer display
   const formatTimer = () => {
     if (countdownSeconds === 'waiting') {
-      return '⏳ Menunggu Bid Pertama';
+      return 'Menunggu Bid Pertama';
     }
     
     if (countdownSeconds === null) {
-      return '⏱️ Belum Dimulai';
+      return 'Belum Dimulai';
     }
     
     if (countdownSeconds === 0) {
@@ -486,7 +510,7 @@ const AuctionDetail = () => {
     return (
       <div className="auction-detail-page">
         <div className="error-container">
-          <h2>⚠️ Terjadi Kesalahan</h2>
+          <h2>Terjadi Kesalahan</h2>
           <p>{error}</p>
           <button onClick={() => navigate('/auctions')} className="primary-btn">
             Kembali
@@ -520,15 +544,15 @@ const AuctionDetail = () => {
     isSeller: isSeller,
     auctionSellerId: auctionSellerId,
     currentUserId: currentUserId,
-    button_should_be: isSeller ? 'Kembali' : 'Kembali ke Lelang'
+    button_should_be: isSeller ? 'Kembali ke Product Management' : 'Kembali ke Lelang'
   });
 
   return (
     <div className="auction-detail-page">
       {isSeller ? (
-        <button className="back-btn" onClick={() => navigate(-1)}>← Kembali</button>
+        <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>Kembali ke Product Management</button>
       ) : (
-        <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
+        <button className="back-btn" onClick={() => navigate('/auctions')}>Kembali ke Lelang</button>
       )}
 
       <div className="detail-container">
@@ -541,7 +565,7 @@ const AuctionDetail = () => {
               onError={(e) => e.target.src = '/placeholder.png'}
             />
             <span className={`status-badge status-${auction.status}`}>
-              {auction.status === 'active' ? '🔴 ACTIVE' : auction.status === 'scheduled' ? '⏱️ SCHEDULED' : auction.status === 'ended' ? '✓ ENDED' : '✗ CANCELLED'}
+              {auction.status === 'active' ? 'ACTIVE' : auction.status === 'scheduled' ? 'SCHEDULED' : auction.status === 'ended' ? 'ENDED' : 'CANCELLED'}
             </span>
           </div>
         </div>
@@ -580,7 +604,7 @@ const AuctionDetail = () => {
             </div>
             {!isSeller && (
               <div className={`meta-card ${timerClass}`}>
-                <span className="meta-label">⏱️ Sisa Waktu</span>
+                <span className="meta-label">Sisa Waktu</span>
                 <span className="meta-value timer-display">{formatTimer()}</span>
               </div>
             )}
@@ -610,7 +634,7 @@ const AuctionDetail = () => {
               {/* Bid Form - Only if Active */}
               {auction.status === 'active' && (
                 <div className="bid-form-section">
-                  <h3>📢 Tawar Produk</h3>
+                  <h3>Tawar Produk</h3>
                   
                   <div className="bid-requirement">
                     Bid minimal: <strong>{formatPrice(nextMinBid)}</strong>
@@ -643,13 +667,14 @@ const AuctionDetail = () => {
               {/* Auction Status Messages */}
               {auction.status === 'scheduled' && (
                 <div className="alert alert-info">
-                  ⏱️ Lelang akan dimulai pada {new Date(auction.start_time).toLocaleString('id-ID')}
+                  Lelang akan dimulai pada {new Date(auction.start_time).toLocaleString('id-ID')}
                 </div>
               )}
 
               {auction.status === 'ended' && (
                 <div className="winner-card">
-                  <h3>🏆 Lelang Berakhir</h3>
+                  <h3>Lelang Berakhir</h3>
+                  {console.log('[AuctionDetail] RENDER: auction status ended, winner_id:', auction.winner_id, 'winner_name:', auction.winner_name)}
                   {auction.winner_id && (
                     <>
                       <p className="winner-info">Pemenang: <strong>{auction.winner_name || 'Pembeli'}</strong></p>
@@ -664,7 +689,7 @@ const AuctionDetail = () => {
 
               {auction.status === 'cancelled' && (
                 <div className="alert alert-error">
-                  ❌ Lelang telah dibatalkan oleh penjual
+                  Lelang telah dibatalkan oleh penjual
                 </div>
               )}
             </>
@@ -673,6 +698,21 @@ const AuctionDetail = () => {
           {/* SELLER SECTION */}
           {isSeller && currentUser && (
             <>
+              {auction.status === 'scheduled' && (
+                <div className="seller-actions">
+                  <button 
+                    className="btn btn-danger btn-cancel"
+                    onClick={() => {
+                      setCancelAction('cancel');
+                      setShowCancelModal(true);
+                    }}
+                    disabled={cancelLoading}
+                  >
+                    Batalkan Lelang
+                  </button>
+                </div>
+              )}
+
               {auction.status === 'active' && (
                 <div className="seller-actions">
                   {bids.length === 0 && (
@@ -684,7 +724,7 @@ const AuctionDetail = () => {
                       }}
                       disabled={cancelLoading}
                     >
-                      ❌ Batalkan Lelang (Tidak ada Bid)
+                      Batalkan Lelang (Tidak ada Bid)
                     </button>
                   )}
                   {bids.length > 0 && (
@@ -696,7 +736,7 @@ const AuctionDetail = () => {
                       }}
                       disabled={cancelLoading}
                     >
-                      ⏹️ Hentikan Lelang Sekarang
+                      Hentikan Lelang Sekarang
                     </button>
                   )}
                 </div>
@@ -704,16 +744,17 @@ const AuctionDetail = () => {
 
               {auction.status === 'ended' && (
                 <div className="seller-result-card">
-                  <h3>🏆 Lelang Berakhir</h3>
+                  <h3>Lelang Berakhir</h3>
+                  {console.log('[AuctionDetail] RENDER SELLER: auction status ended, winner_id:', auction.winner_id, 'winner_name:', auction.winner_name)}
                   {auction.winner_id && (
                     <>
                       <p className="winner-info">Pemenang: <strong>{auction.winner_name || 'Pembeli'}</strong></p>
                       <p className="winner-price">Harga Akhir: <strong>{formatPrice(auction.current_price)}</strong></p>
-                      <p className="hint">✓ Order otomatis dibuat. Pembeli akan melakukan pembayaran.</p>
+                      <p className="hint">Order otomatis dibuat. Pembeli akan melakukan pembayaran.</p>
                     </>
                   )}
                   {!auction.winner_id && (
-                    <p className="no-winner">❌ Tidak ada pemenang (tidak ada bid diterima)</p>
+                    <p className="no-winner">Tidak ada pemenang (tidak ada bid diterima)</p>
                   )}
                 </div>
               )}
@@ -752,7 +793,7 @@ const AuctionDetail = () => {
                 onClick={() => handleStopAuction(cancelAction)}
                 disabled={cancelLoading}
               >
-                {cancelLoading ? 'Memproses...' : (cancelAction === 'cancel' ? '❌ Batalkan' : '⏹️ Hentikan')}
+                {cancelLoading ? 'Memproses...' : (cancelAction === 'cancel' ? 'Batalkan' : 'Hentikan')}
               </button>
             </div>
           </div>
@@ -761,7 +802,7 @@ const AuctionDetail = () => {
 
       {/* Bids History Section */}
       <div className={`bids-section ${newBidAnimation ? 'new-bid-flash' : ''}`}>
-        <h2>📊 Riwayat Penawaran ({bids.length}) - {new Set(bids.map(b => b.bidder_id)).size} Penawar</h2>
+        <h2>Riwayat Penawaran - {new Set(bids.map(b => b.bidder_id)).size} Penawar</h2>
         
         {bids.length > 0 ? (
           <div className="bids-container">
@@ -770,11 +811,11 @@ const AuctionDetail = () => {
                 key={`${bid.bid_id}-${index}`}
                 className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''} ${index === 0 ? 'highest-bid' : ''}`}
               >
-                <div className="bid-rank">#{index + 1}{index === 0 ? ' 👑' : ''}</div>
+                <div className="bid-rank">#{index + 1}</div>
                 <div className="bid-content">
                   <div className="bid-top">
                     <span className="bidder-name">
-                      {bid.bidder_id === currentUser?.user_id ? '👤 Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
+                      {bid.bidder_id === currentUser?.user_id ? 'Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
                     </span>
                     <span className="bid-time">
                       {new Date(bid.bid_time).toLocaleString('id-ID', {
@@ -793,9 +834,9 @@ const AuctionDetail = () => {
           </div>
         ) : (
           <div className="no-bids-container">
-            <p>📭 Belum ada penawaran</p>
+            <p>Belum ada penawaran</p>
             {auction.status === 'active' && !isSeller && (
-              <p className="subtext">Jadilah yang pertama untuk menawar! 🚀</p>
+              <p className="subtext">Jadilah yang pertama untuk menawar!</p>
             )}
             {isSeller && auction.status === 'active' && (
               <p className="subtext">Tunggu pembeli untuk menawar produk Anda...</p>

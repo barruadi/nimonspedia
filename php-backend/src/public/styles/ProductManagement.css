@@ -486,7 +486,7 @@ body {
 .history-link {
     display: inline-block;
     font-size: 0.8rem;
-    color: #3b82f6;
+    color: #05AA5B;
     text-decoration: none;
     font-weight: 500;
     padding: 0.25rem 0.5rem;
@@ -495,8 +495,8 @@ body {
 }
 
 .history-link:hover {
-    background-color: #eff6ff;
-    color: #1d4ed8;
+    background-color: #e8f5e9;
+    color: #047a3e;
     text-decoration: underline;
 }
 

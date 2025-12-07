@@ -48,7 +48,7 @@ class Auction {
       }
 
       if (search) {
-        query += ` AND p.name ILIKE $${paramCount}`;
+        query += ` AND (p.name ILIKE $${paramCount} OR s.store_name ILIKE $${paramCount})`;
         params.push(`%${search}%`);
         paramCount++;
       }
@@ -111,7 +111,15 @@ class Auction {
         return null;
       }
 
-      return result.rows[0];
+      const row = result.rows[0];
+      console.log('[Auction.findById] Query result for auction', auctionId, ':', {
+        status: row.status,
+        winner_id: row.winner_id,
+        winner_name: row.winner_name,
+        seller_id: row.seller_id
+      });
+
+      return row;
 
     } catch (error) {
       console.error('Error in Auction.findById:', error);
@@ -190,6 +198,16 @@ class Auction {
         end_time = null, // NEW LOGIC: end_time is optional, will be set when first bid comes
         status = 'scheduled'
       } = auctionData;
+
+      // DEBUG LOGGING untuk min_increment
+      console.log('[Auction.create] DEBUG min_increment:', {
+        received: auctionData.min_increment,
+        type: typeof auctionData.min_increment,
+        isNumber: typeof auctionData.min_increment === 'number',
+        isNaN: isNaN(auctionData.min_increment),
+        destructured: min_increment,
+        will_use: min_increment || 1000
+      });
 
       // NEW VALIDATION: end_time is NOT required anymore
       if (!product_id || starting_price === undefined || !quantity || !start_time) {
@@ -453,20 +471,45 @@ class Auction {
 
       const auction = auctionCheck.rows[0];
 
-      // Prevent deleting active or ended auctions
-      if (['active', 'ended'].includes(auction.status)) {
-        throw new Error(`Cannot delete auction with status: ${auction.status}`);
-      }
+      console.log('[Auction.delete] Starting delete for auction', auctionId, 'with status:', auction.status);
 
-      // Check if auction has bids
+      // Check if auction has bids FIRST (before status check)
       const bidsCheck = await client.query(
         'SELECT COUNT(*) as bid_count FROM auction_bids WHERE auction_id = $1',
         [auctionId]
       );
 
-      if (parseInt(bidsCheck.rows[0].bid_count) > 0) {
+      const bidCount = parseInt(bidsCheck.rows[0].bid_count);
+
+      console.log('[Auction.delete] Validation check:', {
+        auctionId,
+        status: auction.status,
+        bidCount,
+        canDelete: true // will be updated based on validation
+      });
+
+      // VALIDATION LOGIC:
+      // - scheduled auctions: can always be deleted (no bids allowed at this stage anyway)
+      // - active auctions: can ONLY be deleted if NO bids exist
+      // - ended/cancelled auctions: cannot be deleted
+      if (auction.status === 'scheduled') {
+        // Scheduled auctions can be deleted without restrictions
+      } else if (auction.status === 'active') {
+        // Active auctions can only be deleted if no bids
+        if (bidCount > 0) {
+          throw new Error('Cannot delete active auction with existing bids. Use "Stop" instead to end the auction with current winner.');
+        }
+      } else if (['ended', 'cancelled'].includes(auction.status)) {
+        // Ended or cancelled auctions cannot be deleted
+        throw new Error(`Cannot delete auction with status: ${auction.status}`);
+      }
+
+      // Additional check: if somehow bids exist on a non-ended auction, block it
+      if (bidCount > 0 && auction.status !== 'ended') {
         throw new Error('Cannot delete auction with existing bids');
       }
+
+      console.log('[Auction.delete] All validations passed, proceeding with deletion');
 
       // Delete auction
       const deleteQuery = `
@@ -751,15 +794,25 @@ class Auction {
         throw new Error('You do not have permission to stop this auction');
       }
 
-      // Update status to 'ended'
+      // Get highest bidder (winner)
+      const highestBidQuery = `
+        SELECT bidder_id FROM auction_bids
+        WHERE auction_id = $1
+        ORDER BY bid_amount DESC
+        LIMIT 1
+      `;
+      const highestBidResult = await client.query(highestBidQuery, [auctionId]);
+      const winnerId = highestBidResult.rows.length > 0 ? highestBidResult.rows[0].bidder_id : null;
+
+      // Update status to 'ended' and set winner
       const updateQuery = `
         UPDATE auctions
-        SET status = 'ended'
+        SET status = 'ended', winner_id = $2
         WHERE auction_id = $1
         RETURNING auction_id, status, winner_id
       `;
 
-      const result = await client.query(updateQuery, [auctionId]);
+      const result = await client.query(updateQuery, [auctionId, winnerId]);
 
       await client.query('COMMIT');
 
@@ -767,7 +820,8 @@ class Auction {
         success: true,
         message: `Auction ${auctionId} stopped successfully`,
         auction_id: result.rows[0].auction_id,
-        status: result.rows[0].status
+        status: result.rows[0].status,
+        winner_id: result.rows[0].winner_id
       };
 
     } catch (error) {
