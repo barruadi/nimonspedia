@@ -613,4 +613,71 @@ async function closeAuction(io, auctionId) {
   }
 }
 
-module.exports = setupAuctionSocket;
+/**
+ * Check and transition scheduled auctions to active when start_time is reached
+ * @param {Socket.IO} io - Socket.IO instance
+ */
+async function checkAndStartScheduledAuctions(io) {
+  try {
+    const pgPool = pool.getInstance();
+    
+    // Get all scheduled auctions where start_time <= NOW
+    const result = await pgPool.query(
+      `SELECT a.auction_id, a.product_id, p.name as product_name, p.image_path, 
+              a.starting_price, a.current_price, a.start_time, s.store_name,
+              COUNT(DISTINCT b.bid_id) as bid_count
+       FROM auctions a
+       JOIN products p ON a.product_id = p.product_id
+       JOIN stores s ON p.store_id = s.store_id
+       LEFT JOIN auction_bids b ON a.auction_id = b.auction_id
+       WHERE a.status = 'scheduled' AND a.start_time <= NOW()
+       GROUP BY a.auction_id, a.product_id, p.name, p.image_path, 
+                a.starting_price, a.current_price, a.start_time, s.store_name`
+    );
+
+    if (result.rows.length === 0) {
+      return; // No scheduled auctions to start
+    }
+
+    console.log(`[Auction Check] Found ${result.rows.length} scheduled auctions to start`);
+
+    // Update all these auctions to 'active' status
+    for (const auction of result.rows) {
+      try {
+        const updateResult = await pgPool.query(
+          `UPDATE auctions 
+           SET status = 'active' 
+           WHERE auction_id = $1 AND status = 'scheduled'
+           RETURNING *`,
+          [auction.auction_id]
+        );
+
+        if (updateResult.rows.length > 0) {
+          console.log(`[Auction Check] Transitioned auction ${auction.auction_id} to active`);
+          
+          // Emit auction:started event to all connected clients
+          io.emit('auction:started', {
+            auction_id: auction.auction_id,
+            product_id: auction.product_id,
+            product_name: auction.product_name,
+            image_path: auction.image_path,
+            starting_price: parseInt(auction.starting_price),
+            current_price: parseInt(auction.current_price),
+            start_time: auction.start_time,
+            end_time: null,
+            status: 'active',
+            store_name: auction.store_name,
+            bid_count: parseInt(auction.bid_count) || 0,
+            winner_id: null
+          });
+        }
+      } catch (err) {
+        console.error(`[Auction Check] Error updating auction ${auction.auction_id}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error('[Auction Check] Error checking scheduled auctions:', error);
+  }
+}
+
+module.exports = { setupAuctionSocket, checkAndStartScheduledAuctions };

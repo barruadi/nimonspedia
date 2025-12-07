@@ -83,9 +83,12 @@ async function initAuctionFormPage() {
             quantityInput.max = product.stock;
 
             // Set minimum start time to NOW (must be > current time)
+            // Use local time, not UTC for datetime-local input
             const now = new Date();
-            startTimeInput.min = now.toISOString().slice(0, 16);
-            startTimeInput.value = now.toISOString().slice(0, 16);
+            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 16);
+            startTimeInput.min = localDateTime;
+            startTimeInput.value = localDateTime;
 
             console.log('Product data loaded successfully');
             hideLoading();

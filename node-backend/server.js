@@ -12,7 +12,7 @@ const chatRoutes = require('./src/routes/chatRoutes');
 const pushRoutes = require('./src/routes/push');
 
 // Import socket handlers
-const setupAuctionSocket = require('./src/sockets/auctionSocket');
+const { setupAuctionSocket, checkAndStartScheduledAuctions } = require('./src/sockets/auctionSocket');
 const setupChatSocket = require('./src/sockets/chatSocket');
 
 const app = express();
@@ -58,6 +58,13 @@ app.use('/api/node', pushRoutes);
 // Setup WebSocket handlers
 setupAuctionSocket(io);
 setupChatSocket(io);
+
+// Periodically check and start scheduled auctions (every 5 seconds)
+setInterval(() => {
+    checkAndStartScheduledAuctions(io);
+}, 5000);
+
+console.log('[Server] Scheduled auction checker started (checks every 5 seconds)');
 
 // Basic connection test
 io.on('connection', (socket) => {
