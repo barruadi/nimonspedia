@@ -255,8 +255,10 @@ function initProductManagementPage() {
         const viewLiveAuctionBtn = document.getElementById('viewLiveAuctionBtn');
 
         if (auctionStatus.activeAuction) {
-            // Show bar
-            globalAuctionStatusBar.style.display = 'block';
+            // Show bar with smooth transition
+            globalAuctionStatusBar.classList.remove('hidden');
+            globalAuctionStatusBar.classList.add('visible');
+            
             const productName = auctionStatus.activeAuction.product_name || 'Produk';
             activeAuctionProductName.textContent = productName;
             
@@ -275,8 +277,9 @@ function initProductManagementPage() {
                 };
             }
         } else {
-            // Hide bar
-            globalAuctionStatusBar.style.display = 'none';
+            // Hide bar with smooth transition
+            globalAuctionStatusBar.classList.remove('visible');
+            globalAuctionStatusBar.classList.add('hidden');
             
             // Hide Lihat Live Auction button in header
             if (viewLiveAuctionBtn) {
