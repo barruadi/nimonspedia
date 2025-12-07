@@ -92,6 +92,15 @@ class AuctionController {
         });
       }
 
+      console.log('[auctionController] Auction data from DB:', {
+        auction_id: auction.auction_id,
+        starting_price: auction.starting_price,
+        current_price: auction.current_price,
+        min_increment: auction.min_increment,
+        quantity: auction.quantity,
+        status: auction.status
+      });
+
       const bids = await Auction.getBids(auctionId);
       const stats = await Auction.getAuctionStats(auctionId);
 
@@ -111,6 +120,8 @@ class AuctionController {
             product_id: auction.product_id,
             starting_price: parseInt(auction.starting_price),
             current_price: parseInt(auction.current_price),
+            min_increment: parseInt(auction.min_increment),
+            quantity: parseInt(auction.quantity),
             start_time: auction.start_time,
             end_time: auction.end_time,
             status: auction.status,
