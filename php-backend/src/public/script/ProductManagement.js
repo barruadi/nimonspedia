@@ -409,7 +409,7 @@ function initProductManagementPage() {
         // NEW: Check if this product has history
         const productHistory = auctionStatus.history[product.product_id];
         const historyLabel = productHistory 
-            ? `Last Auction (${productHistory.status})`
+            ? 'Lihat auction terakhir'
             : null;
 
         card.innerHTML = `
@@ -432,7 +432,7 @@ function initProductManagementPage() {
                 ${productHistory ? `
                     <div class="product-card-history">
                         <a href="/auction/${productHistory.last_auction_id}" class="history-link" title="View last auction">
-                            📋 ${historyLabel}
+                            ${historyLabel}
                         </a>
                     </div>
                 ` : ''}
