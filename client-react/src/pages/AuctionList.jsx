@@ -16,7 +16,7 @@ const AuctionList = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize socket
+  // Initialize socket - MUST be before any returns
   const socket = useSocket();
 
   // Check user role on mount
@@ -29,15 +29,31 @@ const AuctionList = () => {
         
         if (response.ok) {
           const data = await response.json();
-          if (data.ok && data.data) {
-            setCurrentUser(data.data);
+          console.log('[AuctionList] PHP API response:', data);
+          
+          // Handle PHP API response structure: { authenticated: true, user: { id, name, role, ... } }
+          if (data.authenticated && data.user) {
+            const userData = {
+              user_id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              role: data.user.role,
+              balance: data.user.balance
+            };
+            console.log('[AuctionList] User data:', userData);
+            setCurrentUser(userData);
             
-            // Redirect seller to product management
-            if (data.data.role === 'seller') {
-              navigate('/product-management', { replace: true });
+            // Redirect seller to product management (will happen after this render)
+            if (data.user.role === 'seller') {
+              console.log('[AuctionList] Redirecting seller to /seller/products');
+              setTimeout(() => navigate('/seller/products', { replace: true }), 0);
               return;
             }
+          } else {
+            console.warn('[AuctionList] API response structure unexpected:', data);
           }
+        } else {
+          console.warn('[AuctionList] PHP API returned non-ok status:', response.status);
         }
       } catch (err) {
         console.warn('[AuctionList] Failed to fetch current user:', err);
@@ -49,17 +65,7 @@ const AuctionList = () => {
     fetchCurrentUser();
   }, [navigate]);
 
-  // If still loading or redirecting, show nothing
-  if (loading) {
-    return <div className="auction-list-page"><p>Memuat...</p></div>;
-  }
-
-  // If seller, should have been redirected above
-  if (!currentUser || currentUser.role === 'seller') {
-    return <div className="auction-list-page"><p>Akses ditolak</p></div>;
-  }
-
-  // Debounce search input
+  // Debounce search input - MUST be before any returns
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput);
@@ -69,11 +75,13 @@ const AuctionList = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Fetch auctions based on filters (REST API)
+  // Fetch auctions based on filters (REST API) - MUST be before any returns
+  // Only fetch if currentUser exists and is a buyer
+  const shouldFetchAuctions = currentUser && currentUser.role === 'buyer';
   const { auctions: apiAuctions, loading: loadingAuctions, error, pagination } = useAuctions(
-    activeTab,
-    page,
-    search
+    shouldFetchAuctions ? activeTab : 'active',
+    shouldFetchAuctions ? page : 1,
+    shouldFetchAuctions ? search : ''
   );
 
   // Sync API data with local state
@@ -132,22 +140,39 @@ const AuctionList = () => {
       );
     };
 
-    // Real-time auction started
+    // Real-time auction started (Scheduled -> Active transition)
     const handleAuctionStarted = (data) => {
       console.log('[AuctionList] Auction started:', data);
       
-      setAuctions(prevAuctions =>
-        prevAuctions.map(auction => {
-          if (auction.auction_id === data.auction_id) {
-            return {
-              ...auction,
-              status: 'active',
-              start_time: data.start_time,
-            };
+      // If viewing 'scheduled' tab: Remove the auction from list
+      if (activeTab === 'scheduled') {
+        setAuctions(prevAuctions =>
+          prevAuctions.filter(auction => auction.auction_id !== data.auction_id)
+        );
+      }
+      // If viewing 'active' tab: Add or update the auction
+      else if (activeTab === 'active') {
+        setAuctions(prevAuctions => {
+          const exists = prevAuctions.some(a => a.auction_id === data.auction_id);
+          if (exists) {
+            // Update if already in list
+            return prevAuctions.map(auction => {
+              if (auction.auction_id === data.auction_id) {
+                return {
+                  ...auction,
+                  status: 'active',
+                  start_time: data.start_time,
+                  end_time: data.end_time || null,
+                };
+              }
+              return auction;
+            });
+          } else {
+            // Add to list if not already there (prepend for latest)
+            return [data, ...prevAuctions];
           }
-          return auction;
-        })
-      );
+        });
+      }
     };
 
     // Real-time price update
@@ -160,11 +185,25 @@ const AuctionList = () => {
             return {
               ...auction,
               current_price: data.current_price,
+              end_time: data.new_end_time || auction.end_time,
+              bid_count: (auction.bid_count || 0) + 1,
             };
           }
           return auction;
         })
       );
+    };
+
+    // Real-time auction ended
+    const handleAuctionEnded = (data) => {
+      console.log('[AuctionList] Auction ended (socket):', data);
+      
+      // Remove from active list if viewing 'active' tab
+      if (activeTab === 'active') {
+        setAuctions(prevAuctions =>
+          prevAuctions.filter(auction => auction.auction_id !== data.auction_id)
+        );
+      }
     };
 
     // Register socket listeners
@@ -173,6 +212,7 @@ const AuctionList = () => {
     socket.on('bid:placed', handleBidPlaced);
     socket.on('auction:status_changed', handleAuctionStatusChanged);
     socket.on('auction:started', handleAuctionStarted);
+    socket.on('auction:ended', handleAuctionEnded);
     socket.on('price:updated', handlePriceUpdate);
 
     // Cleanup listeners on unmount
@@ -182,6 +222,7 @@ const AuctionList = () => {
       socket.off('bid:placed', handleBidPlaced);
       socket.off('auction:status_changed', handleAuctionStatusChanged);
       socket.off('auction:started', handleAuctionStarted);
+      socket.off('auction:ended', handleAuctionEnded);
       socket.off('price:updated', handlePriceUpdate);
     };
   }, [socket]);
@@ -202,6 +243,18 @@ const AuctionList = () => {
   const handleNextPage = () => {
     if (page < pagination.totalPages) setPage(page + 1);
   };
+
+  // CONDITIONAL CHECKS AFTER ALL HOOKS
+  // If still loading authentication, show loading state
+  if (loading) {
+    return <div className="auction-list-page"><p>Memuat...</p></div>;
+  }
+
+  // If not authenticated or not a buyer, show denied
+  if (!currentUser || currentUser.role !== 'buyer') {
+    console.log('[AuctionList] Access denied. currentUser:', currentUser);
+    return <div className="auction-list-page"><p>Akses ditolak. Silakan login sebagai buyer.</p></div>;
+  }
 
   return (
     <div className="auction-list-container">

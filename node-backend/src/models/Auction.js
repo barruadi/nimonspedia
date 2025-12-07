@@ -48,7 +48,7 @@ class Auction {
       }
 
       if (search) {
-        query += ` AND p.name ILIKE $${paramCount}`;
+        query += ` AND (p.name ILIKE $${paramCount} OR s.store_name ILIKE $${paramCount})`;
         params.push(`%${search}%`);
         paramCount++;
       }

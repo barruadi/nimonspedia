@@ -3,47 +3,71 @@ import './AuctionCard.css';
 
 const AuctionCard = ({ auction, onViewDetail }) => {
   const [timeLeft, setTimeLeft] = useState('');
-  const [isActive] = useState(auction.status === 'active');
+  const isActive = auction.status === 'active';
+  const isScheduled = auction.status === 'scheduled';
 
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
       
-      // NEW LOGIC: If end_time is NULL, auction is waiting for first bid
+      // SCHEDULED: Count down to start_time
+      if (isScheduled) {
+        const startTime = new Date(auction.start_time);
+        if (startTime <= now) {
+          setTimeLeft('Dimulai');
+          return;
+        }
+        
+        const diff = startTime - now;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        if (days > 0) {
+          setTimeLeft(`Dimulai dalam ${days}d ${hours}h`);
+        } else if (hours > 0) {
+          setTimeLeft(`Dimulai dalam ${hours}h ${minutes}m`);
+        } else {
+          setTimeLeft(`Dimulai dalam ${minutes}m`);
+        }
+        return;
+      }
+      
+      // ACTIVE: If end_time is NULL, auction is waiting for first bid
       if (isActive && auction.end_time === null) {
         setTimeLeft('Menunggu Penawar Pertama');
         return;
       }
 
-      const targetTime = isActive 
-        ? new Date(auction.end_time) 
-        : new Date(auction.start_time);
+      // ACTIVE: Count down to end_time
+      if (isActive && auction.end_time) {
+        const endTime = new Date(auction.end_time);
+        if (endTime <= now) {
+          setTimeLeft('Berakhir');
+          return;
+        }
 
-      if (targetTime <= now) {
-        setTimeLeft(isActive ? 'Berakhir' : 'Dimulai');
+        const diff = endTime - now;
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        if (hours > 0) {
+          setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+        } else {
+          setTimeLeft(`${minutes}m ${seconds}s`);
+        }
         return;
       }
-
-      const diff = targetTime - now;
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      if (days > 0) {
-        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
-      } else if (hours > 0) {
-        setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
-      } else {
-        setTimeLeft(`${minutes}m ${seconds}s`);
-      }
+      
+      setTimeLeft('Info tidak tersedia');
     };
 
     calculateTimeLeft();
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [auction.end_time, auction.start_time, isActive]);
+  }, [auction.end_time, auction.start_time, isActive, isScheduled]);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('id-ID', {
@@ -63,7 +87,7 @@ const AuctionCard = ({ auction, onViewDetail }) => {
           alt={auction.product_name}
         />
         <span className={`status-badge ${auction.status}`}>
-          {auction.status === 'active' ? 'Berlangsung' : 'Akan Datang'}
+          {auction.status === 'active' ? '🔴 Berlangsung' : auction.status === 'scheduled' ? '⏱️ Akan Datang' : 'Status Lainnya'}
         </span>
       </div>
 
