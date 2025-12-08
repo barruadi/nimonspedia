@@ -125,7 +125,14 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
 
         // Check if there are more messages
         if (data.meta) {
-          setHasMore(data.meta.currentPage < data.meta.totalPages);
+          const hasMoreMessages = data.meta.page < data.meta.totalPages;
+          console.log('[ChatWindow] Pagination:', {
+            page: data.meta.page,
+            totalPages: data.meta.totalPages,
+            totalCount: data.meta.totalCount,
+            hasMore: hasMoreMessages
+          });
+          setHasMore(hasMoreMessages);
         }
 
         if (!append) {
@@ -146,22 +153,31 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
   };
 
   const loadMoreMessages = async () => {
-    if (loadingMore || !hasMore) return;
+    console.log('[ChatWindow] loadMoreMessages called:', { loadingMore, hasMore, currentPage: page });
+
+    if (loadingMore || !hasMore) {
+      console.log('[ChatWindow] Skipping load - already loading or no more messages');
+      return;
+    }
 
     const nextPage = page + 1;
+    console.log('[ChatWindow] Loading page:', nextPage);
     setPage(nextPage);
 
     // Save current scroll position
     const container = messagesContainerRef.current;
     const previousScrollHeight = container?.scrollHeight || 0;
 
+    console.log('[ChatWindow] Previous scroll height:', previousScrollHeight);
     await fetchMessages(nextPage, true);
 
     // Restore scroll position after loading
     setTimeout(() => {
       if (container) {
         const newScrollHeight = container.scrollHeight;
-        container.scrollTop = newScrollHeight - previousScrollHeight;
+        const newScrollTop = newScrollHeight - previousScrollHeight;
+        console.log('[ChatWindow] Restoring scroll position:', { previousScrollHeight, newScrollHeight, newScrollTop });
+        container.scrollTop = newScrollTop;
       }
     }, 100);
   };
@@ -170,8 +186,19 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    // Load more when scrolled to top
-    if (container.scrollTop === 0 && hasMore && !loadingMore) {
+    // Load more when scrolled near the top (within 50px)
+    const isNearTop = container.scrollTop < 50;
+
+    console.log('[ChatWindow] Scroll:', {
+      scrollTop: container.scrollTop,
+      isNearTop,
+      hasMore,
+      loadingMore,
+      currentPage: page
+    });
+
+    if (isNearTop && hasMore && !loadingMore) {
+      console.log('[ChatWindow] Loading more messages...');
       loadMoreMessages();
     }
   };

@@ -196,6 +196,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: left;
 }
 
 .chat-room-time {
@@ -219,6 +220,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  text-align: left;
 }
 
 .unread-badge {

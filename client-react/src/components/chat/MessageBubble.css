@@ -17,6 +17,7 @@
   border-radius: 12px;
   padding: 8px 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  text-align: left;
 }
 
 .message-bubble.own .message-content {
@@ -50,6 +51,7 @@
   line-height: 1.4;
   word-wrap: break-word;
   white-space: pre-wrap;
+  text-align: left;
 }
 
 .message-image {
@@ -105,6 +107,7 @@
 
 .product-info {
   padding: 12px;
+  text-align: left;
 }
 
 .product-info h4 {
