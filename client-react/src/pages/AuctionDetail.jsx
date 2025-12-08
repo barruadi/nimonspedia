@@ -149,11 +149,10 @@ const AuctionDetail = () => {
         }
       } catch (err) {
         console.warn('[AuctionDetail] Failed to fetch current user:', err.message);
-        // If PHP API fails, set dummy currentUser to allow page load BUT don't set currentUserId
-        const dummyUser = { user_id: 0, email: 'guest', balance: 0 };
-        console.log('[AuctionDetail] Using dummy user (PHP API failed):', dummyUser);
-        setCurrentUser(dummyUser);
-        setCurrentUserId(null); // Keep null so isSeller won't compare with dummy user
+        // If PHP API fails, don't set dummy currentUser - stay null
+        console.log('[AuctionDetail] currentUser remains null (not authenticated)');
+        setCurrentUser(null);
+        setCurrentUserId(null);
       }
     };
 
@@ -171,9 +170,18 @@ const AuctionDetail = () => {
           throw new Error('Invalid auction ID');
         }
 
-        const response = await fetch(`${API_BASE_URL}/auction/${id}`);
+        // Build URL with user_id query param if available
+        let url = `${API_BASE_URL}/auction/${id}`;
+        if (currentUser?.user_id) {
+          url += `?user_id=${currentUser.user_id}`;
+        }
+
+        const response = await fetch(url);
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Anda harus login untuk melihat lelang');
+          }
           if (response.status === 404) {
             throw new Error('Lelang tidak ditemukan');
           }
@@ -269,7 +277,7 @@ const AuctionDetail = () => {
     };
 
     fetchAuctionDetail();
-  }, [id]);
+  }, [id, currentUser?.user_id]);
 
   // Update isSeller when auction or currentUser changes
   useEffect(() => {
