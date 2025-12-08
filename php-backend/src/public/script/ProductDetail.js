@@ -56,10 +56,12 @@ function initProductDetailPage() {
                 currentProduct = result.data.product;
                 const store = result.data.store;
                 const auction = result.data.auction;
+                const reviews = result.data.reviews;
 
                 renderProduct(currentProduct, store);
                 setupPurchaseBox(currentProduct);
                 setupStoreActions(store, auction);
+                renderReviews(reviews);
 
                 hideLoading();
             } else {
@@ -304,6 +306,168 @@ async function handleAddToCart() {
                 type: type
             }
         }));
+    }
+
+    function renderReviews(reviewsData) {
+        const reviewsSection = document.getElementById('reviewsSection');
+        const reviewsList = document.getElementById('reviewsList');
+        const reviewsLoading = document.getElementById('reviewsLoading');
+        const noReviews = document.getElementById('noReviews');
+        const averageRating = document.getElementById('averageRating');
+        const averageStars = document.getElementById('averageStars');
+        const totalReviews = document.getElementById('totalReviews');
+        const ratingBreakdown = document.getElementById('ratingBreakdown');
+        const productRatingHeader = document.getElementById('productRatingHeader');
+        const headerStars = document.getElementById('headerStars');
+        const headerRatingText = document.getElementById('headerRatingText');
+
+        if (!reviewsData || !reviewsData.stats) {
+            return;
+        }
+
+        const stats = reviewsData.stats;
+        const latestReviews = reviewsData.latest || [];
+
+        // Show reviews section
+        reviewsSection.style.display = 'block';
+
+        // Update header rating display
+        if (stats.review_count > 0) {
+            productRatingHeader.style.display = 'flex';
+            headerStars.innerHTML = renderStars(stats.average_rating);
+            headerRatingText.textContent = `${stats.average_rating.toFixed(1)} (${stats.review_count} ${stats.review_count === 1 ? 'review' : 'reviews'})`;
+        }
+
+        // Display average rating
+        averageRating.textContent = stats.average_rating.toFixed(1);
+        averageStars.innerHTML = renderStars(stats.average_rating);
+        totalReviews.textContent = `${stats.review_count} ${stats.review_count === 1 ? 'review' : 'reviews'}`;
+
+        // Display rating breakdown
+        if (stats.review_count > 0) {
+            ratingBreakdown.innerHTML = `
+                ${renderRatingBar(5, stats.rating_5, stats.review_count)}
+                ${renderRatingBar(4, stats.rating_4, stats.review_count)}
+                ${renderRatingBar(3, stats.rating_3, stats.review_count)}
+                ${renderRatingBar(2, stats.rating_2, stats.review_count)}
+                ${renderRatingBar(1, stats.rating_1, stats.review_count)}
+            `;
+        }
+
+        // Display reviews
+        if (latestReviews.length === 0) {
+            reviewsList.style.display = 'none';
+            noReviews.style.display = 'block';
+        } else {
+            noReviews.style.display = 'none';
+            reviewsList.style.display = 'block';
+            reviewsList.innerHTML = latestReviews.map(review => renderReviewCard(review)).join('');
+        }
+    }
+
+    function renderStars(rating) {
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 >= 0.5;
+        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+        let starsHtml = '';
+        for (let i = 0; i < fullStars; i++) {
+            starsHtml += '<span class="star filled">★</span>';
+        }
+        if (hasHalfStar) {
+            starsHtml += '<span class="star half">★</span>';
+        }
+        for (let i = 0; i < emptyStars; i++) {
+            starsHtml += '<span class="star empty">☆</span>';
+        }
+        return starsHtml;
+    }
+
+    function renderRatingBar(stars, count, total) {
+        const percentage = total > 0 ? (count / total) * 100 : 0;
+        return `
+            <div class="rating-bar-item">
+                <span class="rating-label">${stars} ★</span>
+                <div class="rating-bar">
+                    <div class="rating-bar-fill" style="width: ${percentage}%"></div>
+                </div>
+                <span class="rating-count">${count}</span>
+            </div>
+        `;
+    }
+
+    function renderReviewCard(review) {
+        const reviewDate = formatReviewDate(review.created_at);
+        const hasImages = review.images && review.images.length > 0;
+        const hasReply = review.seller_reply && review.seller_reply.trim() !== '';
+
+        return `
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <span class="reviewer-name">${escapeHtml(review.buyer_name)}</span>
+                        <span class="review-date">${reviewDate}</span>
+                    </div>
+                    <div class="review-rating">
+                        ${renderStars(review.rating)}
+                    </div>
+                </div>
+
+                ${review.review_text ? `
+                    <div class="review-text">
+                        <p>${escapeHtml(review.review_text)}</p>
+                    </div>
+                ` : ''}
+
+                ${hasImages ? `
+                    <div class="review-images">
+                        ${review.images.map(img => `
+                            <img src="${escapeHtml(img.image_path)}"
+                                 alt="Review image"
+                                 class="review-image"
+                                 onclick="window.open('${escapeHtml(img.image_path)}', '_blank')">
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                ${hasReply ? `
+                    <div class="seller-reply">
+                        <div class="reply-header">
+                            <span class="reply-label">Seller's Reply</span>
+                            ${review.replied_at ? `<span class="reply-date">${formatReviewDate(review.replied_at)}</span>` : ''}
+                        </div>
+                        <p class="reply-text">${escapeHtml(review.seller_reply)}</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    function formatReviewDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+            return 'Today';
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return `${diffDays} days ago`;
+        } else {
+            return date.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     loadProductData();

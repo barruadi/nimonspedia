@@ -26,6 +26,10 @@
                     <header class="product-header">
                         <h1 id="productName">Nama Produk</h1>
                         <span id="productCategory" class="product-category">Kategori</span>
+                        <div id="productRatingHeader" class="product-rating-header" style="display: none;">
+                            <div class="header-stars" id="headerStars"></div>
+                            <span id="headerRatingText" class="header-rating-text"></span>
+                        </div>
                         <span id="productPrice" class="product-price">Rp 0</span>
                         <div class="divider"></div>
                     </header>
@@ -80,6 +84,36 @@
                     </div>
                 </aside>
                 
+            </section>
+
+            <!-- Reviews Section -->
+            <section class="reviews-section" id="reviewsSection" style="display: none;">
+                <div class="reviews-header">
+                    <h2>Reviews & Ratings</h2>
+                </div>
+
+                <div class="reviews-summary">
+                    <div class="rating-overview">
+                        <div class="average-rating">
+                            <span id="averageRating" class="rating-number">0.0</span>
+                            <div class="stars-display" id="averageStars"></div>
+                            <span id="totalReviews" class="total-reviews">0 reviews</span>
+                        </div>
+                        <div class="rating-breakdown" id="ratingBreakdown"></div>
+                    </div>
+                </div>
+
+                <div class="reviews-list" id="reviewsList">
+                    <!-- Reviews will be loaded here -->
+                </div>
+
+                <div id="reviewsLoading" class="reviews-loading" style="display: none;">
+                    <p>Loading reviews...</p>
+                </div>
+
+                <div id="noReviews" class="no-reviews" style="display: none;">
+                    <p>No reviews yet. Be the first to review this product!</p>
+                </div>
             </section>
 
             </div>
