@@ -4,16 +4,26 @@ import { io } from 'socket.io-client';
 // WebSocket URL - connects through NGINX proxy
 const SOCKET_URL = 'http://localhost';
 
-export const useSocket = () => {
+export const useSocket = (authData = null) => {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Initialize socket connection
-    socketRef.current = io(SOCKET_URL, {
+    // Initialize socket connection with optional authentication
+    const socketOptions = {
       path: '/socket.io/',
       transports: ['websocket', 'polling']
-    });
+    };
+
+    // Add authentication if provided
+    if (authData && authData.userId && authData.userRole) {
+      socketOptions.auth = {
+        userId: authData.userId,
+        userRole: authData.userRole
+      };
+    }
+
+    socketRef.current = io(SOCKET_URL, socketOptions);
 
     // Connection event
     socketRef.current.on('connect', () => {
@@ -39,7 +49,7 @@ export const useSocket = () => {
         socketRef.current.disconnect();
       }
     };
-  }, []);
+  }, [authData]);
 
   // Helper functions
   const emit = (event, data) => {

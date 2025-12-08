@@ -54,7 +54,7 @@ function App() {
         <Route path="/auction" element={<AuctionPage />} />
         <Route path="/auctions" element={<AuctionList />} />
         <Route path="/auction/:id" element={<AuctionDetail />} />
-        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/*" element={<ChatPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

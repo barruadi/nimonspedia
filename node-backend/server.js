@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -32,6 +35,9 @@ app.use(cors({
 
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -51,9 +57,10 @@ app.get('/', (req, res) => {
 });
 
 // Mount auction and chat routes
-app.use('/api/node', auctionRoutes);
-app.use('/api/node', chatRoutes);
-app.use('/api/node', pushRoutes);
+// Note: NGINX strips /api/node/ prefix, so mount at root
+app.use('/', auctionRoutes);
+app.use('/', chatRoutes);
+app.use('/', pushRoutes);
 
 // Setup WebSocket handlers
 setupAuctionSocket(io);

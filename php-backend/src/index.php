@@ -1,5 +1,17 @@
 <?php
 
+$cookieLifetime = 7 * 24 * 60 * 60;
+session_set_cookie_params([
+    'lifetime' => $cookieLifetime,
+    'path' => '/',
+    'domain' => '',
+    'secure' => false,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
+ini_set('session.gc_maxlifetime', $cookieLifetime);
+
 session_start();
 
 require __DIR__ . '/bootstrap/bootstrap.php';
