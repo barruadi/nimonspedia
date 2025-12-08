@@ -13,7 +13,10 @@ const authJWT = async (c, next) => {
 
     const token = authHeader.substring(7);
     
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // Verify with explicit algorithm to prevent algorithm confusion attacks
+    const decoded = jwt.verify(token, JWT_SECRET, { 
+      algorithms: ['HS256'] // Whitelist allowed algorithms
+    });
     
     c.set('user', decoded);
     

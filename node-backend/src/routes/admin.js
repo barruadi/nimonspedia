@@ -73,7 +73,10 @@ app.post('/login', async (c) => {
         role: user.role
       },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { 
+        expiresIn: '8h', // Best practice: shorter expiry for admin tokens
+        algorithm: 'HS256' // Explicitly specify algorithm to prevent algorithm confusion attacks
+      }
     );
 
     return c.json({

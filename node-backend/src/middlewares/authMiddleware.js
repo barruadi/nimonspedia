@@ -1,18 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
-/**
- * Simplified Authentication Middleware
- * 
- * Strategy: Frontend validates user via /api/me, then sends user_id in request body or query
- * This middleware verifies user_id exists in database and attaches to request
- * 
- * Priority order:
- * 1. JWT Token (Admin via React Dashboard) - Primary
- * 2. user_id from request body (PHP frontend for POST requests)
- * 3. user_id from query params (PHP frontend for GET requests)
- * 4. Reject Request (401 Unauthorized)
- */
 const verifyUser = async (req, res, next) => {
   try {
     let userId = null;
@@ -24,7 +12,9 @@ const verifyUser = async (req, res, next) => {
       try {
         const token = authHeader.substring(7); // Remove "Bearer " prefix
         const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-        const decoded = jwt.verify(token, secret);
+        const decoded = jwt.verify(token, secret, {
+          algorithms: ['HS256'] // Whitelist allowed algorithms for security
+        });
 
         userId = decoded.user_id || decoded.id;
         
