@@ -100,21 +100,8 @@
 }
 
 .dashboard-content::-webkit-scrollbar {
-  width: 10px;
-}
-
-.dashboard-content::-webkit-scrollbar-track {
-  background: #ffffff;
-}
-
-.dashboard-content::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 5px;
-  border: 2px solid #ffffff;
-}
-
-.dashboard-content::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  width: 0;
+  display: none;
 }
 
 /* ========== SEARCH SECTION ========== */
