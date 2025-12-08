@@ -414,10 +414,12 @@ const AuctionDetail = () => {
       if (data.auction_id === auction.auction_id) {
         setAuction(prev => ({
           ...prev,
-          status: 'cancelled'
+          status: 'cancelled',
+          cancellation_reason: data.cancellation_reason || null
         }));
+        setCancellationReason(data.cancellation_reason || '');
         setShowCancelModal(false);
-        console.log('[AuctionDetail] Auction status updated to cancelled');
+        console.log('[AuctionDetail] Auction status updated to cancelled with reason:', data.cancellation_reason);
       }
     };
 
