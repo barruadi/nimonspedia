@@ -29,11 +29,24 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
   const messagesContainerRef = useRef(null);
 
   useEffect(() => {
-    if (storeId && buyerId) {
+    console.log('[ChatWindow] useEffect triggered - chat changed:', { storeId, buyerId, currentUser: currentUser?.user_id });
+
+    if (storeId && buyerId && currentUser) {
+      // Reset state when switching chats
+      console.log('[ChatWindow] Resetting state and fetching data');
+      setMessages([]);
+      setPage(1);
+      setHasMore(true);
+      setLoading(true);
+      setTyping(false);
+
+      // Fetch chat data
       fetchChatRoom();
       fetchMessages();
+    } else {
+      console.warn('[ChatWindow] Missing storeId, buyerId, or currentUser:', { storeId, buyerId, currentUser: currentUser?.user_id });
     }
-  }, [storeId, buyerId]);
+  }, [storeId, buyerId, currentUser]);
 
   useEffect(() => {
     if (connected && socket && storeId && buyerId && currentUser) {
@@ -47,6 +60,7 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
   }, [connected, socket, storeId, buyerId, currentUser?.user_id]);
 
   useEffect(() => {
+    console.log('[ChatWindow] Messages state updated:', messages.length, 'messages');
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -71,7 +85,12 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
   };
 
   const fetchMessages = async (pageNum = 1, append = false) => {
-    if (!currentUser) return;
+    console.log('[ChatWindow] fetchMessages called:', { storeId, buyerId, pageNum, append, currentUser: currentUser?.user_id });
+
+    if (!currentUser) {
+      console.warn('[ChatWindow] fetchMessages aborted - no currentUser');
+      return;
+    }
 
     try {
       if (!append) {
@@ -80,22 +99,26 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
         setLoadingMore(true);
       }
 
-      const response = await fetch(
-        `/api/node/chat/${storeId}/${buyerId}/messages?user_id=${currentUser.user_id}&page=${pageNum}&limit=50`,
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        }
-      );
+      const url = `/api/node/chat/${storeId}/${buyerId}/messages?user_id=${currentUser.user_id}&page=${pageNum}&limit=50`;
+      console.log('[ChatWindow] Fetching messages from:', url);
 
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      console.log('[ChatWindow] Fetch response status:', response.status);
       const data = await response.json();
+      console.log('[ChatWindow] Fetch response data:', { ok: data.ok, messageCount: data.data?.length, meta: data.meta });
+
       if (data.ok) {
         if (append) {
           // Prepend older messages
           setMessages(prev => [...data.data, ...prev]);
         } else {
+          console.log('[ChatWindow] Setting messages:', data.data.length, 'messages');
           setMessages(data.data);
         }
 
@@ -107,9 +130,11 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
         if (!append) {
           markAsRead();
         }
+      } else {
+        console.error('[ChatWindow] API returned ok:false');
       }
     } catch (error) {
-      console.error('Failed to fetch messages:', error);
+      console.error('[ChatWindow] Failed to fetch messages:', error);
     } finally {
       if (!append) {
         setLoading(false);

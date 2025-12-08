@@ -152,8 +152,15 @@ const setupChatSocket = (io) => {
           productId: productId ? parseInt(productId) : null
         });
 
+        // Add store_id and buyer_id to message for sidebar updates
+        const messageWithRoomInfo = {
+          ...message,
+          store_id: parseInt(storeId),
+          buyer_id: parseInt(buyerId)
+        };
+
         // Broadcast message to all users in the room
-        io.to(roomId).emit('chat:new-message', message);
+        io.to(roomId).emit('chat:new-message', messageWithRoomInfo);
 
         // Get chat room info to determine the other participant
         const chatRoom = await Chat.getChatRoom(parseInt(storeId), parseInt(buyerId));
@@ -162,8 +169,8 @@ const setupChatSocket = (io) => {
         const sellerRoom = `user-${chatRoom.seller_id}`;
         const buyerRoom = `user-${parseInt(buyerId)}`;
 
-        io.to(sellerRoom).emit('chat:new-message', message);
-        io.to(buyerRoom).emit('chat:new-message', message);
+        io.to(sellerRoom).emit('chat:new-message', messageWithRoomInfo);
+        io.to(buyerRoom).emit('chat:new-message', messageWithRoomInfo);
 
         console.log(`[Chat] Message sent in room ${roomId}:`, message.message_id);
 

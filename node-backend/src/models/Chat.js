@@ -195,7 +195,7 @@ class Chat {
         JOIN users u ON cm.sender_id = u.user_id
         LEFT JOIN products p ON cm.product_id = p.product_id
         WHERE cm.store_id = $1 AND cm.buyer_id = $2
-        ORDER BY cm.created_at ASC
+        ORDER BY cm.created_at DESC
         LIMIT $3 OFFSET $4
       `;
 
@@ -204,8 +204,11 @@ class Chat {
       const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
       const totalPages = Math.ceil(totalCount / limit);
 
+      // Reverse the array so oldest messages are first (for chat UI display)
+      const messagesInChatOrder = result.rows.reverse();
+
       return {
-        data: result.rows,
+        data: messagesInChatOrder,
         meta: {
           page,
           limit,
