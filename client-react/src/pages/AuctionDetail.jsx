@@ -19,6 +19,7 @@ const AuctionDetail = () => {
   
   // Timer & Countdown
   const [countdownSeconds, setCountdownSeconds] = useState(null);
+  const [lastCountdownReset, setLastCountdownReset] = useState(null);
   
   // Bid Form
   const [bidAmount, setBidAmount] = useState('');
@@ -36,6 +37,47 @@ const AuctionDetail = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelAction, setCancelAction] = useState('cancel'); // 'cancel' or 'stop'
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [timeSyncOffset, setTimeSyncOffset] = useState(0); // Offset antara server time dan client time (ms)
+
+  // Disable cache untuk page ini
+  useEffect(() => {
+    // Set meta tag untuk no-cache
+    const meta = document.querySelector('meta[http-equiv="Cache-Control"]') || 
+                 document.createElement('meta');
+    meta.httpEquiv = 'Cache-Control';
+    meta.content = 'no-cache, no-store, must-revalidate';
+    if (!document.querySelector('meta[http-equiv="Cache-Control"]')) {
+      document.head.appendChild(meta);
+    }
+
+    // Set Pragma
+    const pragmaMeta = document.querySelector('meta[http-equiv="Pragma"]') || 
+                       document.createElement('meta');
+    pragmaMeta.httpEquiv = 'Pragma';
+    pragmaMeta.content = 'no-cache';
+    if (!document.querySelector('meta[http-equiv="Pragma"]')) {
+      document.head.appendChild(pragmaMeta);
+    }
+
+    // Set Expires
+    const expiresMeta = document.querySelector('meta[http-equiv="Expires"]') || 
+                        document.createElement('meta');
+    expiresMeta.httpEquiv = 'Expires';
+    expiresMeta.content = '0';
+    if (!document.querySelector('meta[http-equiv="Expires"]')) {
+      document.head.appendChild(expiresMeta);
+    }
+
+    return () => {
+      // Clean up on unmount
+      const cacheControl = document.querySelector('meta[http-equiv="Cache-Control"]');
+      const pragma = document.querySelector('meta[http-equiv="Pragma"]');
+      const expires = document.querySelector('meta[http-equiv="Expires"]');
+      if (cacheControl) cacheControl.remove();
+      if (pragma) pragma.remove();
+      if (expires) expires.remove();
+    };
+  }, []);
 
   // Fetch current user from PHP backend
   useEffect(() => {
@@ -263,12 +305,14 @@ const AuctionDetail = () => {
         return;
       }
 
-      // Auction active dengan bid
+      // Auction active dengan bid - calculate dari end_time server
       if (auction.status === 'active' && auction.end_time) {
-        const now = new Date();
+        // Gunakan synchronized time (client time + offset)
+        const syncedNow = new Date(Date.now() + timeSyncOffset);
         const endTime = new Date(auction.end_time);
-        const diffMs = endTime - now;
+        const diffMs = endTime - syncedNow;
         const seconds = Math.max(0, Math.ceil(diffMs / 1000));
+        console.log(`[AuctionDetail] Timer calc (synced): syncedNow=${syncedNow.toISOString()}, end=${endTime.toISOString()}, diff=${diffMs}ms, seconds=${seconds}, offset=${timeSyncOffset}ms`);
         setCountdownSeconds(seconds);
         return;
       }
@@ -277,11 +321,14 @@ const AuctionDetail = () => {
       setCountdownSeconds(null);
     };
 
+    // Calculate immediately saat auction data berubah
     calculateCountdown();
+    
+    // Then update setiap 1 detik
     const timer = setInterval(calculateCountdown, 1000);
 
     return () => clearInterval(timer);
-  }, [auction?.end_time, auction?.status]);
+  }, [auction, timeSyncOffset]);
 
   // Socket setup - join room and listen for updates
   useEffect(() => {
@@ -302,8 +349,19 @@ const AuctionDetail = () => {
 
     const handleBidUpdate = (data) => {
       console.log('[AuctionDetail] Bid update received:', data);
+      console.log('[AuctionDetail] New end_time from server:', data.new_end_time);
+      
+      // Calculate time sync offset jika ada server_time
+      if (data.server_time) {
+        const serverTime = new Date(data.server_time).getTime();
+        const clientTime = Date.now();
+        const offset = serverTime - clientTime;
+        console.log(`[AuctionDetail] Time sync: server=${serverTime}, client=${clientTime}, offset=${offset}ms`);
+        setTimeSyncOffset(offset);
+      }
       
       if (data.auction_id === auction.auction_id) {
+        // Update auction state with new end_time from server
         setAuction(prev => ({
           ...prev,
           current_price: data.bid_amount,
@@ -611,12 +669,10 @@ const AuctionDetail = () => {
               <span className="meta-label">Min Increment</span>
               <span className="meta-value">{formatPrice(auction.min_increment || 0)}</span>
             </div>
-            {!isSeller && (
-              <div className={`meta-card ${timerClass}`}>
-                <span className="meta-label">Sisa Waktu</span>
-                <span className="meta-value timer-display">{formatTimer()}</span>
-              </div>
-            )}
+            <div className={`meta-card ${timerClass}`}>
+              <span className="meta-label">Sisa Waktu</span>
+              <span className="meta-value timer-display">{formatTimer()}</span>
+            </div>
             <div className="meta-card">
               <span className="meta-label">Dimulai</span>
               <span className="meta-value">{new Date(auction.start_time).toLocaleString('id-ID')}</span>

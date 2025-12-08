@@ -322,6 +322,7 @@ const setupAuctionSocket = (io) => {
           bid_amount: bidAmount,
           bid_time: newBid.bid_time,
           new_end_time: newEndTime.toISOString(),
+          server_time: new Date().toISOString(),
           is_first_bid: !previousBid,
           bid_history: bidHistoryResult.rows
         });

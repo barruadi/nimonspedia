@@ -20,6 +20,46 @@ const AuctionList = () => {
   // Initialize socket - MUST be before any returns
   const { socket, connected } = useSocket(authData);
 
+  // Disable cache untuk page ini
+  useEffect(() => {
+    // Set meta tag untuk no-cache
+    const meta = document.querySelector('meta[http-equiv="Cache-Control"]') || 
+                 document.createElement('meta');
+    meta.httpEquiv = 'Cache-Control';
+    meta.content = 'no-cache, no-store, must-revalidate';
+    if (!document.querySelector('meta[http-equiv="Cache-Control"]')) {
+      document.head.appendChild(meta);
+    }
+
+    // Set Pragma
+    const pragmaMeta = document.querySelector('meta[http-equiv="Pragma"]') || 
+                       document.createElement('meta');
+    pragmaMeta.httpEquiv = 'Pragma';
+    pragmaMeta.content = 'no-cache';
+    if (!document.querySelector('meta[http-equiv="Pragma"]')) {
+      document.head.appendChild(pragmaMeta);
+    }
+
+    // Set Expires
+    const expiresMeta = document.querySelector('meta[http-equiv="Expires"]') || 
+                        document.createElement('meta');
+    expiresMeta.httpEquiv = 'Expires';
+    expiresMeta.content = '0';
+    if (!document.querySelector('meta[http-equiv="Expires"]')) {
+      document.head.appendChild(expiresMeta);
+    }
+
+    return () => {
+      // Clean up on unmount
+      const cacheControl = document.querySelector('meta[http-equiv="Cache-Control"]');
+      const pragma = document.querySelector('meta[http-equiv="Pragma"]');
+      const expires = document.querySelector('meta[http-equiv="Expires"]');
+      if (cacheControl) cacheControl.remove();
+      if (pragma) pragma.remove();
+      if (expires) expires.remove();
+    };
+  }, []);
+
   // Check user role on mount
   useEffect(() => {
     const fetchCurrentUser = async () => {
