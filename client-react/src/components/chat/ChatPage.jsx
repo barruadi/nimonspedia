@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 import './ChatPage.css';
 
 const ChatPage = () => {
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatListRefreshTrigger, setChatListRefreshTrigger] = useState(0);
+
+  // Check if we're on a specific chat route (for mobile responsiveness)
+  const isChatOpen = location.pathname.match(/\/chat\/\d+\/\d+/);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -70,7 +74,7 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="chat-page">
+    <div className={`chat-page ${isChatOpen ? 'chat-open' : ''}`}>
       <div className="chat-sidebar">
         <ChatList
           currentUser={currentUser}

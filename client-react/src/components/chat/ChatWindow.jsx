@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../../hooks/useSocket';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -7,6 +7,7 @@ import './ChatWindow.css';
 
 const ChatWindow = ({ currentUser, onMessageSent }) => {
   const { storeId, buyerId } = useParams();
+  const navigate = useNavigate();
 
   // Memoize authData to prevent socket reconnections on every render
   const authData = useMemo(() => {
@@ -444,6 +445,15 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
     <div className="chat-window">
       {/* Chat Header */}
       <div className="chat-header">
+        <button
+          className="chat-back-btn"
+          onClick={() => navigate('/chat')}
+          aria-label="Back to chat list"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
         <div className="chat-header-info">
           <div className="chat-avatar">
             {chatRoom?.store_logo ? (
@@ -521,6 +531,7 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
         onTyping={handleTyping}
         disabled={!connected}
         currentUser={currentUser}
+        storeId={storeId}
       />
     </div>
   );

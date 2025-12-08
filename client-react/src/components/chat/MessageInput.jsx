@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import './MessageInput.css';
 
-const MessageInput = ({ onSendMessage, onTyping, disabled, currentUser }) => {
+const MessageInput = ({ onSendMessage, onTyping, disabled, currentUser, storeId }) => {
   const [message, setMessage] = useState('');
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showProductPicker, setShowProductPicker] = useState(false);
@@ -10,25 +10,29 @@ const MessageInput = ({ onSendMessage, onTyping, disabled, currentUser }) => {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    if (showProductPicker) {
+    if (showProductPicker && storeId) {
       fetchProducts();
     }
-  }, [showProductPicker]);
+  }, [showProductPicker, storeId]);
 
   const fetchProducts = async () => {
+    if (!storeId) {
+      console.error('No store ID provided');
+      return;
+    }
+
     try {
-      // Fetch products from API (you may need to adjust the endpoint)
-      const response = await fetch('/api/node/auctions?limit=50', {
+      // Fetch products from the store
+      const response = await fetch(`/api/store/${storeId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
           'Content-Type': 'application/json'
         },
         credentials: 'include'
       });
 
       const data = await response.json();
-      if (data.ok) {
-        setProducts(data.data);
+      if (data.ok && data.data.products) {
+        setProducts(data.data.products);
       }
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -119,7 +123,7 @@ const MessageInput = ({ onSendMessage, onTyping, disabled, currentUser }) => {
   const handleProductSelect = (product) => {
     onSendMessage({
       messageType: 'item_preview',
-      content: `Product: ${product.product_name}`,
+      content: `Product: ${product.name}`,
       productId: product.product_id
     });
 
@@ -155,20 +159,18 @@ const MessageInput = ({ onSendMessage, onTyping, disabled, currentUser }) => {
                     {product.image_path && (
                       <img
                         src={product.image_path}
-                        alt={product.product_name}
+                        alt={product.name}
                         className="product-thumbnail"
                       />
                     )}
                     <div className="product-details">
-                      <h4>{product.product_name}</h4>
+                      <h4>{product.name}</h4>
                       <p className="product-price">
-                        Starting: Rp {product.starting_price?.toLocaleString()}
+                        Rp {product.price?.toLocaleString()}
                       </p>
-                      {product.current_price && (
-                        <p className="product-current">
-                          Current: Rp {product.current_price?.toLocaleString()}
-                        </p>
-                      )}
+                      <p className="product-stock">
+                        Stock: {product.stock}
+                      </p>
                     </div>
                   </div>
                 ))
