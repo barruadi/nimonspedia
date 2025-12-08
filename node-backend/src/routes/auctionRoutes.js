@@ -11,18 +11,21 @@ router.get('/auctions', auctionController.getAllAuctions);
 
 /**
  * Get auction detail (initial load) 
+ * Protected: buyer & seller only (conditional page at frontend)
  */
-router.get('/auction/:id', auctionController.getAuctionById);
+router.get('/auction/:id', verifyUser, auctionController.getAuctionById);
 
 /**
  * Get bids for an auction
+ * Protected: buyer & seller only (conditional page at frontend)
  */
-router.get('/auction/:id/bids', auctionController.getBidHistory);
+router.get('/auction/:id/bids', verifyUser, auctionController.getBidHistory);
 
 /**
  * Place bid on auction
+ * Protected: buyer & seller (seller validated in controller)
  */
-router.post('/auction/:id/bids', auctionController.placeBid);
+router.post('/auction/:id/bids', verifyUser, auctionController.placeBid);
 
 /**
  * Stop auction (seller action - ends with current winner)

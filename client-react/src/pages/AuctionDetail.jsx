@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import './AuctionDetail.css';
@@ -8,7 +8,9 @@ const API_BASE_URL = 'http://localhost/api/node';
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const socket = useSocket();
+  const descriptionRef = useRef(null);
+  const [authData, setAuthData] = useState(null);
+  const { socket, connected } = useSocket(authData);
   
   // Auction & Bid Data
   const [auction, setAuction] = useState(null);
@@ -18,6 +20,7 @@ const AuctionDetail = () => {
   
   // Timer & Countdown
   const [countdownSeconds, setCountdownSeconds] = useState(null);
+  const [lastCountdownReset, setLastCountdownReset] = useState(null);
   
   // Bid Form
   const [bidAmount, setBidAmount] = useState('');
@@ -34,7 +37,62 @@ const AuctionDetail = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelAction, setCancelAction] = useState('cancel'); // 'cancel' or 'stop'
+  const [cancellationReason, setCancellationReason] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [timeSyncOffset, setTimeSyncOffset] = useState(0); // Offset antara server time dan client time (ms)
+  const [displayedBidsCount, setDisplayedBidsCount] = useState(10); // Load more for bids
+
+  // Load Quill CSS for rich text display
+  useEffect(() => {
+    // Check if Quill CSS is already loaded
+    if (!document.querySelector('link[href*="quill.css"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.css';
+      document.head.appendChild(link);
+      console.log('[AuctionDetail] Quill CSS loaded');
+    }
+  }, []);
+
+  // Disable cache untuk page ini
+  useEffect(() => {
+    // Set meta tag untuk no-cache
+    const meta = document.querySelector('meta[http-equiv="Cache-Control"]') || 
+                 document.createElement('meta');
+    meta.httpEquiv = 'Cache-Control';
+    meta.content = 'no-cache, no-store, must-revalidate';
+    if (!document.querySelector('meta[http-equiv="Cache-Control"]')) {
+      document.head.appendChild(meta);
+    }
+
+    // Set Pragma
+    const pragmaMeta = document.querySelector('meta[http-equiv="Pragma"]') || 
+                       document.createElement('meta');
+    pragmaMeta.httpEquiv = 'Pragma';
+    pragmaMeta.content = 'no-cache';
+    if (!document.querySelector('meta[http-equiv="Pragma"]')) {
+      document.head.appendChild(pragmaMeta);
+    }
+
+    // Set Expires
+    const expiresMeta = document.querySelector('meta[http-equiv="Expires"]') || 
+                        document.createElement('meta');
+    expiresMeta.httpEquiv = 'Expires';
+    expiresMeta.content = '0';
+    if (!document.querySelector('meta[http-equiv="Expires"]')) {
+      document.head.appendChild(expiresMeta);
+    }
+
+    return () => {
+      // Clean up on unmount
+      const cacheControl = document.querySelector('meta[http-equiv="Cache-Control"]');
+      const pragma = document.querySelector('meta[http-equiv="Pragma"]');
+      const expires = document.querySelector('meta[http-equiv="Expires"]');
+      if (cacheControl) cacheControl.remove();
+      if (pragma) pragma.remove();
+      if (expires) expires.remove();
+    };
+  }, []);
 
   // Fetch current user from PHP backend
   useEffect(() => {
@@ -61,6 +119,10 @@ const AuctionDetail = () => {
             };
             console.log('[AuctionDetail] Extracted user data:', userData);
             setCurrentUser(userData);
+            setAuthData({
+              userId: data.user.id,
+              userRole: data.user.role
+            });
             // Ensure user_id is a number
             const userId = parseInt(userData.user_id, 10);
             console.log('[AuctionDetail] Setting currentUserId to:', userId, 'type:', typeof userId);
@@ -71,6 +133,10 @@ const AuctionDetail = () => {
             const userData = data.data || data;
             console.log('[AuctionDetail] Current user fetched (fallback):', userData);
             setCurrentUser(userData);
+            setAuthData({
+              userId: userData.user_id,
+              userRole: userData.role
+            });
             const userId = parseInt(userData.user_id, 10);
             console.log('[AuctionDetail] Setting currentUserId to:', userId, 'type:', typeof userId);
             setCurrentUserId(userId);
@@ -83,11 +149,10 @@ const AuctionDetail = () => {
         }
       } catch (err) {
         console.warn('[AuctionDetail] Failed to fetch current user:', err.message);
-        // If PHP API fails, set dummy currentUser to allow page load BUT don't set currentUserId
-        const dummyUser = { user_id: 0, email: 'guest', balance: 0 };
-        console.log('[AuctionDetail] Using dummy user (PHP API failed):', dummyUser);
-        setCurrentUser(dummyUser);
-        setCurrentUserId(null); // Keep null so isSeller won't compare with dummy user
+        // If PHP API fails, don't set dummy currentUser - stay null
+        console.log('[AuctionDetail] currentUser remains null (not authenticated)');
+        setCurrentUser(null);
+        setCurrentUserId(null);
       }
     };
 
@@ -105,9 +170,18 @@ const AuctionDetail = () => {
           throw new Error('Invalid auction ID');
         }
 
-        const response = await fetch(`${API_BASE_URL}/auction/${id}`);
+        // Build URL with user_id query param if available
+        let url = `${API_BASE_URL}/auction/${id}`;
+        if (currentUser?.user_id) {
+          url += `?user_id=${currentUser.user_id}`;
+        }
+
+        const response = await fetch(url);
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Anda harus login untuk melihat lelang');
+          }
           if (response.status === 404) {
             throw new Error('Lelang tidak ditemukan');
           }
@@ -151,7 +225,8 @@ const AuctionDetail = () => {
           product_description: responseData.product.description,
           image_path: responseData.product.image_path,
           store_id: responseData.store.store_id,
-          store_name: responseData.store.store_name
+          store_name: responseData.store.store_name,
+          cancellation_reason: responseData.auction.cancellation_reason || null
         };
 
         console.log('[AuctionDetail] Winner data from API:', {
@@ -202,7 +277,7 @@ const AuctionDetail = () => {
     };
 
     fetchAuctionDetail();
-  }, [id]);
+  }, [id, currentUser?.user_id]);
 
   // Update isSeller when auction or currentUser changes
   useEffect(() => {
@@ -254,12 +329,14 @@ const AuctionDetail = () => {
         return;
       }
 
-      // Auction active dengan bid
+      // Auction active dengan bid - calculate dari end_time server
       if (auction.status === 'active' && auction.end_time) {
-        const now = new Date();
+        // Gunakan synchronized time (client time + offset)
+        const syncedNow = new Date(Date.now() + timeSyncOffset);
         const endTime = new Date(auction.end_time);
-        const diffMs = endTime - now;
+        const diffMs = endTime - syncedNow;
         const seconds = Math.max(0, Math.ceil(diffMs / 1000));
+        console.log(`[AuctionDetail] Timer calc (synced): syncedNow=${syncedNow.toISOString()}, end=${endTime.toISOString()}, diff=${diffMs}ms, seconds=${seconds}, offset=${timeSyncOffset}ms`);
         setCountdownSeconds(seconds);
         return;
       }
@@ -268,19 +345,22 @@ const AuctionDetail = () => {
       setCountdownSeconds(null);
     };
 
+    // Calculate immediately saat auction data berubah
     calculateCountdown();
+    
+    // Then update setiap 1 detik
     const timer = setInterval(calculateCountdown, 1000);
 
     return () => clearInterval(timer);
-  }, [auction?.end_time, auction?.status]);
+  }, [auction, timeSyncOffset]);
 
   // Socket setup - join room and listen for updates
   useEffect(() => {
-    if (!socket.socket || !auction || !currentUser) return;
+    if (!socket || !auction || !currentUser) return;
 
     console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
 
-    socket.socket.emit('auction:join', {
+    socket.emit('auction:join', {
       auctionId: auction.auction_id,
       userId: currentUser.user_id
     }, (response) => {
@@ -293,8 +373,19 @@ const AuctionDetail = () => {
 
     const handleBidUpdate = (data) => {
       console.log('[AuctionDetail] Bid update received:', data);
+      console.log('[AuctionDetail] New end_time from server:', data.new_end_time);
+      
+      // Calculate time sync offset jika ada server_time
+      if (data.server_time) {
+        const serverTime = new Date(data.server_time).getTime();
+        const clientTime = Date.now();
+        const offset = serverTime - clientTime;
+        console.log(`[AuctionDetail] Time sync: server=${serverTime}, client=${clientTime}, offset=${offset}ms`);
+        setTimeSyncOffset(offset);
+      }
       
       if (data.auction_id === auction.auction_id) {
+        // Update auction state with new end_time from server
         setAuction(prev => ({
           ...prev,
           current_price: data.bid_amount,
@@ -311,17 +402,49 @@ const AuctionDetail = () => {
       }
     };
 
+    const handleAuctionStarted = (data) => {
+      console.log('[AuctionDetail] Auction started event received:', data);
+      
+      if (data.auction_id === auction.auction_id) {
+        setAuction(prev => ({
+          ...prev,
+          status: 'active',
+          start_time: data.start_time,
+          end_time: data.end_time
+        }));
+        console.log('[AuctionDetail] Auction status updated to active');
+      }
+    };
+
+    const handleAuctionCancelled = (data) => {
+      console.log('[AuctionDetail] Auction cancelled event received:', data);
+      
+      if (data.auction_id === auction.auction_id) {
+        setAuction(prev => ({
+          ...prev,
+          status: 'cancelled',
+          cancellation_reason: data.cancellation_reason || null
+        }));
+        setCancellationReason(data.cancellation_reason || '');
+        setShowCancelModal(false);
+        console.log('[AuctionDetail] Auction status updated to cancelled with reason:', data.cancellation_reason);
+      }
+    };
+
     const handleAuctionEnded = (data) => {
-      console.log('[AuctionDetail] Auction ended:', data);
+      console.log('[AuctionDetail] Auction ended event received:', data);
       
       if (data.auction_id === auction.auction_id) {
         setAuction(prev => ({
           ...prev,
           status: 'ended',
           winner_id: data.winner_id,
-          winner_name: data.winner_name
+          winner_name: data.winner_name,
+          current_price: data.final_price
         }));
         setCountdownSeconds(0);
+        setShowCancelModal(false);
+        console.log('[AuctionDetail] Auction status updated to ended with winner:', data.winner_name);
       }
     };
 
@@ -330,17 +453,21 @@ const AuctionDetail = () => {
       setBidError(data.error || 'Gagal menempatkan penawaran');
     };
 
-    socket.socket.on('auction:bid-update', handleBidUpdate);
-    socket.socket.on('auction:ended', handleAuctionEnded);
-    socket.socket.on('auction:bid-error', handleBidError);
+    socket.on('auction:bid-update', handleBidUpdate);
+    socket.on('auction:started', handleAuctionStarted);
+    socket.on('auction:cancelled', handleAuctionCancelled);
+    socket.on('auction:ended', handleAuctionEnded);
+    socket.on('auction:bid-error', handleBidError);
 
     return () => {
-      socket.socket.emit('auction:leave', { auctionId: auction.auction_id });
-      socket.socket.off('auction:bid-update', handleBidUpdate);
-      socket.socket.off('auction:ended', handleAuctionEnded);
-      socket.socket.off('auction:bid-error', handleBidError);
+      socket.emit('auction:leave', { auctionId: auction.auction_id });
+      socket.off('auction:bid-update', handleBidUpdate);
+      socket.off('auction:started', handleAuctionStarted);
+      socket.off('auction:cancelled', handleAuctionCancelled);
+      socket.off('auction:ended', handleAuctionEnded);
+      socket.off('auction:bid-error', handleBidError);
     };
-  }, [id, currentUser?.user_id]);
+  }, [socket, connected, auction, currentUser?.user_id]);
 
   // Place bid via Socket.IO (with validation)
   const handlePlaceBid = useCallback(async () => {
@@ -370,14 +497,14 @@ const AuctionDetail = () => {
         return;
       }
 
-      if (!socket.socket || !socket.connected) {
+      if (!socket || !connected) {
         setBidError('Koneksi socket terputus. Silakan refresh halaman.');
         return;
       }
 
       setSubmittingBid(true);
 
-      socket.socket.emit('auction:place-bid', {
+      socket.emit('auction:place-bid', {
         auctionId: auction.auction_id,
         bidderId: currentUser.user_id,
         bidAmount: bid
@@ -408,6 +535,13 @@ const AuctionDetail = () => {
     try {
       setCancelLoading(true);
       
+      // Validate reason for cancel action
+      if (action === 'cancel' && !cancellationReason.trim()) {
+        alert('Silakan masukkan alasan pembatalan');
+        setCancelLoading(false);
+        return;
+      }
+      
       const endpoint = action === 'stop' 
         ? `${API_BASE_URL}/auction/${auction.auction_id}/stop`
         : `${API_BASE_URL}/auction/${auction.auction_id}/cancel`;
@@ -418,7 +552,8 @@ const AuctionDetail = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: currentUser.user_id
+          user_id: currentUser.user_id,
+          ...(action === 'cancel' && { cancellation_reason: cancellationReason.trim() })
         })
       });
 
@@ -437,10 +572,12 @@ const AuctionDetail = () => {
         ...prev,
         status: action === 'stop' ? 'ended' : 'cancelled',
         winner_id: data.data?.winner_id || null,
-        winner_name: data.data?.winner_name || null
+        winner_name: data.data?.winner_name || null,
+        ...(action === 'cancel' && { cancellation_reason: cancellationReason.trim() })
       }));
 
       setShowCancelModal(false);
+      setCancellationReason('');
       alert(`Lelang berhasil di${action === 'stop' ? 'hentikan' : 'batalkan'}!`);
 
     } catch (err) {
@@ -536,7 +673,7 @@ const AuctionDetail = () => {
   }
 
   const isActive = auction.status === 'active';
-  const displayPrice = isActive ? auction.current_price : auction.starting_price;
+  const displayPrice = (isActive || auction.status === 'ended') ? auction.current_price : auction.starting_price;
   const timerClass = countdownSeconds !== null && countdownSeconds !== 'waiting' && countdownSeconds < 60 ? 'timer-warning' : '';
   const nextMinBid = auction.current_price + (auction.min_increment || 1000);
 
@@ -550,13 +687,13 @@ const AuctionDetail = () => {
   return (
     <div className="auction-detail-page">
       {isSeller ? (
-        <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>Kembali ke Product Management</button>
+        <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>← Kembali ke Product Management</button>
       ) : (
-        <button className="back-btn" onClick={() => navigate('/auctions')}>Kembali ke Lelang</button>
+        <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
       )}
 
       <div className="detail-container">
-        {/* Left: Image Section */}
+        {/* Left: Image + Description Section */}
         <div className="image-section">
           <div className="image-wrapper">
             <img 
@@ -568,6 +705,22 @@ const AuctionDetail = () => {
               {auction.status === 'active' ? 'ACTIVE' : auction.status === 'scheduled' ? 'SCHEDULED' : auction.status === 'ended' ? 'ENDED' : 'CANCELLED'}
             </span>
           </div>
+
+          {/* Product Description Below Image */}
+          {auction.product_description && (
+            <>
+              {console.log('[AuctionDetail] Rendering description with content:', {
+                hasDescription: !!auction.product_description,
+                descriptionLength: auction.product_description?.length,
+                firstChars: auction.product_description?.substring(0, 100)
+              })}
+              <div 
+                ref={descriptionRef}
+                className="product-description ql-editor"
+                dangerouslySetInnerHTML={{ __html: auction.product_description }}
+              />
+            </>
+          )}
         </div>
 
         {/* Right: Detail Section */}
@@ -575,13 +728,23 @@ const AuctionDetail = () => {
           {/* Product Info */}
           <div className="product-info">
             <h1>{auction.product_name}</h1>
-            {auction.product_description && (
-              <p className="product-description">{auction.product_description}</p>
-            )}
-            <p className="store-info">
-              <span className="label">Toko:</span>
-              <span className="value">{auction.store_name}</span>
-            </p>
+            <div className="product-meta-info">
+              <p className="quantity-info">
+                <span className="label">Jumlah Dilelang:</span>
+                <span className="value">{auction.quantity} pcs</span>
+              </p>
+              <p className="store-info">
+                <span className="label">Toko:</span>
+                <a 
+                  href={`http://localhost/store/${auction.store_id}`}
+                  className="store-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {auction.store_name}
+                </a>
+              </p>
+            </div>
           </div>
 
           {/* Price Info */}
@@ -602,12 +765,10 @@ const AuctionDetail = () => {
               <span className="meta-label">Min Increment</span>
               <span className="meta-value">{formatPrice(auction.min_increment || 0)}</span>
             </div>
-            {!isSeller && (
-              <div className={`meta-card ${timerClass}`}>
-                <span className="meta-label">Sisa Waktu</span>
-                <span className="meta-value timer-display">{formatTimer()}</span>
-              </div>
-            )}
+            <div className={`meta-card ${timerClass}`}>
+              <span className="meta-label">Sisa Waktu</span>
+              <span className="meta-value timer-display">{formatTimer()}</span>
+            </div>
             <div className="meta-card">
               <span className="meta-label">Dimulai</span>
               <span className="meta-value">{new Date(auction.start_time).toLocaleString('id-ID')}</span>
@@ -689,7 +850,10 @@ const AuctionDetail = () => {
 
               {auction.status === 'cancelled' && (
                 <div className="alert alert-error">
-                  Lelang telah dibatalkan oleh penjual
+                  <p><strong>Lelang telah dibatalkan</strong></p>
+                  {auction.cancellation_reason && (
+                    <p className="cancellation-reason">Alasan: {auction.cancellation_reason}</p>
+                  )}
                 </div>
               )}
             </>
@@ -775,7 +939,22 @@ const AuctionDetail = () => {
           <div className="modal-content">
             <h3>Konfirmasi {cancelAction === 'cancel' ? 'Pembatalan' : 'Penghentian'} Lelang</h3>
             {cancelAction === 'cancel' && (
-              <p>Apakah Anda yakin ingin <strong>MEMBATALKAN</strong> lelang ini? Tindakan ini tidak dapat dibatalkan.</p>
+              <>
+                <p>Apakah Anda yakin ingin <strong>MEMBATALKAN</strong> lelang ini? Tindakan ini tidak dapat dibatalkan.</p>
+                <div className="modal-form-group">
+                  <label htmlFor="cancel-reason">Alasan Pembatalan *</label>
+                  <textarea
+                    id="cancel-reason"
+                    className="modal-textarea"
+                    placeholder="Jelaskan alasan pembatalan..."
+                    value={cancellationReason}
+                    onChange={(e) => setCancellationReason(e.target.value)}
+                    maxLength={500}
+                    rows={4}
+                  />
+                  <span className="char-count">{cancellationReason.length}/500</span>
+                </div>
+              </>
             )}
             {cancelAction === 'stop' && (
               <p>Apakah Anda yakin ingin <strong>MENGHENTIKAN</strong> lelang ini sekarang? Penawar tertinggi saat ini akan menjadi pemenang.</p>
@@ -783,7 +962,10 @@ const AuctionDetail = () => {
             <div className="modal-actions">
               <button 
                 className="btn btn-secondary"
-                onClick={() => setShowCancelModal(false)}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason('');
+                }}
                 disabled={cancelLoading}
               >
                 Batal
@@ -791,7 +973,7 @@ const AuctionDetail = () => {
               <button 
                 className={`btn ${cancelAction === 'cancel' ? 'btn-danger' : 'btn-warning'}`}
                 onClick={() => handleStopAuction(cancelAction)}
-                disabled={cancelLoading}
+                disabled={cancelLoading || (cancelAction === 'cancel' && !cancellationReason.trim())}
               >
                 {cancelLoading ? 'Memproses...' : (cancelAction === 'cancel' ? 'Batalkan' : 'Hentikan')}
               </button>
@@ -805,33 +987,45 @@ const AuctionDetail = () => {
         <h2>Riwayat Penawaran - {new Set(bids.map(b => b.bidder_id)).size} Penawar</h2>
         
         {bids.length > 0 ? (
-          <div className="bids-container">
-            {bids.map((bid, index) => (
-              <div 
-                key={`${bid.bid_id}-${index}`}
-                className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''} ${index === 0 ? 'highest-bid' : ''}`}
-              >
-                <div className="bid-rank">#{index + 1}</div>
-                <div className="bid-content">
-                  <div className="bid-top">
-                    <span className="bidder-name">
-                      {bid.bidder_id === currentUser?.user_id ? 'Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
-                    </span>
-                    <span className="bid-time">
-                      {new Date(bid.bid_time).toLocaleString('id-ID', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                      })}
-                    </span>
+          <>
+            <div className="bids-container">
+              {bids.slice(0, displayedBidsCount).map((bid, index) => (
+                <div 
+                  key={`${bid.bid_id}-${index}`}
+                  className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''} ${index === 0 ? 'highest-bid' : ''}`}
+                >
+                  <div className="bid-rank">#{index + 1}</div>
+                  <div className="bid-content">
+                    <div className="bid-top">
+                      <span className="bidder-name">
+                        {bid.bidder_id === currentUser?.user_id ? 'Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
+                      </span>
+                      <span className="bid-time">
+                        {new Date(bid.bid_time).toLocaleString('id-ID', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <span className="bid-amount">{formatPrice(bid.bid_amount)}</span>
                   </div>
-                  <span className="bid-amount">{formatPrice(bid.bid_amount)}</span>
                 </div>
+              ))}
+            </div>
+            {displayedBidsCount < bids.length && (
+              <div className="load-more-container">
+                <button 
+                  className="btn btn-secondary load-more-btn"
+                  onClick={() => setDisplayedBidsCount(prev => prev + 10)}
+                >
+                  Muat {Math.min(10, bids.length - displayedBidsCount)} Penawaran Sebelumnya
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="no-bids-container">
             <p>Belum ada penawaran</p>

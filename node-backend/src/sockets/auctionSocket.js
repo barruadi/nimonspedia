@@ -12,6 +12,7 @@
 
 const pool = require('../config/db');
 const { sendAuctionNotification } = require('../services/pushNotificationService');
+const { sendOutbidNotification, sendAuctionWonNotification, sendAuctionEndedSellerNotification } = require('../utils/notificationUtils');
 
 // Map to track active auction timers: { auctionId: timeoutHandle }
 const auctionTimers = new Map();
@@ -244,17 +245,6 @@ const setupAuctionSocket = (io) => {
         await client.query(deductQuery, [bidAmount, bidderId]);
         console.log(`[Auction Socket] Deducted ${bidAmount} from bidder ${bidderId}`);
 
-        // STEP 6: REFUND PREVIOUS BIDDER (if exists)
-        if (previousBid && previousBid.bidder_id !== bidderId) {
-          const refundQuery = `
-            UPDATE users 
-            SET balance = balance + $1
-            WHERE user_id = $2
-          `;
-          await client.query(refundQuery, [previousBid.bid_amount, previousBid.bidder_id]);
-          console.log(`[Auction Socket] Refunded ${previousBid.bid_amount} to previous bidder ${previousBid.bidder_id}`);
-        }
-
         // STEP 7: INSERT NEW BID
         const insertBidQuery = `
           INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
@@ -322,15 +312,46 @@ const setupAuctionSocket = (io) => {
           bid_amount: bidAmount,
           bid_time: newBid.bid_time,
           new_end_time: newEndTime.toISOString(),
+          server_time: new Date().toISOString(),
           is_first_bid: !previousBid,
           bid_history: bidHistoryResult.rows
         });
 
         console.log(`[Auction Socket] Broadcast bid-update to auction ${auctionId}`);
 
+        // SEND OUTBID NOTIFICATION TO PREVIOUS BIDDER
+        if (previousBid && previousBid.bidder_id !== bidderId) {
+          try {
+            const productQuery = `
+              SELECT p.name as product_name
+              FROM auctions a
+              JOIN products p ON a.product_id = p.product_id
+              WHERE a.auction_id = $1
+            `;
+            const productResult = await pgPool.query(productQuery, [auctionId]);
+            const productName = productResult.rows[0]?.product_name || 'produk';
+
+            await sendOutbidNotification(
+              previousBid.bidder_id,
+              productName,
+              auctionId,
+              buyer.full_name,
+              bidAmount
+            );
+            console.log(`[Auction Socket] Outbid notification sent to user ${previousBid.bidder_id}`);
+          } catch (notifError) {
+            console.error('[Auction Socket] Error sending outbid notification:', notifError.message);
+          }
+        }
+
         // SEND PUSH NOTIFICATION TO SELLER
         try {
-          const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+          const productQuery = `
+            SELECT p.name as product_name
+            FROM auctions a
+            JOIN products p ON a.product_id = p.product_id
+            WHERE a.auction_id = $1
+          `;
           const productResult = await pgPool.query(productQuery, [auctionId]);
           const productName = productResult.rows[0]?.product_name || 'produk';
 
@@ -461,7 +482,7 @@ async function closeAuction(io, auctionId) {
     // LOCK auction & get details
     const auctionQuery = `
       SELECT 
-        auction_id, product_id, current_price, status
+        auction_id, product_id, current_price, status, quantity
       FROM auctions 
       WHERE auction_id = $1 
       FOR UPDATE
@@ -493,34 +514,102 @@ async function closeAuction(io, auctionId) {
 
     let winnerId = null;
     let finalPrice = auction.current_price;
+    let orderId = null;
+    let productName = null;
 
     if (winner) {
       winnerId = winner.bidder_id;
 
       // Get product & store info
       const productQuery = `
-        SELECT product_id, store_id FROM products WHERE product_id = $1
+        SELECT product_id, store_id, name FROM products WHERE product_id = $1
       `;
       const productResult = await client.query(productQuery, [auction.product_id]);
       const product = productResult.rows[0];
+      productName = product?.name || 'produk';
 
       // CREATE ORDER AUTOMATICALLY
       const orderQuery = `
         INSERT INTO orders (buyer_id, store_id, status, total_amount, created_at)
         VALUES ($1, $2, 'approved', $3, NOW())
-        RETURNING order_id
+        RETURNING order_id, status, created_at
       `;
+      console.log(`[Auction Socket] Creating order with: buyer=${winnerId}, store=${product.store_id}, amount=${finalPrice}`);
       const orderResult = await client.query(orderQuery, [winnerId, product.store_id, finalPrice]);
-      const orderId = orderResult.rows[0].order_id;
+      
+      if (!orderResult.rows[0]) {
+        console.error(`[Auction Socket] ❌ ORDER INSERT FAILED for auction ${auctionId}`);
+        throw new Error('Order insert returned no rows');
+      }
+      
+      orderId = orderResult.rows[0].order_id;
+      console.log(`[Auction Socket] Order insert result:`, orderResult.rows[0]);
 
       // Insert order item
       const orderItemQuery = `
         INSERT INTO order_items (order_id, product_id, price_at, qty)
-        VALUES ($1, $2, $3, 1)
+        VALUES ($1, $2, $3, $4)
       `;
-      await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice]);
+      await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice, auction.quantity]);
 
-      console.log(`[Auction Socket] Order ${orderId} created for auction ${auctionId}`);
+      console.log(`[Auction Socket] ✅ Order ${orderId} created for auction ${auctionId}:`);
+      console.log(`  - Buyer: ${winnerId}`);
+      console.log(`  - Store: ${product.store_id}`);
+      console.log(`  - Amount: Rp ${finalPrice}`);
+      console.log(`  - Status: approved`);
+    }
+
+    // REFUND NON-WINNING BIDS
+    // Winner: refund all bids EXCEPT the highest (winning) bid
+    // Losers: refund ALL bids
+    
+    if (winnerId) {
+      // Refund winner's previous bids (all except max)
+      const winnerPreviousBidsQuery = `
+        SELECT SUM(bid_amount) as total_refund
+        FROM auction_bids
+        WHERE auction_id = $1 AND bidder_id = $2
+        AND bid_amount != (
+          SELECT MAX(bid_amount) 
+          FROM auction_bids 
+          WHERE auction_id = $1 AND bidder_id = $2
+        )
+      `;
+      const winnerRefundResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
+      const winnerRefundAmount = winnerRefundResult.rows[0]?.total_refund || 0;
+      
+      if (winnerRefundAmount > 0) {
+        const winnerRefundQuery = `
+          UPDATE users 
+          SET balance = balance + $1
+          WHERE user_id = $2
+        `;
+        await client.query(winnerRefundQuery, [winnerRefundAmount, winnerId]);
+        console.log(`[Auction Socket] Refunded Rp ${winnerRefundAmount} (previous bids) to winner ${winnerId}`);
+      }
+    }
+    
+    // Refund all losing bidders - ALL their bids
+    const losingBidsQuery = `
+      SELECT bidder_id, SUM(bid_amount) as total_bid_amount
+      FROM auction_bids
+      WHERE auction_id = $1 AND bidder_id != $2
+      GROUP BY bidder_id
+    `;
+    const losingBidsResult = await client.query(losingBidsQuery, [auctionId, winnerId || -1]);
+    
+    if (losingBidsResult.rows.length > 0) {
+      console.log(`[Auction Socket] Refunding ${losingBidsResult.rows.length} losing bidders for auction ${auctionId}`);
+      
+      for (const losingBid of losingBidsResult.rows) {
+        const refundQuery = `
+          UPDATE users 
+          SET balance = balance + $1
+          WHERE user_id = $2
+        `;
+        await client.query(refundQuery, [losingBid.total_bid_amount, losingBid.bidder_id]);
+        console.log(`[Auction Socket] Refunded Rp ${losingBid.total_bid_amount} (all bids) to losing bidder ${losingBid.bidder_id}`);
+      }
     }
 
     // UPDATE AUCTION STATUS TO ENDED
@@ -551,23 +640,41 @@ async function closeAuction(io, auctionId) {
       final_price: finalPrice
     });
 
+    // EMIT order:created event to winner
+    if (winnerId) {
+      io.to(`user-${winnerId}`).emit('order:created', {
+        order_id: orderId || null,
+        auction_id: auctionId,
+        product_name: productName || 'produk',
+        final_price: finalPrice,
+        status: 'approved',
+        message: 'Order Anda dari hasil lelang sudah dibuat dengan status approved'
+      });
+      console.log(`[Auction Socket] Emitted order:created event to winner ${winnerId} (order: ${orderId})`);
+    }
+
     console.log(`[Auction Socket] ✅ Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
 
     // SEND PUSH NOTIFICATIONS
     try {
-      const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+      const productQuery = `
+        SELECT p.name as product_name
+        FROM auctions a
+        JOIN products p ON a.product_id = p.product_id
+        WHERE a.auction_id = $1
+      `;
       const productResult = await client.query(productQuery, [auctionId]);
       const productName = productResult.rows[0]?.product_name || 'produk';
 
       // Notify winner
-      if (winnerId) {
-        await sendAuctionNotification(
+      if (winnerId && winnerName) {
+        await sendAuctionWonNotification(
           winnerId,
-          'Selamat! Anda Menang Lelang',
-          `Anda memenangkan lelang ${productName} dengan harga Rp ${finalPrice.toLocaleString('id-ID')}`,
-          auctionId
+          productName,
+          finalPrice,
+          winnerName
         );
-        console.log(`[Auction Socket] Push notification sent to winner ${winnerId}`);
+        console.log(`[Auction Socket] Win notification sent to winner ${winnerId}`);
       }
 
       // Notify seller
@@ -582,20 +689,16 @@ async function closeAuction(io, auctionId) {
       const sellerId = sellerResult.rows[0]?.owner_id;
 
       if (sellerId) {
-        const message = winnerId 
-          ? `Lelang ${productName} telah berakhir. Pemenang: ${winnerName} (Rp ${finalPrice.toLocaleString('id-ID')})`
-          : `Lelang ${productName} telah berakhir tanpa pemenang`;
-        
-        await sendAuctionNotification(
+        await sendAuctionEndedSellerNotification(
           sellerId,
-          'Lelang Berakhir',
-          message,
-          auctionId
+          productName,
+          winnerName || 'Tidak ada pemenang',
+          finalPrice
         );
-        console.log(`[Auction Socket] Push notification sent to seller ${sellerId}`);
+        console.log(`[Auction Socket] Seller ended notification sent to seller ${sellerId}`);
       }
     } catch (notifError) {
-      console.error('[Auction Socket] Error sending end auction notifications:', notifError);
+      console.error('[Auction Socket] Error sending auction end notifications:', notifError.message);
     }
 
     // Clean up timer

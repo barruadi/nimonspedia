@@ -195,6 +195,7 @@ CREATE TABLE IF NOT EXISTS auctions (
     end_time       TIMESTAMPTZ, -- Nullable, filled when ended
     status         auction_status NOT NULL DEFAULT 'scheduled',
     winner_id      INTEGER REFERENCES users(user_id) ON DELETE SET NULL, -- Nullable
+    cancellation_reason TEXT, -- Nullable, filled when cancelled
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
     CONSTRAINT chk_auction_current_price CHECK (current_price >= starting_price)

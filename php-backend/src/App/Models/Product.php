@@ -349,6 +349,20 @@ class Product
         return (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
     }
 
+    // Check if product has active or scheduled auctions
+    public static function hasActiveAuctions(int $productId): int
+    {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as count
+            FROM auctions
+            WHERE product_id = :product_id
+            AND status IN ('active', 'scheduled')
+        ");
+        $stmt->execute(['product_id' => $productId]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    }
+
     // Soft delete a product
     public static function softDelete(int $productId): bool
     {

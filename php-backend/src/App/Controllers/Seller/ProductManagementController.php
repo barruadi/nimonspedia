@@ -632,6 +632,17 @@ class ProductManagementController
             ];
         }
 
+        // Cascade Validation: Check for active or scheduled auctions
+        $activeAuctions = Product::hasActiveAuctions($productId);
+
+        if ($activeAuctions > 0) {
+            http_response_code(400);
+            return [
+                'ok' => false,
+                'error' => "Tidak dapat menghapus produk: Masih ada {$activeAuctions} lelang yang sedang berlangsung atau dijadwalkan"
+            ];
+        }
+
         // Soft delete
         try {
             $success = Product::softDelete($productId);

@@ -15,9 +15,50 @@ const AuctionList = () => {
   const [socketConnected, setSocketConnected] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authData, setAuthData] = useState(null);
 
   // Initialize socket - MUST be before any returns
-  const socket = useSocket();
+  const { socket, connected } = useSocket(authData);
+
+  // Disable cache untuk page ini
+  useEffect(() => {
+    // Set meta tag untuk no-cache
+    const meta = document.querySelector('meta[http-equiv="Cache-Control"]') || 
+                 document.createElement('meta');
+    meta.httpEquiv = 'Cache-Control';
+    meta.content = 'no-cache, no-store, must-revalidate';
+    if (!document.querySelector('meta[http-equiv="Cache-Control"]')) {
+      document.head.appendChild(meta);
+    }
+
+    // Set Pragma
+    const pragmaMeta = document.querySelector('meta[http-equiv="Pragma"]') || 
+                       document.createElement('meta');
+    pragmaMeta.httpEquiv = 'Pragma';
+    pragmaMeta.content = 'no-cache';
+    if (!document.querySelector('meta[http-equiv="Pragma"]')) {
+      document.head.appendChild(pragmaMeta);
+    }
+
+    // Set Expires
+    const expiresMeta = document.querySelector('meta[http-equiv="Expires"]') || 
+                        document.createElement('meta');
+    expiresMeta.httpEquiv = 'Expires';
+    expiresMeta.content = '0';
+    if (!document.querySelector('meta[http-equiv="Expires"]')) {
+      document.head.appendChild(expiresMeta);
+    }
+
+    return () => {
+      // Clean up on unmount
+      const cacheControl = document.querySelector('meta[http-equiv="Cache-Control"]');
+      const pragma = document.querySelector('meta[http-equiv="Pragma"]');
+      const expires = document.querySelector('meta[http-equiv="Expires"]');
+      if (cacheControl) cacheControl.remove();
+      if (pragma) pragma.remove();
+      if (expires) expires.remove();
+    };
+  }, []);
 
   // Check user role on mount
   useEffect(() => {
@@ -42,6 +83,10 @@ const AuctionList = () => {
             };
             console.log('[AuctionList] User data:', userData);
             setCurrentUser(userData);
+            setAuthData({
+              userId: data.user.id,
+              userRole: data.user.role
+            });
             
             // Redirect seller to product management (will happen after this render)
             if (data.user.role === 'seller') {
@@ -93,7 +138,7 @@ const AuctionList = () => {
   useEffect(() => {
     if (!socket) return;
 
-    // Connect event
+    // Define all handlers
     const handleConnect = () => {
       console.log('[AuctionList] Socket connected');
       setSocketConnected(true);
@@ -230,6 +275,16 @@ const AuctionList = () => {
       );
     };
 
+    // Real-time auction cancelled (new event from server)
+    const handleAuctionCancelled = (data) => {
+      console.log('[AuctionList] Auction cancelled (socket):', data);
+      
+      // Remove from both active and scheduled lists
+      setAuctions(prevAuctions =>
+        prevAuctions.filter(auction => auction.auction_id !== data.auction_id)
+      );
+    };
+
     // Register socket listeners
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
@@ -239,6 +294,7 @@ const AuctionList = () => {
     socket.on('auction:ended', handleAuctionEnded);
     socket.on('auction:created', handleAuctionCreated);
     socket.on('auction:deleted', handleAuctionDeleted);
+    socket.on('auction:cancelled', handleAuctionCancelled);
     socket.on('price:updated', handlePriceUpdate);
 
     // Cleanup listeners on unmount
@@ -251,9 +307,10 @@ const AuctionList = () => {
       socket.off('auction:ended', handleAuctionEnded);
       socket.off('auction:created', handleAuctionCreated);
       socket.off('auction:deleted', handleAuctionDeleted);
+      socket.off('auction:cancelled', handleAuctionCancelled);
       socket.off('price:updated', handlePriceUpdate);
     };
-  }, [socket]);
+  }, [socket, activeTab]);
 
   const handleViewDetail = (auctionId) => {
     navigate(`/auction/${auctionId}`);
@@ -286,6 +343,8 @@ const AuctionList = () => {
 
   return (
     <div className="auction-list-container">
+      <button className="back-list-btn" onClick={() => navigate(-1)}>← Kembali</button>
+      
       <header className="list-header">
         <h1>Lelang Produk</h1>
         <p>Jelajahi berbagai produk yang sedang atau akan diluncurkan</p>
