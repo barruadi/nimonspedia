@@ -2,42 +2,42 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// Express middleware for JWT authentication
-const authJWT = (req, res, next) => {
+// Hono-style middleware untuk JWT authentication
+const authJWT = async (c, next) => {
   try {
-    const authHeader = req.headers.authorization;
-
+    const authHeader = c.req.header('Authorization');
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ ok: false, error: 'Unauthorized' });
+      return c.json({ ok: false, error: 'Unauthorized' }, 401);
     }
 
     const token = authHeader.substring(7);
-
+    
     // Verify with explicit algorithm to prevent algorithm confusion attacks
-    const decoded = jwt.verify(token, JWT_SECRET, {
+    const decoded = jwt.verify(token, JWT_SECRET, { 
       algorithms: ['HS256'] // Whitelist allowed algorithms
     });
-
-    req.user = decoded;
-
-    next();
+    
+    c.set('user', decoded);
+    
+    await next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ ok: false, error: 'Token expired' });
+      return c.json({ ok: false, error: 'Token expired' }, 401);
     }
-    return res.status(401).json({ ok: false, error: 'Invalid token' });
+    return c.json({ ok: false, error: 'Invalid token' }, 401);
   }
 };
 
-// Express middleware for admin-only access
-const adminOnly = (req, res, next) => {
-  const user = req.user;
-
+// Hono-style middleware untuk admin-only access
+const adminOnly = async (c, next) => {
+  const user = c.get('user');
+  
   if (!user || user.role !== 'admin') {
-    return res.status(403).json({ ok: false, error: 'Admin access required' });
+    return c.json({ ok: false, error: 'Admin access required' }, 403);
   }
-
-  next();
+  
+  await next();
 };
 
 module.exports = { authJWT, adminOnly, JWT_SECRET };

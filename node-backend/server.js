@@ -2,91 +2,64 @@
 require('dotenv').config();
 
 const express = require('express');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+const http = require('http');
+const { Server } = require("socket.io");
+const cors = require('cors');
 
 const db = require('./src/config/db');
 
-// Import Express routes
+const auctionRoutes = require('./src/routes/auctionRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
+const pushRoutes = require('./src/routes/push');
 const adminApp = require('./src/routes/admin');
-const auctionApp = require('./src/routes/auctionRoutes');
-const chatApp = require('./src/routes/chatRoutes');
-const pushApp = require('./src/routes/push');
 
 // Import socket handlers
 const { setupAuctionSocket, checkAndStartScheduledAuctions } = require('./src/sockets/auctionSocket');
 const setupChatSocket = require('./src/sockets/chatSocket');
 
-// Create main Express app
 const app = express();
 
-// Custom CORS middleware with Express - MUST BE FIRST
-app.use((req, res, next) => {
-  // Allow all origins in development (you can restrict this in production)
-  const origin = req.headers.origin;
+app.use(cors({
+    origin: [
+        'http://localhost',
+        'http://localhost:80',
+        'http://localhost:5173',
+        'http://127.0.0.1',
+        'http://127.0.0.1:80',
+        'http://127.0.0.1:5173'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-User-ID']
+}));
 
-  // Set CORS headers for ALL requests
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-User-ID');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, X-Request-Id');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-
-  // Handle preflight OPTIONS request IMMEDIATELY
-  if (req.method === 'OPTIONS') {
-    console.log('[CORS] Handling OPTIONS preflight for:', req.path);
-    return res.status(204).end();
-  }
-
-  console.log(`[CORS] ${req.method} ${req.path} from origin: ${origin || 'none'}`);
-  next();
-});
-
-// Body parser middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
-// Test database connection
-db.testConnection();
-
-// Root route
-app.get('/', (req, res) => {
-  res.send('Node.js Backend with Express is Running!');
-});
-
-// Mount sub-apps
-// Note: NGINX strips /api/node/ prefix, so mount at root
-app.use('/admin', adminApp);
-app.use('/', auctionApp);
-app.use('/', chatApp);
-app.use('/', pushApp);
-
-// Create HTTP server for Socket.IO
-const PORT = process.env.PORT || 3000;
-
-// Create HTTP server
-const server = createServer(app);
-
-// Setup Socket.IO
+const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
 });
 
 // Make io instance available globally
 global.ioInstance = io;
+
+db.testConnection();
+
+app.get('/', (req, res) => {
+    res.send('Node.js Backend is Running!');
+});
+
+// Mount auction and chat routes
+// Note: NGINX strips /api/node/ prefix, so mount at root
+app.use('/', auctionRoutes);
+app.use('/', chatRoutes);
+app.use('/', pushRoutes);
 
 // Setup WebSocket handlers
 setupAuctionSocket(io);
@@ -94,32 +67,32 @@ setupChatSocket(io);
 
 // Periodically check and start scheduled auctions (every 5 seconds)
 setInterval(() => {
-  checkAndStartScheduledAuctions(io);
+    checkAndStartScheduledAuctions(io);
 }, 5000);
 
 console.log('[Server] Scheduled auction checker started (checks every 5 seconds)');
 
 // Basic connection test
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+    console.log('User connected:', socket.id);
 
-  // Test event
-  socket.on('test', (data) => {
-    console.log('Test event received:', data);
-    socket.emit('test-response', {
-      message: 'Server received your test message',
-      originalData: data,
-      timestamp: new Date().toISOString()
+    // Test event
+    socket.on('test', (data) => {
+        console.log('Test event received:', data);
+        socket.emit('test-response', {
+            message: 'Server received your test message',
+            originalData: data,
+            timestamp: new Date().toISOString()
+        });
     });
-  });
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
 });
 
-// Start server
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Express server running on port ${PORT}`);
-  console.log(`WebSocket server ready`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`WebSocket server ready`);
 });

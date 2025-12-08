@@ -1,8 +1,8 @@
 const express = require('express');
+const router = express.Router();
 const webPush = require('web-push');
 const database = require('../config/db');
 
-const router = express.Router();
 const pool = database.getInstance();
 
 // Setup web-push with VAPID keys from environment
@@ -26,7 +26,9 @@ if (!vapidPublicKey || !vapidPrivateKey) {
  * GET /api/node/push/public-key
  */
 router.get('/push/public-key', (req, res) => {
-    return res.json({ publicKey: vapidPublicKey });
+    res.json({ 
+        publicKey: vapidPublicKey 
+    });
 });
 
 /**
@@ -38,7 +40,7 @@ router.post('/push/subscribe', async (req, res) => {
         const { userId, subscription } = req.body;
 
         if (!userId || !subscription || !subscription.endpoint) {
-            return res.status(400).json({
+            return res.status(400).json({ 
                 ok: false,
                 error: { message: 'Invalid request data' }
             });
@@ -46,8 +48,8 @@ router.post('/push/subscribe', async (req, res) => {
 
         // Check if subscription already exists
         const checkQuery = `
-            SELECT subscription_id
-            FROM push_subscriptions
+            SELECT subscription_id 
+            FROM push_subscriptions 
             WHERE user_id = $1 AND endpoint = $2
         `;
         const existingResult = await pool.query(checkQuery, [userId, subscription.endpoint]);
@@ -55,7 +57,7 @@ router.post('/push/subscribe', async (req, res) => {
         if (existingResult.rows.length > 0) {
             // Update existing subscription
             const updateQuery = `
-                UPDATE push_subscriptions
+                UPDATE push_subscriptions 
                 SET p256dh_key = $1, auth_key = $2, created_at = NOW()
                 WHERE user_id = $3 AND endpoint = $4
                 RETURNING subscription_id
@@ -89,13 +91,13 @@ router.post('/push/subscribe', async (req, res) => {
         `;
         await pool.query(prefQuery, [userId]);
 
-        return res.status(201).json({
+        res.status(201).json({ 
             ok: true,
-            message: 'Subscription saved successfully'
+            message: 'Subscription saved successfully' 
         });
     } catch (error) {
         console.error('Error saving push subscription:', error);
-        return res.status(500).json({
+        res.status(500).json({ 
             ok: false,
             error: { message: 'Failed to save subscription' }
         });
@@ -111,33 +113,33 @@ router.post('/push/unsubscribe', async (req, res) => {
         const { userId, endpoint } = req.body;
 
         if (!userId || !endpoint) {
-            return res.status(400).json({
+            return res.status(400).json({ 
                 ok: false,
                 error: { message: 'Invalid request data' }
             });
         }
 
         const deleteQuery = `
-            DELETE FROM push_subscriptions
+            DELETE FROM push_subscriptions 
             WHERE user_id = $1 AND endpoint = $2
             RETURNING subscription_id
         `;
         const result = await pool.query(deleteQuery, [userId, endpoint]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 ok: false,
                 error: { message: 'Subscription not found' }
             });
         }
 
-        return res.json({
+        res.json({ 
             ok: true,
-            message: 'Unsubscribed successfully'
+            message: 'Unsubscribed successfully' 
         });
     } catch (error) {
         console.error('Error unsubscribing:', error);
-        return res.status(500).json({
+        res.status(500).json({ 
             ok: false,
             error: { message: 'Failed to unsubscribe' }
         });
@@ -154,7 +156,7 @@ router.post('/push/send', async (req, res) => {
         const { userId, title, body, url, notificationType } = req.body;
 
         if (!userId || !title || !body) {
-            return res.status(400).json({
+            return res.status(400).json({ 
                 ok: false,
                 error: { message: 'Missing required fields' }
             });
@@ -167,10 +169,10 @@ router.post('/push/send', async (req, res) => {
             WHERE user_id = $1
         `;
         const prefResult = await pool.query(prefQuery, [userId]);
-
+        
         if (prefResult.rows.length > 0) {
             const prefs = prefResult.rows[0];
-
+            
             // Check if this notification type is enabled
             if (notificationType === 'chat' && !prefs.chat_enabled) {
                 return res.json({ ok: true, message: 'Chat notifications disabled for user' });
@@ -192,7 +194,7 @@ router.post('/push/send', async (req, res) => {
         const subscriptions = await pool.query(subQuery, [userId]);
 
         if (subscriptions.rows.length === 0) {
-            return res.status(404).json({
+            return res.status(404).json({ 
                 ok: false,
                 error: { message: 'No subscriptions found for user' }
             });
@@ -220,7 +222,7 @@ router.post('/push/send', async (req, res) => {
                 return { success: true, endpoint: sub.endpoint };
             } catch (error) {
                 console.error('Error sending to endpoint:', sub.endpoint, error);
-
+                
                 // Remove invalid subscriptions (410 Gone, 404 Not Found)
                 if (error.statusCode === 410 || error.statusCode === 404) {
                     await pool.query(
@@ -228,7 +230,7 @@ router.post('/push/send', async (req, res) => {
                         [sub.endpoint]
                     );
                 }
-
+                
                 return { success: false, endpoint: sub.endpoint, error: error.message };
             }
         });
@@ -236,14 +238,14 @@ router.post('/push/send', async (req, res) => {
         const results = await Promise.all(sendPromises);
         const successCount = results.filter(r => r.success).length;
 
-        return res.json({
+        res.json({ 
             ok: true,
             message: `Notification sent to ${successCount}/${results.length} devices`,
             results
         });
     } catch (error) {
         console.error('Error sending push notification:', error);
-        return res.status(500).json({
+        res.status(500).json({ 
             ok: false,
             error: { message: 'Failed to send notification' }
         });

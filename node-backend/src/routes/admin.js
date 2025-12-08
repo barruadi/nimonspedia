@@ -1,25 +1,34 @@
-const express = require('express');
+const { Hono } = require('hono');
+const { cors } = require('hono/cors');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const database = require('../config/db');
 const { authJWT, adminOnly, JWT_SECRET } = require('../middlewares/authJWT');
 
-const router = express.Router();
+const app = new Hono();
 const pool = database.getInstance();
 
-// CORS is handled globally in server.js, no need to set it here
+// Setup CORS untuk Hono
+app.use('/*', cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost', 'http://localhost:80'],
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 600,
+}));
 
-router.post('/login', async (req, res) => {
+app.post('/login', async (c) => {
   try {
     console.log('Admin login attempt');
-    const { email, password } = req.body;
+    const { email, password } = await c.req.json();
     console.log("pass:" ,password);
 
     if (!email || !password) {
-      return res.status(400).json({
-        ok: false,
+      return c.json({ 
+        ok: false, 
         error: { message: 'Email and password are required' }
-      });
+      }, 400);
     }
 
     // First check if user exists at all
@@ -28,40 +37,34 @@ router.post('/login', async (req, res) => {
       FROM users
       WHERE email = $1
     `;
-
-    const userCheckResult = await pool.query(userCheckQuery, [email]);
     
-    if (userCheckResult.rows.length === 0) {
-      return res.status(401).json({
-        ok: false,
-        error: { message: 'Email tidak terdaftar' }
-      });
+
+    const result = await pool.query(query, [email]);
+    console.log(result.rows);
+
+    if (result.rows.length === 0) {
+      return c.json({ 
+        ok: false, 
+        error: { message: 'Invalid credentials' }
+      }, 401);
     }
 
-    const user = userCheckResult.rows[0];
-
-    // Block buyer/seller from logging in via admin dashboard
-    if (user.role !== 'admin') {
-      return res.status(403).json({
-        ok: false,
-        error: { message: 'Akun Anda bukan admin. Halaman ini khusus untuk administrator.' }
-      });
-    }
-
+    const user = result.rows[0];
+    
     // Convert PHP bcrypt format ($2y$) to Node.js format ($2b$) if needed
     let passwordHash = user.password_hash;
     if (passwordHash.startsWith('$2y$')) {
       passwordHash = passwordHash.replace('$2y$', '$2b$');
     }
-
+    
     const isValidPassword = await bcrypt.compare(password, passwordHash);
     console.log("isValidPassword:", isValidPassword);
 
     if (!isValidPassword) {
-      return res.status(401).json({
-        ok: false,
-        error: { message: 'Password salah' }
-      });
+      return c.json({ 
+        ok: false, 
+        error: { message: 'Invalid credentials' }
+      }, 401);
     }
 
     const token = jwt.sign(
@@ -71,13 +74,13 @@ router.post('/login', async (req, res) => {
         role: user.role
       },
       JWT_SECRET,
-      {
+      { 
         expiresIn: '8h', // Best practice: shorter expiry for admin tokens
         algorithm: 'HS256' // Explicitly specify algorithm to prevent algorithm confusion attacks
       }
     );
 
-    return res.json({
+    return c.json({
       ok: true,
       token,
       user: {
@@ -89,35 +92,35 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Admin login error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-router.get('/me', authJWT, adminOnly, async (req, res) => {
+app.get('/me', authJWT, adminOnly, async (c) => {
   try {
-    const user = req.user;
-
+    const user = c.get('user');
+    
     const query = `
       SELECT user_id, email, full_name, role
       FROM users
       WHERE user_id = $1 AND role = 'admin'
     `;
-
+    
     const result = await pool.query(query, [user.userId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        ok: false,
+      return c.json({ 
+        ok: false, 
         error: { message: 'User not found' }
-      });
+      }, 404);
     }
 
     const userData = result.rows[0];
 
-    return res.json({
+    return c.json({
       ok: true,
       user: {
         id: userData.user_id,
@@ -128,18 +131,18 @@ router.get('/me', authJWT, adminOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('Get admin user error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-router.get('/users', authJWT, adminOnly, async (req, res) => {
+app.get('/users', authJWT, adminOnly, async (c) => {
   try {
-    const search = req.query.search || '';
-    const page = parseInt(req.query.page) || 1;
-    const perPage = parseInt(req.query.per_page) || 12;
+    const search = c.req.query('search') || '';
+    const page = parseInt(c.req.query('page')) || 1;
+    const perPage = parseInt(c.req.query('per_page')) || 12;
     const offset = (page - 1) * perPage;
 
     let countQuery = 'SELECT COUNT(*) FROM users WHERE role != $1';
@@ -165,7 +168,7 @@ router.get('/users', authJWT, adminOnly, async (req, res) => {
 
     const dataResult = await pool.query(dataQuery, params);
 
-    return res.json({
+    return c.json({
       ok: true,
       users: dataResult.rows.map(u => ({
         id: u.user_id,
@@ -188,23 +191,23 @@ router.get('/users', authJWT, adminOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('Get users error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-router.get('/users/:userId/flags', authJWT, adminOnly, async (req, res) => {
+app.get('/users/:userId/flags', authJWT, adminOnly, async (c) => {
   try {
-    const userId = req.params.userId;
+    const userId = c.req.param('userId');
 
     const query = `
       SELECT feature_name, is_enabled, reason, updated_at
       FROM user_feature_access
       WHERE user_id = $1
     `;
-
+    
     const result = await pool.query(query, [userId]);
 
     const flags = {
@@ -217,7 +220,7 @@ router.get('/users/:userId/flags', authJWT, adminOnly, async (req, res) => {
       flags[row.feature_name] = row.is_enabled;
     });
 
-    return res.json({
+    return c.json({
       ok: true,
       flags,
       details: result.rows.map(r => ({
@@ -229,24 +232,24 @@ router.get('/users/:userId/flags', authJWT, adminOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('Get user flags error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-router.put('/users/:userId/flags', authJWT, adminOnly, async (req, res) => {
+app.put('/users/:userId/flags', authJWT, adminOnly, async (c) => {
   try {
-    const userId = req.params.userId;
-    const { flags } = req.body;
+    const userId = c.req.param('userId');
+    const { flags } = await c.req.json();
 
     for (const [featureName, data] of Object.entries(flags)) {
       if (!data.isEnabled && (!data.reason || data.reason.length < 10)) {
-        return res.status(400).json({
+        return c.json({
           ok: false,
           error: { message: `Alasan untuk ${featureName} minimal 10 karakter` }
-        });
+        }, 400);
       }
 
       const upsertQuery = `
@@ -264,27 +267,27 @@ router.put('/users/:userId/flags', authJWT, adminOnly, async (req, res) => {
       ]);
     }
 
-    return res.json({
+    return c.json({
       ok: true,
       message: 'Feature flags updated successfully'
     });
   } catch (error) {
     console.error('Update user flags error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-router.get('/global-flags', authJWT, adminOnly, async (req, res) => {
+app.get('/global-flags', authJWT, adminOnly, async (c) => {
   try {
     const query = `
       SELECT feature_name, is_enabled, reason, updated_at
       FROM user_feature_access
       WHERE user_id IS NULL
     `;
-
+    
     const result = await pool.query(query);
 
     const flags = {
@@ -297,7 +300,7 @@ router.get('/global-flags', authJWT, adminOnly, async (req, res) => {
       flags[row.feature_name] = row.is_enabled;
     });
 
-    return res.json({
+    return c.json({
       ok: true,
       flags,
       details: result.rows.map(r => ({
@@ -309,23 +312,23 @@ router.get('/global-flags', authJWT, adminOnly, async (req, res) => {
     });
   } catch (error) {
     console.error('Get global flags error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-router.put('/global-flags', authJWT, adminOnly, async (req, res) => {
+app.put('/global-flags', authJWT, adminOnly, async (c) => {
   try {
-    const { flags } = req.body;
+    const { flags } = await c.req.json();
 
     for (const [featureName, data] of Object.entries(flags)) {
       if (!data.isEnabled && (!data.reason || data.reason.length < 20)) {
-        return res.status(400).json({
+        return c.json({
           ok: false,
           error: { message: `Alasan untuk ${featureName} minimal 20 karakter` }
-        });
+        }, 400);
       }
 
       const upsertQuery = `
@@ -342,17 +345,17 @@ router.put('/global-flags', authJWT, adminOnly, async (req, res) => {
       ]);
     }
 
-    return res.json({
+    return c.json({
       ok: true,
       message: 'Global flags updated successfully'
     });
   } catch (error) {
     console.error('Update global flags error:', error);
-    return res.status(500).json({
-      ok: false,
+    return c.json({ 
+      ok: false, 
       error: { message: 'Internal server error' }
-    });
+    }, 500);
   }
 });
 
-module.exports = router;
+module.exports = app;
