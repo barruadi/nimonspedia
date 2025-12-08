@@ -351,13 +351,22 @@ class AppNavbar extends HTMLElement {
 
         try {
           await api.post('/logout', {});
+          
+          // Clear all cookies
+          document.cookie.split(";").forEach((c) => {
+            document.cookie = c
+              .replace(/^ +/, "")
+              .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+          });
+          
+          // Clear any localStorage/sessionStorage auth data
+          localStorage.removeItem('adminToken');
+          sessionStorage.clear();
+          
           notifyAuthChanged({ authenticated: false, user: null });
-          if (window.render) {
-            history.pushState({}, '', '/login');
-            window.render('/login');
-          } else {
-            location.href = '/login';
-          }
+          
+          // Hard redirect to ensure clean state
+          window.location.href = '/login';
         } catch (err) {
           console.error('Logout failed:', err);
           alert('Gagal logout. Coba lagi.');

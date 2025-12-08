@@ -1,5 +1,6 @@
 import { api } from "/utils/api.js";
 import { checkAlreadyLoggedIn } from "/utils/loginRedirect.js";
+import { notifyAuthChanged } from "/components/Navbar.js";
 
 checkAlreadyLoggedIn();
 
@@ -80,7 +81,7 @@ loginForm.addEventListener("submit", async (e) => {
     if (!res || res.ok === false) {
       setButtonLoading(loginSubmitBtn, false);
       const errorMsg = res?.error || 'Login gagal';
-      if (errorMsg.includes('Email tidak terdaftar') || errorMsg.includes('email')) {
+      if (errorMsg.includes('Email tidak terdaftar') || errorMsg.includes('email') || errorMsg.includes('admin')) {
         emailError.textContent = errorMsg;
       } else if (errorMsg.includes('Password salah') || errorMsg.includes('password')) {
         passwordError.textContent = errorMsg;
@@ -90,6 +91,10 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
 
+    // Notify auth changed so navbar and other components update
+    notifyAuthChanged({ authenticated: true, user: res.data });
+
+    // Hard redirect to ensure fresh page load with new session
     window.location.href = "/products";
   } catch (err) {
     setButtonLoading(loginSubmitBtn, false);
