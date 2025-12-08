@@ -76,7 +76,7 @@ body {
 }
 
 .btn-add-product {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
@@ -132,7 +132,7 @@ body {
 
 .search-input:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 .filter-select {
@@ -155,7 +155,7 @@ body {
 
 .filter-select:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 /* Orders Grid - 2 Columns */
@@ -337,7 +337,7 @@ body {
 }
 
 .btn-approve {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
 }
 
@@ -479,8 +479,8 @@ body {
 }
 
 .page-number.active {
-    background-color: #10b981;
-    border-color: #10b981;
+    background-color: #05AA5B;
+    border-color: #05AA5B;
     color: white;
     font-weight: 600;
 }
@@ -516,7 +516,7 @@ body {
 
 .items-per-page-select:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
@@ -670,7 +670,7 @@ body {
 
 .modal-textarea:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 .modal-label {
@@ -697,7 +697,7 @@ body {
 
 .modal-input:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 .modal-buttons {
@@ -728,7 +728,7 @@ body {
 }
 
 .btn-modal-confirm {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
 }
 

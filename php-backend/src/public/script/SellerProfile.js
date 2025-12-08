@@ -1,4 +1,10 @@
 import { api } from '/utils/api.js';
+import { 
+  subscribeToPushNotifications, 
+  unsubscribeFromPushNotifications,
+  isUserSubscribed,
+  getNotificationPermissionStatus
+} from '/utils/pushNotification.js';
 
 (async function initProfile() {
   const rootLoading   = document.getElementById('profile-loading');
@@ -26,6 +32,9 @@ import { api } from '/utils/api.js';
   const oldPwInput    = document.getElementById('oldPwInput');
   const newPwInput    = document.getElementById('newPwInput');
   const newPwConfirmInput = document.getElementById('newPwConfirmInput');
+
+  let currentUserId = null;
+  let isPushSubscribed = false;
 
   function showError(msg) {
     if (!errBox || !okBox) return;
@@ -100,16 +109,55 @@ import { api } from '/utils/api.js';
     }
 
     const { user } = res;
-    nameSpan.textContent  = user.full_name || user.name || '';
+    currentUserId = user.id || user.user_id;
+    console.log('[Seller Profile] User ID set to:', currentUserId);
+    nameSpan.textContent  = user.name || user.full_name || '';
     emailSpan.textContent = user.email || '';
     nameInput.value       = nameSpan.textContent;
 
-    const notifRes = await api.get('/profile/notifications');
-    if (notifRes && notifRes.ok) {
-      const prefs = notifRes.preferences || {};
-      toggleChat.checked = prefs.chat_enabled !== false;
-      toggleAuction.checked = prefs.auction_enabled !== false;
-      toggleOrder.checked = prefs.order_enabled !== false;
+    try {
+      const notifRes = await api.get('/profile/notifications');
+      if (notifRes && notifRes.ok) {
+        const prefs = notifRes.preferences || {};
+        toggleChat.checked = prefs.chat_enabled !== false;
+        toggleAuction.checked = prefs.auction_enabled !== false;
+        toggleOrder.checked = prefs.order_enabled !== false;
+      }
+    } catch (notifErr) {
+      console.warn('Failed to load notification preferences:', notifErr);
+      toggleChat.checked = true;
+      toggleAuction.checked = true;
+      toggleOrder.checked = true;
+    }
+
+    try {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+        console.log('Service worker registered in Seller Profile');
+      }
+      isPushSubscribed = await isUserSubscribed();
+      console.log('Push subscription status:', isPushSubscribed);
+    } catch (subErr) {
+      console.warn('Failed to check subscription status:', subErr);
+      isPushSubscribed = false;
+    }
+
+    if (toggleChat) {
+      toggleChat.addEventListener('change', (e) => {
+        updateNotificationPreference('chat_enabled', e.target.checked);
+      });
+    }
+
+    if (toggleAuction) {
+      toggleAuction.addEventListener('change', (e) => {
+        updateNotificationPreference('auction_enabled', e.target.checked);
+      });
+    }
+
+    if (toggleOrder) {
+      toggleOrder.addEventListener('change', (e) => {
+        updateNotificationPreference('order_enabled', e.target.checked);
+      });
     }
 
     rootLoading.style.display = 'none';
@@ -219,6 +267,8 @@ import { api } from '/utils/api.js';
       });
 
       if (res && res.ok) {
+        await handlePushSubscription();
+        
         showSuccess('Pengaturan notifikasi berhasil diperbarui.');
         setTimeout(() => clearMessages(), 3000);
       } else {
@@ -230,21 +280,40 @@ import { api } from '/utils/api.js';
     }
   }
 
-  if (toggleChat) {
-    toggleChat.addEventListener('change', (e) => {
-      updateNotificationPreference('chat_enabled', e.target.checked);
-    });
-  }
+  async function handlePushSubscription() {
+    try {
+      console.log('[Push] handlePushSubscription called, currentUserId:', currentUserId);
+      
+      if (!currentUserId) {
+        console.error('User ID not available');
+        showError('Terjadi kesalahan. Silakan refresh halaman.');
+        return;
+      }
 
-  if (toggleAuction) {
-    toggleAuction.addEventListener('change', (e) => {
-      updateNotificationPreference('auction_enabled', e.target.checked);
-    });
-  }
-
-  if (toggleOrder) {
-    toggleOrder.addEventListener('change', (e) => {
-      updateNotificationPreference('order_enabled', e.target.checked);
-    });
+      const anyEnabled = toggleChat.checked || toggleAuction.checked || toggleOrder.checked;
+      
+      if (anyEnabled && !isPushSubscribed) {
+        console.log('Subscribing to push notifications for user:', currentUserId);
+        await subscribeToPushNotifications(currentUserId);
+        isPushSubscribed = true;
+        console.log('Successfully subscribed to push notifications');
+      } else if (!anyEnabled && isPushSubscribed) {
+        console.log('Unsubscribing from push notifications for user:', currentUserId);
+        await unsubscribeFromPushNotifications(currentUserId);
+        isPushSubscribed = false;
+        console.log('Successfully unsubscribed from push notifications');
+      }
+    } catch (error) {
+      console.error('Error handling push subscription:', error);
+      
+      const permissionStatus = getNotificationPermissionStatus();
+      if (permissionStatus === 'denied') {
+        showError('Notifikasi diblokir. Silakan aktifkan di pengaturan browser.');
+      } else if (permissionStatus === 'unsupported') {
+        showError('Browser Anda tidak mendukung push notification.');
+      } else {
+        showError('Gagal mengaktifkan push notification. Silakan coba lagi.');
+      }
+    }
   }
 })();

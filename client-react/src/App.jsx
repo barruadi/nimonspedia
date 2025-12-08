@@ -23,7 +23,7 @@ function HomePage() {
         </Link>
         <Link to="/chat" style={{
           padding: '15px 30px',
-          backgroundColor: '#28a745',
+          backgroundColor: '#05AA5B',
           color: 'white',
           textDecoration: 'none',
           borderRadius: '4px',

@@ -49,8 +49,8 @@
 }
 
 .tab-btn.active {
-  color: #FF6B6B;
-  border-bottom-color: #FF6B6B;
+  color: #05AA5B;
+  border-bottom-color: #05AA5B;
 }
 
 /* Search Container */
@@ -70,7 +70,7 @@
 }
 
 .search-input:focus {
-  border-color: #FF6B6B;
+  border-color: #05AA5B;
 }
 
 /* Grid Layout */
@@ -142,8 +142,8 @@
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: #FF6B6B;
-  border-color: #FF6B6B;
+  background: #05AA5B;
+  border-color: #05AA5B;
   color: white;
 }
 
@@ -216,48 +216,5 @@
 
   .tab-navigation {
     flex-wrap: wrap;
-  }
-}
-
-/* Socket Status Indicator */
-.socket-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-top: 12px;
-}
-
-.socket-status.connected {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.socket-status.disconnected {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.socket-status .status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulse 2s infinite;
-}
-
-.socket-status.disconnected .status-dot {
-  animation: none;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
   }
 }

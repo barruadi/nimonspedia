@@ -114,7 +114,7 @@ body {
 }
 
 .btn-add-product {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
@@ -135,23 +135,29 @@ body {
 
 /* Global Auction Status Bar */
 .global-auction-status-bar {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    border-radius: 8px;
+    background: linear-gradient(135deg, #05AA5B 0%, #028a0f 100%);
+    border-radius: 12px;
     padding: 1rem 1.5rem;
     margin-bottom: 2rem;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-    animation: slideDown 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(3, 172, 14, 0.15);
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease, margin-bottom 0.3s ease;
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.global-auction-status-bar.visible {
+    opacity: 1;
+    max-height: 100px;
+    transform: translateY(0);
+}
+
+.global-auction-status-bar.hidden {
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: 0;
+    transform: translateY(-10px);
 }
 
 .status-content {
@@ -236,7 +242,7 @@ body {
 
 .search-input:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 .search-input::placeholder {
@@ -263,7 +269,7 @@ body {
 
 .filter-select:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #05AA5B;
 }
 
 /* Product Grid - 2 Equal Width Columns */
@@ -480,7 +486,7 @@ body {
 .history-link {
     display: inline-block;
     font-size: 0.8rem;
-    color: #3b82f6;
+    color: #05AA5B;
     text-decoration: none;
     font-weight: 500;
     padding: 0.25rem 0.5rem;
@@ -489,8 +495,8 @@ body {
 }
 
 .history-link:hover {
-    background-color: #eff6ff;
-    color: #1d4ed8;
+    background-color: #e8f5e9;
+    color: #047a3e;
     text-decoration: underline;
 }
 
@@ -527,7 +533,7 @@ body {
 }
 
 .btn-add-first {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
     border: none;
     padding: 0.875rem 1.75rem;
@@ -638,7 +644,7 @@ body {
 }
 
 .btn-modal-confirm {
-    background-color: #10b981;
+    background-color: #05AA5B;
     color: white;
 }
 

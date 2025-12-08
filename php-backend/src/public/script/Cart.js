@@ -83,11 +83,11 @@ import { api } from '/utils/api.js';
 
           let statusBadge = '';
           if (status === 'deleted') {
-            statusBadge = '<span class="status-badge status-deleted">Produk Tidak Tersedia</span>';
+            statusBadge = '<span class="status-badge status-deleted">Tidak Tersedia</span>';
           } else if (status === 'out_of_stock') {
-            statusBadge = '<span class="status-badge status-out">Stok Habis</span>';
+            statusBadge = '<span class="status-badge status-out">Habis</span>';
           } else if (status === 'insufficient_stock') {
-            statusBadge = `<span class="status-badge status-insufficient">Stok Terbatas (${i.stock} tersedia)</span>`;
+            statusBadge = `<span class="status-badge status-insufficient">Tersisa ${i.stock}</span>`;
           }
 
           return `
@@ -196,7 +196,6 @@ import { api } from '/utils/api.js';
     /* ---------- qty & remove actions ---------- */
     async function changeQty(btn, delta) {
       const row = btn.closest('.row');
-      const pid = Number(row.dataset.id);
       const inp = row.querySelector('.inp-qty');
       const next = Math.max(1, Number(inp.value || 1) + delta);
       inp.value = next;

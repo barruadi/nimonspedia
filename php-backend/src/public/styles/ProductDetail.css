@@ -202,7 +202,7 @@ body {
     transition: background-color 0.2s ease;
 }
 .btn-add-to-cart:hover {
-    background: #048A49;
+    background: #05AA5B;
 }
 .btn-add-to-cart:disabled {
     background: #E5E7EB;
@@ -296,7 +296,7 @@ body {
     color: white;
 }
 .btn-chat-store:hover {
-    background: #048A49;
+    background: #05AA5B;
 }
 .btn-chat-store:disabled {
     background: #E5E7EB;

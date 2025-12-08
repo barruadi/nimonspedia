@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require('cors');
-require('dotenv').config();
 
 // Import database singleton
 const db = require('./src/config/db');
@@ -10,9 +9,10 @@ const db = require('./src/config/db');
 // Import routes
 const auctionRoutes = require('./src/routes/auctionRoutes');
 const chatRoutes = require('./src/routes/chatRoutes');
+const pushRoutes = require('./src/routes/push');
 
 // Import socket handlers
-const setupAuctionSocket = require('./src/sockets/auctionSocket');
+const { setupAuctionSocket, checkAndStartScheduledAuctions } = require('./src/sockets/auctionSocket');
 const setupChatSocket = require('./src/sockets/chatSocket');
 
 const app = express();
@@ -43,6 +43,9 @@ const io = new Server(server, {
     }
 });
 
+// Make io instance available globally
+global.ioInstance = io;
+
 db.testConnection();
 
 // API Routes
@@ -54,10 +57,18 @@ app.get('/', (req, res) => {
 // Note: NGINX strips /api/node/ prefix, so mount at root
 app.use('/', auctionRoutes);
 app.use('/', chatRoutes);
+app.use('/', pushRoutes);
 
 // Setup WebSocket handlers
 setupAuctionSocket(io);
 setupChatSocket(io);
+
+// Periodically check and start scheduled auctions (every 5 seconds)
+setInterval(() => {
+    checkAndStartScheduledAuctions(io);
+}, 5000);
+
+console.log('[Server] Scheduled auction checker started (checks every 5 seconds)');
 
 // Basic connection test
 io.on('connection', (socket) => {

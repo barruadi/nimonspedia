@@ -1,4 +1,6 @@
 const Chat = require('../models/Chat');
+// Chat WebSocket Handlers
+const { sendChatNotification } = require('../services/pushNotificationService');
 
 /**
  * Setup Chat WebSocket Handlers
@@ -164,6 +166,41 @@ const setupChatSocket = (io) => {
         io.to(buyerRoom).emit('chat:new-message', message);
 
         console.log(`[Chat] Message sent in room ${roomId}:`, message.message_id);
+
+        // Send push notification to receiver if they're not in the room
+        try {
+          // Determine receiver based on sender role
+          const receiverId = socket.userRole === 'buyer'
+            ? chatRoom.seller_id
+            : parseInt(buyerId);
+
+          // Check if receiver is online in this chat room
+          const roomSockets = await io.in(roomId).fetchSockets();
+          const receiverOnline = roomSockets.some(s => s.userId === receiverId);
+
+          if (!receiverOnline) {
+            // Receiver is not in the room, send push notification
+            const messagePreview = message.message_type === 'text'
+              ? (message.content.length > 50
+                  ? message.content.substring(0, 50) + '...'
+                  : message.content)
+              : message.message_type === 'image'
+                ? '📷 Photo'
+                : '🏷️ Product';
+
+            await sendChatNotification(
+              receiverId,
+              message.sender_name,
+              messagePreview,
+              parseInt(storeId),
+              parseInt(buyerId)
+            );
+            console.log(`[Chat] Push notification sent to user ${receiverId}`);
+          }
+        } catch (error) {
+          console.error('[Chat] Error sending push notification:', error);
+          // Don't fail the message send if push notification fails
+        }
 
         // Send success callback
         if (callback) {

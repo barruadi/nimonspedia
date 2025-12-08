@@ -255,8 +255,10 @@ function initProductManagementPage() {
         const viewLiveAuctionBtn = document.getElementById('viewLiveAuctionBtn');
 
         if (auctionStatus.activeAuction) {
-            // Show bar
-            globalAuctionStatusBar.style.display = 'block';
+            // Show bar with smooth transition
+            globalAuctionStatusBar.classList.remove('hidden');
+            globalAuctionStatusBar.classList.add('visible');
+            
             const productName = auctionStatus.activeAuction.product_name || 'Produk';
             activeAuctionProductName.textContent = productName;
             
@@ -275,8 +277,9 @@ function initProductManagementPage() {
                 };
             }
         } else {
-            // Hide bar
-            globalAuctionStatusBar.style.display = 'none';
+            // Hide bar with smooth transition
+            globalAuctionStatusBar.classList.remove('visible');
+            globalAuctionStatusBar.classList.add('hidden');
             
             // Hide Lihat Live Auction button in header
             if (viewLiveAuctionBtn) {
@@ -406,7 +409,7 @@ function initProductManagementPage() {
         // NEW: Check if this product has history
         const productHistory = auctionStatus.history[product.product_id];
         const historyLabel = productHistory 
-            ? `Last Auction (${productHistory.status})`
+            ? 'Lihat auction terakhir'
             : null;
 
         card.innerHTML = `
@@ -429,7 +432,7 @@ function initProductManagementPage() {
                 ${productHistory ? `
                     <div class="product-card-history">
                         <a href="/auction/${productHistory.last_auction_id}" class="history-link" title="View last auction">
-                            📋 ${historyLabel}
+                            ${historyLabel}
                         </a>
                     </div>
                 ` : ''}

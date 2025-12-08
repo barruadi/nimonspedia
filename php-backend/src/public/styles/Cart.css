@@ -348,18 +348,42 @@ h1 {
 }
 
 .row-unavailable {
-  opacity: 0.6;
-  background-color: #f9fafb;
+  position: relative;
+  background: #fafafa;
+  opacity: 0.65;
+}
+
+.row-unavailable::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dc2626;
+}
+
+.row-unavailable .thumb {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.row-unavailable .title {
+  color: #9ca3af;
+}
+
+.row-unavailable .price {
+  color: #d1d5db;
 }
 
 .row-unavailable .chk {
   cursor: not-allowed;
+  opacity: 0.3;
 }
 
-.row-unavailable .qty .btn-qty,
-.row-unavailable .qty .inp-qty {
-  cursor: not-allowed;
+.row-unavailable .qty {
   opacity: 0.5;
+  pointer-events: none;
 }
 
 .status-badge {
@@ -369,25 +393,21 @@ h1 {
   font-size: 11px;
   font-weight: 600;
   margin-top: 4px;
-  letter-spacing: 0.3px;
 }
 
 .status-deleted {
   background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+  color: #b91c1c;
 }
 
 .status-out {
   background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fcd34d;
+  color: #b45309;
 }
 
 .status-insufficient {
-  background: #ffedd5;
-  color: #9a3412;
-  border: 1px solid #fdba74;
+  background: #fed7aa;
+  color: #c2410c;
 }
 
 @media (max-width: 900px) {

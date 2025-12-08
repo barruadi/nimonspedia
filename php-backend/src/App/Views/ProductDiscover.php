@@ -89,7 +89,7 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
 .filters input:focus,
 .filters select:focus {
   outline: none;
-  border-color: #03ac0e;
+  border-color: #05AA5B;
 }
 
 /* Search with icon */
@@ -235,9 +235,9 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.btn-addcart { background: #03ac0e; color: #fff; }
+.btn-addcart { background: #05AA5B; color: #fff; }
 .btn-addcart:hover:not(:disabled) {
-  background: #028a0b;
+  background: #08874a;
   box-shadow: 0 2px 8px rgba(3, 172, 14, 0.3);
 }
 .btn-addcart:disabled { opacity: 0.7; cursor: not-allowed; position: relative; }
@@ -285,7 +285,7 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
   width: 36px; height: 36px; border: 1px solid #e5e5e5; border-radius: 0.5rem;
   background: #fff; color: #333; cursor: pointer; transition: all 0.2s ease; text-decoration: none;
 }
-.pagination-btn:hover { background: #f5f5f5; border-color: #03ac0e; }
+.pagination-btn:hover { background: #f5f5f5; border-color: #05AA5B; }
 .pagination-btn[aria-disabled="true"], .pagination-btn.disabled {
   opacity: 0.4; cursor: not-allowed; pointer-events: none; color: #999; background: #f5f5f5;
 }
@@ -296,9 +296,9 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
   background: #fff; color: #333; font-size: 0.9rem; font-weight: 500;
   cursor: pointer; transition: all 0.2s ease; text-decoration: none;
 }
-.pagination-number:hover { background: #f5f5f5; border-color: #03ac0e; }
+.pagination-number:hover { background: #f5f5f5; border-color: #05AA5B; }
 .pagination-number[aria-disabled="true"], .pagination-number.active {
-  background: #03ac0e; color: #fff; border-color: #03ac0e; cursor: default; pointer-events: none;
+  background: #05AA5B; color: #fff; border-color: #05AA5B; cursor: default; pointer-events: none;
 }
 .pagination-ellipsis {
   display: flex; align-items: center; justify-content: center;
@@ -315,8 +315,8 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 0.75rem center;
 }
-.per-page-select:hover { border-color: #03ac0e; }
-.per-page-select:focus { outline: none; border-color: #03ac0e; }
+.per-page-select:hover { border-color: #05AA5B; }
+.per-page-select:focus { outline: none; border-color: #05AA5B; }
 
 /* Responsive pagination adjustments */
 @media(max-width: 767px) {

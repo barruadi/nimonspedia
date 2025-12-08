@@ -7,9 +7,11 @@
  * - Automatic balance deduction & refund
  * - Order auto-creation on auction end
  * - Real-time bid broadcasting
+ * - Push notifications for auction events
  */
 
 const pool = require('../config/db');
+const { sendAuctionNotification } = require('../services/pushNotificationService');
 
 // Map to track active auction timers: { auctionId: timeoutHandle }
 const auctionTimers = new Map();
@@ -122,10 +124,13 @@ const setupAuctionSocket = (io) => {
      * 9. Broadcast to room
      */
     socket.on('auction:place-bid', async (data, callback) => {
-      const client = await pool.connect();
+      const pgPool = pool.getInstance();
+      let client;
       
       try {
         const { auctionId, bidderId, bidAmount } = data;
+        
+        client = await pgPool.connect();
 
         console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
 
@@ -180,7 +185,7 @@ const setupAuctionSocket = (io) => {
         const auctionQuery = `
           SELECT 
             auction_id, status, current_price, min_increment, 
-            product_id, quantity, start_time, end_time, seller_id
+            product_id, quantity, start_time, end_time
           FROM auctions 
           WHERE auction_id = $1 
           FOR UPDATE
@@ -205,18 +210,7 @@ const setupAuctionSocket = (io) => {
           });
         }
 
-        // STEP 3: VALIDATE BID AMOUNT
-        const minimumBid = auction.current_price + auction.min_increment;
-        
-        if (bidAmount < minimumBid) {
-          await client.query('ROLLBACK');
-          return callback?.({
-            success: false,
-            error: `Bid minimal: Rp ${minimumBid.toLocaleString('id-ID')}`
-          });
-        }
-
-        // STEP 4: GET PREVIOUS HIGHEST BIDDER
+        // STEP 4: GET PREVIOUS HIGHEST BIDDER (do this first to determine minimum bid)
         const highestBidQuery = `
           SELECT bidder_id, bid_amount 
           FROM auction_bids 
@@ -227,10 +221,24 @@ const setupAuctionSocket = (io) => {
         const highestBidResult = await client.query(highestBidQuery, [auctionId]);
         const previousBid = highestBidResult.rows[0] || null;
 
+        // STEP 3: VALIDATE BID AMOUNT
+        // First bid must be >= starting_price, subsequent bids must be >= current_price + min_increment
+        const minimumBid = previousBid 
+          ? auction.current_price + auction.min_increment 
+          : auction.starting_price;
+        
+        if (bidAmount < minimumBid) {
+          await client.query('ROLLBACK');
+          return callback?.({
+            success: false,
+            error: `Bid minimal: Rp ${minimumBid.toLocaleString('id-ID')}`
+          });
+        }
+
         // STEP 5: DEDUCT BALANCE FROM BUYER
         const deductQuery = `
           UPDATE users 
-          SET balance = balance - $1, updated_at = NOW()
+          SET balance = balance - $1
           WHERE user_id = $2
         `;
         await client.query(deductQuery, [bidAmount, bidderId]);
@@ -240,7 +248,7 @@ const setupAuctionSocket = (io) => {
         if (previousBid && previousBid.bidder_id !== bidderId) {
           const refundQuery = `
             UPDATE users 
-            SET balance = balance + $1, updated_at = NOW()
+            SET balance = balance + $1
             WHERE user_id = $2
           `;
           await client.query(refundQuery, [previousBid.bid_amount, previousBid.bidder_id]);
@@ -262,7 +270,7 @@ const setupAuctionSocket = (io) => {
 
         const updateAuctionQuery = `
           UPDATE auctions 
-          SET current_price = $1, end_time = $2, updated_at = NOW()
+          SET current_price = $1, end_time = $2
           WHERE auction_id = $3
         `;
         await client.query(updateAuctionQuery, [bidAmount, newEndTime.toISOString(), auctionId]);
@@ -320,10 +328,41 @@ const setupAuctionSocket = (io) => {
 
         console.log(`[Auction Socket] Broadcast bid-update to auction ${auctionId}`);
 
+        // SEND PUSH NOTIFICATION TO SELLER
+        try {
+          const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+          const productResult = await pgPool.query(productQuery, [auctionId]);
+          const productName = productResult.rows[0]?.product_name || 'produk';
+
+          const sellerQuery = `
+            SELECT s.owner_id 
+            FROM auctions a
+            JOIN products p ON a.product_id = p.product_id
+            JOIN stores s ON p.store_id = s.store_id
+            WHERE a.auction_id = $1
+          `;
+          const sellerResult = await pgPool.query(sellerQuery, [auctionId]);
+          const sellerId = sellerResult.rows[0]?.owner_id;
+
+          if (sellerId) {
+            await sendAuctionNotification(
+              sellerId,
+              'Penawaran Baru!',
+              `${buyer.full_name} menawar Rp ${bidAmount.toLocaleString('id-ID')} untuk ${productName}`,
+              auctionId
+            );
+            console.log(`[Auction Socket] Push notification sent to seller ${sellerId}`);
+          }
+        } catch (notifError) {
+          console.error('[Auction Socket] Error sending push notification:', notifError);
+        }
+
       } catch (error) {
         // ROLLBACK on error
         try {
-          await client.query('ROLLBACK');
+          if (client) {
+            await client.query('ROLLBACK');
+          }
         } catch (rollbackErr) {
           console.error('[Auction Socket] Rollback error:', rollbackErr);
         }
@@ -335,7 +374,9 @@ const setupAuctionSocket = (io) => {
         });
 
       } finally {
-        client.release();
+        if (client) {
+          client.release();
+        }
       }
     });
 
@@ -359,7 +400,8 @@ const setupAuctionSocket = (io) => {
         const query = `
           SELECT end_time FROM auctions WHERE auction_id = $1
         `;
-        const result = await pool.query(query, [auctionId]);
+        const pgPool = pool.getInstance();
+        const result = await pgPool.query(query, [auctionId]);
 
         if (result.rows.length === 0) {
           return callback?.({
@@ -407,7 +449,8 @@ const setupAuctionSocket = (io) => {
  * @param {number} auctionId
  */
 async function closeAuction(io, auctionId) {
-  const client = await pool.connect();
+  const pgPool = pool.getInstance();
+  const client = await pgPool.connect();
   
   try {
     console.log(`[Auction Socket] ⏰ Auto-closing auction ${auctionId}`);
@@ -418,7 +461,7 @@ async function closeAuction(io, auctionId) {
     // LOCK auction & get details
     const auctionQuery = `
       SELECT 
-        auction_id, product_id, current_price, seller_id, status
+        auction_id, product_id, current_price, status
       FROM auctions 
       WHERE auction_id = $1 
       FOR UPDATE
@@ -483,10 +526,10 @@ async function closeAuction(io, auctionId) {
     // UPDATE AUCTION STATUS TO ENDED
     const updateQuery = `
       UPDATE auctions 
-      SET status = 'ended', winner_id = $1, updated_at = NOW()
+      SET status = 'ended', winner_id = $1
       WHERE auction_id = $2
     `;
-    await client.query(updateQuery, [winnerId, auctionId]);
+    await client.query(updateQuery, [winner?.bidder_id || null, auctionId]);
 
     // GET WINNER NAME
     let winnerName = null;
@@ -510,6 +553,51 @@ async function closeAuction(io, auctionId) {
 
     console.log(`[Auction Socket] ✅ Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
 
+    // SEND PUSH NOTIFICATIONS
+    try {
+      const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+      const productResult = await client.query(productQuery, [auctionId]);
+      const productName = productResult.rows[0]?.product_name || 'produk';
+
+      // Notify winner
+      if (winnerId) {
+        await sendAuctionNotification(
+          winnerId,
+          'Selamat! Anda Menang Lelang',
+          `Anda memenangkan lelang ${productName} dengan harga Rp ${finalPrice.toLocaleString('id-ID')}`,
+          auctionId
+        );
+        console.log(`[Auction Socket] Push notification sent to winner ${winnerId}`);
+      }
+
+      // Notify seller
+      const sellerQuery = `
+        SELECT s.owner_id 
+        FROM auctions a
+        JOIN products p ON a.product_id = p.product_id
+        JOIN stores s ON p.store_id = s.store_id
+        WHERE a.auction_id = $1
+      `;
+      const sellerResult = await client.query(sellerQuery, [auctionId]);
+      const sellerId = sellerResult.rows[0]?.owner_id;
+
+      if (sellerId) {
+        const message = winnerId 
+          ? `Lelang ${productName} telah berakhir. Pemenang: ${winnerName} (Rp ${finalPrice.toLocaleString('id-ID')})`
+          : `Lelang ${productName} telah berakhir tanpa pemenang`;
+        
+        await sendAuctionNotification(
+          sellerId,
+          'Lelang Berakhir',
+          message,
+          auctionId
+        );
+        console.log(`[Auction Socket] Push notification sent to seller ${sellerId}`);
+      }
+    } catch (notifError) {
+      console.error('[Auction Socket] Error sending end auction notifications:', notifError);
+    }
+
     // Clean up timer
     auctionTimers.delete(auctionId);
 
@@ -525,4 +613,71 @@ async function closeAuction(io, auctionId) {
   }
 }
 
-module.exports = setupAuctionSocket;
+/**
+ * Check and transition scheduled auctions to active when start_time is reached
+ * @param {Socket.IO} io - Socket.IO instance
+ */
+async function checkAndStartScheduledAuctions(io) {
+  try {
+    const pgPool = pool.getInstance();
+    
+    // Get all scheduled auctions where start_time <= NOW
+    const result = await pgPool.query(
+      `SELECT a.auction_id, a.product_id, p.name as product_name, p.image_path, 
+              a.starting_price, a.current_price, a.start_time, s.store_name,
+              COUNT(DISTINCT b.bid_id) as bid_count
+       FROM auctions a
+       JOIN products p ON a.product_id = p.product_id
+       JOIN stores s ON p.store_id = s.store_id
+       LEFT JOIN auction_bids b ON a.auction_id = b.auction_id
+       WHERE a.status = 'scheduled' AND a.start_time <= NOW()
+       GROUP BY a.auction_id, a.product_id, p.name, p.image_path, 
+                a.starting_price, a.current_price, a.start_time, s.store_name`
+    );
+
+    if (result.rows.length === 0) {
+      return; // No scheduled auctions to start
+    }
+
+    console.log(`[Auction Check] Found ${result.rows.length} scheduled auctions to start`);
+
+    // Update all these auctions to 'active' status
+    for (const auction of result.rows) {
+      try {
+        const updateResult = await pgPool.query(
+          `UPDATE auctions 
+           SET status = 'active' 
+           WHERE auction_id = $1 AND status = 'scheduled'
+           RETURNING *`,
+          [auction.auction_id]
+        );
+
+        if (updateResult.rows.length > 0) {
+          console.log(`[Auction Check] Transitioned auction ${auction.auction_id} to active`);
+          
+          // Emit auction:started event to all connected clients
+          io.emit('auction:started', {
+            auction_id: auction.auction_id,
+            product_id: auction.product_id,
+            product_name: auction.product_name,
+            image_path: auction.image_path,
+            starting_price: parseInt(auction.starting_price),
+            current_price: parseInt(auction.current_price),
+            start_time: auction.start_time,
+            end_time: null,
+            status: 'active',
+            store_name: auction.store_name,
+            bid_count: parseInt(auction.bid_count) || 0,
+            winner_id: null
+          });
+        }
+      } catch (err) {
+        console.error(`[Auction Check] Error updating auction ${auction.auction_id}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error('[Auction Check] Error checking scheduled auctions:', error);
+  }
+}
+
+module.exports = { setupAuctionSocket, checkAndStartScheduledAuctions };

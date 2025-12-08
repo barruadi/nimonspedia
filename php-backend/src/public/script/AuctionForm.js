@@ -82,11 +82,13 @@ async function initAuctionFormPage() {
             // Set input constraints
             quantityInput.max = product.stock;
 
-            // Set minimum start time to 5 minutes from now
+            // Set minimum start time to NOW (must be > current time)
+            // Use local time, not UTC for datetime-local input
             const now = new Date();
-            const minStartTime = new Date(now.getTime() + 5 * 60000);
-            startTimeInput.min = minStartTime.toISOString().slice(0, 16);
-            startTimeInput.value = minStartTime.toISOString().slice(0, 16);
+            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 16);
+            startTimeInput.min = localDateTime;
+            startTimeInput.value = localDateTime;
 
             console.log('Product data loaded successfully');
             hideLoading();
@@ -150,11 +152,10 @@ async function initAuctionFormPage() {
         } else {
             const startTime = new Date(startTimeInput.value);
             const now = new Date();
-            const minStartTime = new Date(now.getTime() + 5 * 60000);
 
-            if (startTime < minStartTime) {
+            if (startTime <= now) {
                 if (errorElements.startTime) {
-                    errorElements.startTime.textContent = 'Waktu mulai harus minimal 5 menit dari sekarang';
+                    errorElements.startTime.textContent = 'Waktu mulai harus lebih dari waktu sekarang';
                 }
                 isValid = false;
             }
@@ -200,6 +201,13 @@ async function initAuctionFormPage() {
                 // end_time: NULL (will be set when first bid comes)
                 status: 'scheduled'
             };
+
+            console.log('[AuctionForm] DEBUG min_increment:', {
+                inputValue: minIncrementInput.value,
+                parsed: parseFloat(minIncrementInput.value),
+                type: typeof parseFloat(minIncrementInput.value),
+                inData: auctionData.min_increment
+            });
 
             console.log('✅ Submitting auction data (end_time will be NULL until first bid):', auctionData);
 
