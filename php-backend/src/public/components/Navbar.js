@@ -37,9 +37,26 @@ class AppNavbar extends HTMLElement {
   async fetchSession() {
     try {
       const res = await api.get('/me'); // { authenticated, user: { role, name, balance, cartCount? } }
-      if (!res || res.authenticated !== true) return { authenticated: false, user: null };
+      
+      // Check if response is valid
+      if (!res) {
+        console.warn('[Navbar] Empty response from /api/me');
+        return { authenticated: false, user: null };
+      }
+      
+      // Check if response has error property
+      if (res.error) {
+        console.error('[Navbar] Error from /api/me:', res.error);
+        return { authenticated: false, user: null };
+      }
+      
+      if (res.authenticated !== true) {
+        return { authenticated: false, user: null };
+      }
+      
       return { authenticated: true, user: res.user || null };
-    } catch {
+    } catch (err) {
+      console.error('[Navbar] Failed to fetch session:', err);
       return { authenticated: false, user: null };
     }
   }
