@@ -22,24 +22,31 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const query = `
+    // First check if user exists at all
+    const userCheckQuery = `
       SELECT user_id, email, password_hash, full_name, role
       FROM users
-      WHERE email = $1 AND role = 'admin'
+      WHERE email = $1
     `;
 
-
-    const result = await pool.query(query, [email]);
-    console.log(result.rows);
-
-    if (result.rows.length === 0) {
+    const userCheckResult = await pool.query(userCheckQuery, [email]);
+    
+    if (userCheckResult.rows.length === 0) {
       return res.status(401).json({
         ok: false,
-        error: { message: 'Invalid credentials' }
+        error: { message: 'Email tidak terdaftar' }
       });
     }
 
-    const user = result.rows[0];
+    const user = userCheckResult.rows[0];
+
+    // Block buyer/seller from logging in via admin dashboard
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        ok: false,
+        error: { message: 'Akun Anda bukan admin. Halaman ini khusus untuk administrator.' }
+      });
+    }
 
     // Convert PHP bcrypt format ($2y$) to Node.js format ($2b$) if needed
     let passwordHash = user.password_hash;
@@ -53,7 +60,7 @@ router.post('/login', async (req, res) => {
     if (!isValidPassword) {
       return res.status(401).json({
         ok: false,
-        error: { message: 'Invalid credentials' }
+        error: { message: 'Password salah' }
       });
     }
 
