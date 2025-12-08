@@ -125,6 +125,7 @@ class AppNavbar extends HTMLElement {
     } else {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
+          <a class="nav-link hide-mobile" href="/auctions" data-nav>Auctions</a>
           <a class="nav-link cart-link hide-mobile" href="/cart" data-nav title="Keranjang">
             <span class="cart"></span>
             ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
@@ -155,6 +156,7 @@ class AppNavbar extends HTMLElement {
           </div>
       `;
       mobileMenuHTML = `
+        <a class="mobile-menu-item" href="/auctions" data-nav data-mobile-item>Auctions</a>
         <a class="mobile-menu-item" href="/cart" data-nav data-mobile-item>
           <span>Keranjang</span>
           ${cartCount > 0 ? `<span class="cart-badge-mobile">${cartCount}</span>` : ''}
