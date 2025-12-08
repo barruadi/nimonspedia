@@ -23,6 +23,21 @@ class OrderController
 
         $orders = Order::findByBuyerId($buyerId);
 
+        // Add review status for each product in each order
+        foreach ($orders as &$order) {
+            foreach ($order['items'] as &$item) {
+                // Check if this product has been reviewed for this order
+                $item['can_review'] = \App\Models\Review::canReview(
+                    $order['order_id'],
+                    $item['product_id'],
+                    $buyerId
+                );
+
+                // Only products from received orders can be reviewed
+                $item['show_review_button'] = $order['status'] === 'received' && $item['can_review'];
+            }
+        }
+
         http_response_code(200);
         return [
             'ok' => true,

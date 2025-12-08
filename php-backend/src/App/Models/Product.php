@@ -33,16 +33,20 @@ class Product
     {
         $db = self::getDB();
         $stmt = $db->prepare("
-            SELECT 
-                p.*, 
-                c.name as category_name
+            SELECT
+                p.*,
+                c.name as category_name,
+                COALESCE(AVG(r.rating), 0) as average_rating,
+                COUNT(r.review_id) as review_count
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
-            WHERE p.product_id = :id 
+            LEFT JOIN reviews r ON p.product_id = r.product_id AND r.is_hidden = FALSE
+            WHERE p.product_id = :id
             AND p.is_deleted <> TRUE
+            GROUP BY p.product_id, c.name
         ");
         $stmt->execute(['id' => $productId]);
-        
+
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result ?: null;
     }
@@ -66,7 +70,7 @@ class Product
     {
         $db = Database::getInstance();
         $stmt = $db->prepare("
-            SELECT 
+            SELECT
                 p.product_id,
                 p.name,
                 p.description,
@@ -76,11 +80,15 @@ class Product
                 p.created_at,
                 p.updated_at,
                 c.category_id,
-                c.name as category_name
+                c.name as category_name,
+                COALESCE(AVG(r.rating), 0) as average_rating,
+                COUNT(r.review_id) as review_count
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
+            LEFT JOIN reviews r ON p.product_id = r.product_id AND r.is_hidden = FALSE
             WHERE p.store_id = :store_id
             AND p.is_deleted <> TRUE
+            GROUP BY p.product_id, c.category_id, c.name
             ORDER BY p.created_at DESC
         ");
         $stmt->execute(['store_id' => $storeId]);
@@ -313,10 +321,14 @@ class Product
                 p.image_path,
                 p.store_id,
                 p.is_deleted,
-                s.store_name
+                s.store_name,
+                COALESCE(AVG(r.rating), 0) as average_rating,
+                COUNT(r.review_id) as review_count
             FROM products p
             JOIN stores s ON s.store_id = p.store_id
+            LEFT JOIN reviews r ON p.product_id = r.product_id AND r.is_hidden = FALSE
             $whereSql
+            GROUP BY p.product_id, s.store_name
             ORDER BY p.product_id DESC
             LIMIT :limit OFFSET :offset
         ";
