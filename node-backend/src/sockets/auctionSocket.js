@@ -498,25 +498,36 @@ async function closeAuction(io, auctionId) {
 
     let winnerId = null;
     let finalPrice = auction.current_price;
+    let orderId = null;
+    let productName = null;
 
     if (winner) {
       winnerId = winner.bidder_id;
 
       // Get product & store info
       const productQuery = `
-        SELECT product_id, store_id FROM products WHERE product_id = $1
+        SELECT product_id, store_id, name FROM products WHERE product_id = $1
       `;
       const productResult = await client.query(productQuery, [auction.product_id]);
       const product = productResult.rows[0];
+      productName = product?.name || 'produk';
 
       // CREATE ORDER AUTOMATICALLY
       const orderQuery = `
         INSERT INTO orders (buyer_id, store_id, status, total_amount, created_at)
         VALUES ($1, $2, 'approved', $3, NOW())
-        RETURNING order_id
+        RETURNING order_id, status, created_at
       `;
+      console.log(`[Auction Socket] Creating order with: buyer=${winnerId}, store=${product.store_id}, amount=${finalPrice}`);
       const orderResult = await client.query(orderQuery, [winnerId, product.store_id, finalPrice]);
-      const orderId = orderResult.rows[0].order_id;
+      
+      if (!orderResult.rows[0]) {
+        console.error(`[Auction Socket] ❌ ORDER INSERT FAILED for auction ${auctionId}`);
+        throw new Error('Order insert returned no rows');
+      }
+      
+      orderId = orderResult.rows[0].order_id;
+      console.log(`[Auction Socket] Order insert result:`, orderResult.rows[0]);
 
       // Insert order item
       const orderItemQuery = `
@@ -525,7 +536,11 @@ async function closeAuction(io, auctionId) {
       `;
       await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice]);
 
-      console.log(`[Auction Socket] Order ${orderId} created for auction ${auctionId}`);
+      console.log(`[Auction Socket] ✅ Order ${orderId} created for auction ${auctionId}:`);
+      console.log(`  - Buyer: ${winnerId}`);
+      console.log(`  - Store: ${product.store_id}`);
+      console.log(`  - Amount: Rp ${finalPrice}`);
+      console.log(`  - Status: approved`);
     }
 
     // UPDATE AUCTION STATUS TO ENDED
@@ -555,6 +570,19 @@ async function closeAuction(io, auctionId) {
       winner_name: winnerName,
       final_price: finalPrice
     });
+
+    // EMIT order:created event to winner
+    if (winnerId) {
+      io.to(`user-${winnerId}`).emit('order:created', {
+        order_id: orderId || null,
+        auction_id: auctionId,
+        product_name: productName || 'produk',
+        final_price: finalPrice,
+        status: 'approved',
+        message: 'Order Anda dari hasil lelang sudah dibuat dengan status approved'
+      });
+      console.log(`[Auction Socket] Emitted order:created event to winner ${winnerId} (order: ${orderId})`);
+    }
 
     console.log(`[Auction Socket] ✅ Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
 
