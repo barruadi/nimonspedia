@@ -10,7 +10,8 @@ const MessageBubble = ({ message, isOwn }) => {
 
   const handleProductClick = () => {
     if (message.product_id) {
-      navigate(`/auction/${message.product_id}`);
+      // Redirect to product detail page (PHP backend handles this route)
+      window.location.href = `/product/${message.product_id}`;
     }
   };
 
