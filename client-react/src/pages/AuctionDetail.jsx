@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import './AuctionDetail.css';
 
-const API_BASE_URL = 'http://localhost:3000/api/node';
+const API_BASE_URL = 'http://localhost/api/node';
 
 const AuctionDetail = () => {
   const { id } = useParams();
