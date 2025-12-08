@@ -651,9 +651,9 @@ const AuctionDetail = () => {
   return (
     <div className="auction-detail-page">
       {isSeller ? (
-        <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>Kembali ke Product Management</button>
+        <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>← Kembali ke Product Management</button>
       ) : (
-        <button className="back-btn" onClick={() => navigate('/auctions')}>Kembali ke Lelang</button>
+        <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
       )}
 
       <div className="detail-container">

@@ -14,13 +14,13 @@
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
+  background: #05AA5B;
+  border: 1px solid #05AA5B;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #ffffff;
   transition: all 0.3s;
   margin: 20px 0 24px 20px;
   min-width: auto;
@@ -28,8 +28,8 @@
 }
 
 .back-btn:hover {
-  background: #efefef;
-  border-color: #d0d0d0;
+  background: #048a47;
+  border-color: #048a47;
 }
 
 /* Loading & Error States */
