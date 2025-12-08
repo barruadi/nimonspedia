@@ -9,6 +9,7 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./php-backend:/var/www/html:ro
+      - ./node-backend/uploads:/var/www/uploads:ro
     depends_on:
       - php-backend
       - node-backend
@@ -27,13 +28,14 @@ services:
       - postgres 
 
   node-backend:
-    build: ./node-backend 
+    build: ./node-backend
     container_name: nimons_node
     volumes:
       - ./node-backend:/app
       - /app/node_modules
+      - ./node-backend/uploads:/app/uploads
     ports:
-      - "3000:3000" 
+      - "3000:3000"
     env_file:
       - ./.env
     command: npm run dev
