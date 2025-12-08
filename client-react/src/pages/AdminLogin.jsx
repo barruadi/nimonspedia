@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './AdminLogin.css';
+
+const API_BASE = 'http://localhost/api/node/admin';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +13,34 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('adminToken');
+      
+      if (token) {
+        try {
+          const response = await fetch(`${API_BASE}/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.ok) {
+            navigate('/admin/dashboard');
+          }
+        } catch {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+        }
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEmailError('');
@@ -18,7 +48,7 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/node/admin/login', {
+      const response = await fetch(`${API_BASE}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

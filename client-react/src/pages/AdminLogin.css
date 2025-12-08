@@ -24,7 +24,7 @@ body {
   --radius-field: 8px;
   --text-main: #000;
   --text-dim: #6b7280;
-  --bg-page: #ffffff;
+  --bg-page: #FFFFFFFFFfff;
 
   font-family: system-ui, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
   background: var(--bg-page);
@@ -90,7 +90,7 @@ body {
 .login-page .login-card {
   flex: 1 1 50%;
   max-width: 380px;
-  background: #fff;
+  background: #FFFFFF;
   border-radius: var(--radius-card);
   box-shadow: 0 20px 40px rgba(0,0,0,0.08);
   border: 1px solid rgba(0,0,0,0.05);
@@ -154,7 +154,7 @@ body {
   position: relative;
   border: 2px solid var(--border);
   border-radius: var(--radius-field);
-  background: #fff;
+  background: #FFFFFF;
   display: flex;
   align-items: center;
   padding: .625rem .75rem;
