@@ -343,6 +343,8 @@ const AuctionList = () => {
 
   return (
     <div className="auction-list-container">
+      <button className="back-list-btn" onClick={() => navigate(-1)}>← Kembali</button>
+      
       <header className="list-header">
         <h1>Lelang Produk</h1>
         <p>Jelajahi berbagai produk yang sedang atau akan diluncurkan</p>

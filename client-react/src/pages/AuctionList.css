@@ -2,10 +2,40 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  position: relative;
+}
+
+/* Back Button for List */
+.back-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #05AA5B;
+  border: 1px solid #05AA5B;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+.back-list-btn:hover {
+  background: #048a47;
+  border-color: #048a47;
+}
+
+.back-list-btn:active {
+  background: #036d37;
 }
 
 .list-header {
   margin-bottom: 30px;
+  margin-top: 50px;
   text-align: center;
 }
 
