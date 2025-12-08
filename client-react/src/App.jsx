@@ -57,7 +57,7 @@ function App() {
         <Route path="/auction" element={<AuctionPage />} />
         <Route path="/auctions" element={<AuctionList />} />
         <Route path="/auction/:id" element={<AuctionDetail />} />
-        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/*" element={<ChatPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="*" element={<NotFound />} />

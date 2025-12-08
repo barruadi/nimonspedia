@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const { Server } = require("socket.io");
@@ -10,7 +13,8 @@ const chatRoutes = require('./src/routes/chatRoutes');
 const pushRoutes = require('./src/routes/push');
 const adminApp = require('./src/routes/admin');
 
-const setupAuctionSocket = require('./src/sockets/auctionSocket');
+// Import socket handlers
+const { setupAuctionSocket, checkAndStartScheduledAuctions } = require('./src/sockets/auctionSocket');
 const setupChatSocket = require('./src/sockets/chatSocket');
 
 const app = express();
@@ -31,6 +35,9 @@ app.use(cors({
 
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
@@ -39,56 +46,31 @@ const io = new Server(server, {
     }
 });
 
+// Make io instance available globally
+global.ioInstance = io;
+
 db.testConnection();
 
 app.get('/', (req, res) => {
     res.send('Node.js Backend is Running!');
 });
 
-app.use('/api/node', auctionRoutes);
-app.use('/api/node', chatRoutes);
-app.use('/api/node', pushRoutes);
-
-// Mount Hono admin app dengan proper adapter
-app.use('/api/node/admin', async (req, res, next) => {
-  console.log('Proxying request to Hono admin app:', req.method, req.originalUrl);
-  
-  // Strip /api/node/admin prefix untuk Hono
-  const path = req.originalUrl.replace(/^\/api\/node\/admin/, '') || '/';
-  const url = new URL(path, `http://${req.headers.host}`);
-  
-  console.log('Constructed URL for Hono admin app:', url.toString());
-  
-  const honoRequest = new Request(url, {
-    method: req.method,
-    headers: new Headers(req.headers),
-    body: req.method !== 'GET' && req.method !== 'HEAD' && req.body 
-      ? JSON.stringify(req.body) 
-      : undefined
-  });
-
-  try {
-    const honoResponse = await adminApp.fetch(honoRequest);
-    console.log(honoRequest.body)
-    console.log('Hono admin app response status:', honoResponse.status);
-    
-    res.status(honoResponse.status);
-    
-    honoResponse.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-    
-    const body = await honoResponse.text();
-    res.send(body);
-  } catch (error) {
-    console.error('Hono admin route error:', error);
-    res.status(500).json({ ok: false, error: 'Internal server error' });
-  }
-});
+// Mount auction and chat routes
+// Note: NGINX strips /api/node/ prefix, so mount at root
+app.use('/', auctionRoutes);
+app.use('/', chatRoutes);
+app.use('/', pushRoutes);
 
 // Setup WebSocket handlers
 setupAuctionSocket(io);
 setupChatSocket(io);
+
+// Periodically check and start scheduled auctions (every 5 seconds)
+setInterval(() => {
+    checkAndStartScheduledAuctions(io);
+}, 5000);
+
+console.log('[Server] Scheduled auction checker started (checks every 5 seconds)');
 
 // Basic connection test
 io.on('connection', (socket) => {

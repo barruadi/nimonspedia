@@ -1,192 +1,119 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSocket } from '../../hooks/useSocket';
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import ChatList from './ChatList';
+import ChatWindow from './ChatWindow';
+import './ChatPage.css';
 
 const ChatPage = () => {
-  const { connected, emit, on, off } = useSocket();
-  const [user, setUser] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [typingUser, setTypingUser] = useState(null);
-  const messagesEndRef = useRef(null);
+  const location = useLocation();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [chatListRefreshTrigger, setChatListRefreshTrigger] = useState(0);
 
-  const chatId = 'test-chat-1'; // Mockup chat ID
+  // Check if we're on a specific chat route (for mobile responsiveness)
+  const isChatOpen = location.pathname.match(/\/chat\/\d+\/\d+/);
 
-  // Fetch user session
   useEffect(() => {
-    fetch('/api/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          setUser(data.user);
-        }
-      })
-      .catch(err => console.error('Failed to fetch user:', err));
+    fetchCurrentUser();
   }, []);
 
-  // Join chat room when connected
-  useEffect(() => {
-    if (connected) {
-      console.log('[Chat] Joining chat room:', chatId);
-      emit('chat:join', chatId);
-
-      // Listen for chat data
-      on('chat:joined', (data) => {
-        console.log('[Chat] Joined:', data);
-        setMessages(data.mockData.messages);
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/me', {
+        credentials: 'include'
       });
 
-      // Listen for new messages
-      on('chat:new-message', (message) => {
-        console.log('[Chat] New message:', message);
-        setMessages(prev => [...prev, message]);
+      const data = await response.json();
+      console.log('[ChatPage] User data from /api/me:', data);
+
+      if (data.authenticated && data.user) {
+        // Normalize user object to ensure user_id exists
+        const user = {
+          user_id: data.user.user_id || data.user.id || data.user.userId,
+          full_name: data.user.full_name || data.user.fullName || data.user.name || 'User',
+          role: data.user.role || 'buyer',
+          email: data.user.email,
+          ...data.user
+        };
+        console.log('[ChatPage] Normalized user:', user);
+        setCurrentUser(user);
+      } else {
+        // Not authenticated, use guest user for development
+        console.warn('[ChatPage] Not authenticated, using guest user');
+        setCurrentUser({
+          user_id: 1,
+          full_name: 'Guest User',
+          role: 'buyer'
+        });
+      }
+    } catch (error) {
+      console.error('[ChatPage] Failed to fetch user:', error);
+      // Set dummy user for development
+      setCurrentUser({
+        user_id: 1,
+        full_name: 'Guest User',
+        role: 'buyer'
       });
-
-      // Listen for typing indicators
-      on('chat:user-typing', (data) => {
-        setTypingUser(data.userName);
-      });
-
-      on('chat:user-stop-typing', () => {
-        setTypingUser(null);
-      });
-
-      return () => {
-        emit('chat:leave', chatId);
-        off('chat:joined');
-        off('chat:new-message');
-        off('chat:user-typing');
-        off('chat:user-stop-typing');
-      };
-    }
-  }, [connected, chatId]);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
-
-    emit('chat:send-message', {
-      chatId,
-      userId: user?.id || 'guest',
-      userName: user?.name || 'Guest',
-      message: inputMessage
-    });
-
-    setInputMessage('');
-    emit('chat:stop-typing', { chatId, userName: user?.name || 'Guest' });
-  };
-
-  const handleTyping = (e) => {
-    setInputMessage(e.target.value);
-
-    if (e.target.value) {
-      emit('chat:typing', { chatId, userName: user?.name || 'Guest' });
-    } else {
-      emit('chat:stop-typing', { chatId, userName: user?.name || 'Guest' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
-    }
-  };
+  // Callback to refresh chat list when a message is sent
+  const handleChatListRefresh = useCallback(() => {
+    setChatListRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="chat-page-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading chat...</p>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>Chat Page (WebSocket Mockup)</h1>
-
-      {/* Connection Status */}
-      <div style={{
-        padding: '10px',
-        marginBottom: '20px',
-        backgroundColor: connected ? '#d4edda' : '#f8d7da',
-        border: `1px solid ${connected ? '#c3e6cb' : '#f5c6cb'}`,
-        borderRadius: '4px'
-      }}>
-        Status: {connected ? '🟢 Connected' : '🔴 Disconnected'}
-      </div>
-
-      {/* User Info */}
-      {user && (
-        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#e7f3ff', borderRadius: '4px' }}>
-          <strong>User:</strong> {user.name} ({user.role})
-        </div>
-      )}
-
-      {/* Chat Messages */}
-      <div style={{
-        height: '400px',
-        overflowY: 'auto',
-        padding: '15px',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        marginBottom: '10px',
-        backgroundColor: '#f8f9fa'
-      }}>
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            style={{
-              padding: '10px',
-              marginBottom: '10px',
-              backgroundColor: msg.userId === user?.id ? '#007bff' : '#fff',
-              color: msg.userId === user?.id ? '#fff' : '#000',
-              borderRadius: '4px',
-              maxWidth: '70%',
-              marginLeft: msg.userId === user?.id ? 'auto' : '0',
-              marginRight: msg.userId === user?.id ? '0' : 'auto'
-            }}
-          >
-            <div style={{ fontSize: '0.85em', marginBottom: '5px', opacity: 0.8 }}>
-              <strong>{msg.userName}</strong> • {new Date(msg.timestamp).toLocaleTimeString()}
-            </div>
-            <div>{msg.message}</div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Typing Indicator */}
-      {typingUser && (
-        <div style={{ marginBottom: '10px', fontStyle: 'italic', color: '#666' }}>
-          {typingUser} is typing...
-        </div>
-      )}
-
-      {/* Message Input */}
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={handleTyping}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          disabled={!connected}
-          style={{
-            flex: 1,
-            padding: '10px',
-            border: '1px solid #ddd',
-            borderRadius: '4px'
-          }}
+    <div className={`chat-page ${isChatOpen ? 'chat-open' : ''}`}>
+      <div className="chat-sidebar">
+        <ChatList
+          currentUser={currentUser}
+          refreshTrigger={chatListRefreshTrigger}
         />
-        <button
-          onClick={handleSendMessage}
-          disabled={!connected || !inputMessage.trim()}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: connected && inputMessage.trim() ? '#007bff' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: connected && inputMessage.trim() ? 'pointer' : 'not-allowed'
-          }}
-        >
-          Send
-        </button>
+      </div>
+      <div className="chat-main">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <div className="chat-empty-state">
+                <div className="empty-content">
+                  <svg
+                    width="120"
+                    height="120"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ccc"
+                    strokeWidth="1"
+                  >
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                  <h2>Select a conversation</h2>
+                  <p>Choose a chat from the list to start messaging</p>
+                </div>
+              </div>
+            }
+          />
+          <Route
+            path="/:storeId/:buyerId"
+            element={
+              <ChatWindow
+                currentUser={currentUser}
+                onMessageSent={handleChatListRefresh}
+              />
+            }
+          />
+        </Routes>
       </div>
     </div>
   );

@@ -92,8 +92,24 @@ class AuctionController {
         });
       }
 
+      console.log('[auctionController] Auction data from DB:', {
+        auction_id: auction.auction_id,
+        starting_price: auction.starting_price,
+        current_price: auction.current_price,
+        min_increment: auction.min_increment,
+        quantity: auction.quantity,
+        status: auction.status
+      });
+
       const bids = await Auction.getBids(auctionId);
       const stats = await Auction.getAuctionStats(auctionId);
+
+      console.log('[auctionController] Fetched auction from DB:', {
+        auction_id: auction.auction_id,
+        status: auction.status,
+        winner_id: auction.winner_id,
+        winner_name: auction.winner_name
+      });
 
       // Return all relevant information regarding the auction
       return res.status(200).json({
@@ -104,6 +120,8 @@ class AuctionController {
             product_id: auction.product_id,
             starting_price: parseInt(auction.starting_price),
             current_price: parseInt(auction.current_price),
+            min_increment: parseInt(auction.min_increment),
+            quantity: parseInt(auction.quantity),
             start_time: auction.start_time,
             end_time: auction.end_time,
             status: auction.status,
@@ -151,6 +169,14 @@ class AuctionController {
   static async createAuction(req, res) {
     try {
       const auctionData = req.body;
+
+      // DEBUG: Log the entire request body
+      console.log('[auctionController.createAuction] Full request body:', JSON.stringify(auctionData, null, 2));
+      console.log('[auctionController.createAuction] min_increment:', {
+        value: auctionData.min_increment,
+        type: typeof auctionData.min_increment,
+        isNumber: typeof auctionData.min_increment === 'number'
+      });
 
       // Validate required fields (end_time is NOT required - will be set on first bid)
       if (!auctionData.product_id || !auctionData.starting_price || !auctionData.start_time) {
@@ -216,6 +242,29 @@ class AuctionController {
       }
 
       const newAuction = await Auction.create(auctionData);
+
+      // Emit Socket.IO event to notify all connected clients about new auction
+      if (global.ioInstance) {
+        console.log('[auctionController] Emitting auction:created event for auction', newAuction.auction_id);
+        
+        // Get complete auction data with store name for real-time list
+        const fullAuction = await Auction.findById(newAuction.auction_id);
+        
+        global.ioInstance.emit('auction:created', {
+          auction_id: newAuction.auction_id,
+          product_id: newAuction.product_id,
+          product_name: fullAuction?.product_name,
+          image_path: fullAuction?.image_path,
+          starting_price: parseInt(newAuction.starting_price),
+          current_price: parseInt(newAuction.current_price),
+          start_time: newAuction.start_time,
+          end_time: newAuction.end_time,
+          status: newAuction.status,
+          store_name: fullAuction?.store_name,
+          bid_count: 0,
+          winner_id: null
+        });
+      }
 
       return res.status(201).json({
         ok: true,
@@ -437,13 +486,17 @@ class AuctionController {
       // Stop the auction
       const result = await Auction.stopAuction(auctionId, sellerId);
 
+      // Fetch updated auction to get the new winner information
+      const updatedAuction = await Auction.findById(auctionId);
+
       return res.status(200).json({
         ok: true,
         data: {
           auction_id: result.auction_id,
           status: result.status,
-          winner_id: auction.winner_id || null,
-          final_price: parseInt(auction.current_price),
+          winner_id: updatedAuction.winner_id || null,
+          winner_name: updatedAuction.winner_name || null,
+          final_price: parseInt(updatedAuction.current_price),
           message: result.message
         }
       });
@@ -492,11 +545,11 @@ class AuctionController {
         });
       }
 
-      // Verify auction is active
-      if (auction.status !== 'active') {
+      // Verify auction is scheduled or active
+      if (auction.status !== 'scheduled' && auction.status !== 'active') {
         return res.status(400).json({
           ok: false,
-          error: `Cannot cancel auction with status '${auction.status}'. Only active auctions can be cancelled.`
+          error: `Cannot cancel auction with status '${auction.status}'. Only scheduled or active auctions can be cancelled.`
         });
       }
 
@@ -520,6 +573,14 @@ class AuctionController {
 
       // Cancel the auction
       const result = await Auction.delete(auctionId);
+
+      // Emit Socket.IO event to notify all connected clients about cancelled auction
+      if (global.ioInstance) {
+        console.log('[auctionController] Emitting auction:deleted event for auction', auctionId);
+        global.ioInstance.emit('auction:deleted', {
+          auction_id: auctionId
+        });
+      }
 
       return res.status(200).json({
         ok: true,
