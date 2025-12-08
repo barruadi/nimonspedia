@@ -12,6 +12,7 @@
 
 const pool = require('../config/db');
 const { sendAuctionNotification } = require('../services/pushNotificationService');
+const { sendOutbidNotification, sendAuctionWonNotification, sendAuctionEndedSellerNotification } = require('../utils/notificationUtils');
 
 // Map to track active auction timers: { auctionId: timeoutHandle }
 const auctionTimers = new Map();
@@ -317,6 +318,31 @@ const setupAuctionSocket = (io) => {
         });
 
         console.log(`[Auction Socket] Broadcast bid-update to auction ${auctionId}`);
+
+        // SEND OUTBID NOTIFICATION TO PREVIOUS BIDDER
+        if (previousBid && previousBid.bidder_id !== bidderId) {
+          try {
+            const productQuery = `
+              SELECT p.name as product_name
+              FROM auctions a
+              JOIN products p ON a.product_id = p.product_id
+              WHERE a.auction_id = $1
+            `;
+            const productResult = await pgPool.query(productQuery, [auctionId]);
+            const productName = productResult.rows[0]?.product_name || 'produk';
+
+            await sendOutbidNotification(
+              previousBid.bidder_id,
+              productName,
+              auctionId,
+              buyer.full_name,
+              bidAmount
+            );
+            console.log(`[Auction Socket] Outbid notification sent to user ${previousBid.bidder_id}`);
+          } catch (notifError) {
+            console.error('[Auction Socket] Error sending outbid notification:', notifError.message);
+          }
+        }
 
         // SEND PUSH NOTIFICATION TO SELLER
         try {
@@ -641,14 +667,14 @@ async function closeAuction(io, auctionId) {
       const productName = productResult.rows[0]?.product_name || 'produk';
 
       // Notify winner
-      if (winnerId) {
-        await sendAuctionNotification(
+      if (winnerId && winnerName) {
+        await sendAuctionWonNotification(
           winnerId,
-          'Selamat! Anda Menang Lelang',
-          `Anda memenangkan lelang ${productName} dengan harga Rp ${finalPrice.toLocaleString('id-ID')}`,
-          auctionId
+          productName,
+          finalPrice,
+          winnerName
         );
-        console.log(`[Auction Socket] Push notification sent to winner ${winnerId}`);
+        console.log(`[Auction Socket] Win notification sent to winner ${winnerId}`);
       }
 
       // Notify seller
@@ -663,20 +689,16 @@ async function closeAuction(io, auctionId) {
       const sellerId = sellerResult.rows[0]?.owner_id;
 
       if (sellerId) {
-        const message = winnerId 
-          ? `Lelang ${productName} telah berakhir. Pemenang: ${winnerName} (Rp ${finalPrice.toLocaleString('id-ID')})`
-          : `Lelang ${productName} telah berakhir tanpa pemenang`;
-        
-        await sendAuctionNotification(
+        await sendAuctionEndedSellerNotification(
           sellerId,
-          'Lelang Berakhir',
-          message,
-          auctionId
+          productName,
+          winnerName || 'Tidak ada pemenang',
+          finalPrice
         );
-        console.log(`[Auction Socket] Push notification sent to seller ${sellerId}`);
+        console.log(`[Auction Socket] Seller ended notification sent to seller ${sellerId}`);
       }
     } catch (notifError) {
-      console.error('[Auction Socket] Error sending end auction notifications:', notifError);
+      console.error('[Auction Socket] Error sending auction end notifications:', notifError.message);
     }
 
     // Clean up timer
