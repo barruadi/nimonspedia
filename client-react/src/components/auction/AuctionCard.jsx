@@ -38,7 +38,7 @@ const AuctionCard = ({ auction, onViewDetail }) => {
       
       // ACTIVE: If end_time is NULL, auction is waiting for first bid
       if (isActive && auction.end_time === null) {
-        setTimeLeft('Menunggu Penawar Pertama');
+        setTimeLeft('Menunggu Penawar');
         return;
       }
 
