@@ -907,6 +907,68 @@ class Auction {
         console.log(`  - Status: approved`);
       }
 
+      // REFUND ALL NON-WINNING BIDS
+      // For losing bidders: refund their highest bid
+      // For winning bidder: refund all bids EXCEPT the highest (winning) bid
+      
+      if (winnerId) {
+        // Get all bids for winning bidder except the winning bid
+        const winnerPreviousBidsQuery = `
+          SELECT bid_amount 
+          FROM auction_bids
+          WHERE auction_id = $1 AND bidder_id = $2
+          AND bid_amount != (
+            SELECT MAX(bid_amount) 
+            FROM auction_bids 
+            WHERE auction_id = $1 AND bidder_id = $2
+          )
+          ORDER BY bid_id DESC
+        `;
+        const winnerPreviousBidsResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
+        
+        let totalWinnerRefund = 0;
+        if (winnerPreviousBidsResult.rows.length > 0) {
+          console.log(`[Auction Model] Refunding ${winnerPreviousBidsResult.rows.length} previous bids from winning bidder ${winnerId}`);
+          
+          for (const bid of winnerPreviousBidsResult.rows) {
+            totalWinnerRefund += bid.bid_amount;
+          }
+          
+          if (totalWinnerRefund > 0) {
+            const refundWinnerQuery = `
+              UPDATE users 
+              SET balance = balance + $1
+              WHERE user_id = $2
+            `;
+            await client.query(refundWinnerQuery, [totalWinnerRefund, winnerId]);
+            console.log(`[Auction Model] Refunded Rp ${totalWinnerRefund} (previous bids) to winning bidder ${winnerId}`);
+          }
+        }
+      }
+
+      // For losing bidders: refund their highest bid
+      const losingBidsQuery = `
+        SELECT DISTINCT bidder_id, MAX(bid_amount) as bid_amount
+        FROM auction_bids
+        WHERE auction_id = $1 AND bidder_id != $2
+        GROUP BY bidder_id
+      `;
+      const losingBidsResult = await client.query(losingBidsQuery, [auctionId, winnerId || -1]);
+      
+      if (losingBidsResult.rows.length > 0) {
+        console.log(`[Auction Model] Refunding ${losingBidsResult.rows.length} losing bidders for auction ${auctionId}`);
+        
+        for (const losingBid of losingBidsResult.rows) {
+          const refundQuery = `
+            UPDATE users 
+            SET balance = balance + $1
+            WHERE user_id = $2
+          `;
+          await client.query(refundQuery, [losingBid.bid_amount, losingBid.bidder_id]);
+          console.log(`[Auction Model] Refunded Rp ${losingBid.bid_amount} to bidder ${losingBid.bidder_id}`);
+        }
+      }
+
       // Update status to 'ended' and set winner
       const updateQuery = `
         UPDATE auctions
