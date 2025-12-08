@@ -665,7 +665,7 @@ const AuctionDetail = () => {
   }
 
   const isActive = auction.status === 'active';
-  const displayPrice = isActive ? auction.current_price : auction.starting_price;
+  const displayPrice = (isActive || auction.status === 'ended') ? auction.current_price : auction.starting_price;
   const timerClass = countdownSeconds !== null && countdownSeconds !== 'waiting' && countdownSeconds < 60 ? 'timer-warning' : '';
   const nextMinBid = auction.current_price + (auction.min_increment || 1000);
 

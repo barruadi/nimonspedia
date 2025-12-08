@@ -244,17 +244,6 @@ const setupAuctionSocket = (io) => {
         await client.query(deductQuery, [bidAmount, bidderId]);
         console.log(`[Auction Socket] Deducted ${bidAmount} from bidder ${bidderId}`);
 
-        // STEP 6: REFUND PREVIOUS BIDDER (if exists)
-        if (previousBid && previousBid.bidder_id !== bidderId) {
-          const refundQuery = `
-            UPDATE users 
-            SET balance = balance + $1
-            WHERE user_id = $2
-          `;
-          await client.query(refundQuery, [previousBid.bid_amount, previousBid.bidder_id]);
-          console.log(`[Auction Socket] Refunded ${previousBid.bid_amount} to previous bidder ${previousBid.bidder_id}`);
-        }
-
         // STEP 7: INSERT NEW BID
         const insertBidQuery = `
           INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
@@ -467,7 +456,7 @@ async function closeAuction(io, auctionId) {
     // LOCK auction & get details
     const auctionQuery = `
       SELECT 
-        auction_id, product_id, current_price, status
+        auction_id, product_id, current_price, status, quantity
       FROM auctions 
       WHERE auction_id = $1 
       FOR UPDATE
@@ -533,9 +522,9 @@ async function closeAuction(io, auctionId) {
       // Insert order item
       const orderItemQuery = `
         INSERT INTO order_items (order_id, product_id, price_at, qty)
-        VALUES ($1, $2, $3, 1)
+        VALUES ($1, $2, $3, $4)
       `;
-      await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice]);
+      await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice, auction.quantity]);
 
       console.log(`[Auction Socket] ✅ Order ${orderId} created for auction ${auctionId}:`);
       console.log(`  - Buyer: ${winnerId}`);
@@ -544,14 +533,14 @@ async function closeAuction(io, auctionId) {
       console.log(`  - Status: approved`);
     }
 
-    // REFUND ALL NON-WINNING BIDS
-    // For losing bidders: refund their highest bid
-    // For winning bidder: refund all bids EXCEPT the highest (winning) bid
+    // REFUND NON-WINNING BIDS
+    // Winner: refund all bids EXCEPT the highest (winning) bid
+    // Losers: refund ALL bids
     
     if (winnerId) {
-      // Get all bids for winning bidder except the winning bid
+      // Refund winner's previous bids (all except max)
       const winnerPreviousBidsQuery = `
-        SELECT bid_amount 
+        SELECT SUM(bid_amount) as total_refund
         FROM auction_bids
         WHERE auction_id = $1 AND bidder_id = $2
         AND bid_amount != (
@@ -559,33 +548,24 @@ async function closeAuction(io, auctionId) {
           FROM auction_bids 
           WHERE auction_id = $1 AND bidder_id = $2
         )
-        ORDER BY bid_id DESC
       `;
-      const winnerPreviousBidsResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
+      const winnerRefundResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
+      const winnerRefundAmount = winnerRefundResult.rows[0]?.total_refund || 0;
       
-      let totalWinnerRefund = 0;
-      if (winnerPreviousBidsResult.rows.length > 0) {
-        console.log(`[Auction Socket] Refunding ${winnerPreviousBidsResult.rows.length} previous bids from winning bidder ${winnerId}`);
-        
-        for (const bid of winnerPreviousBidsResult.rows) {
-          totalWinnerRefund += bid.bid_amount;
-        }
-        
-        if (totalWinnerRefund > 0) {
-          const refundWinnerQuery = `
-            UPDATE users 
-            SET balance = balance + $1
-            WHERE user_id = $2
-          `;
-          await client.query(refundWinnerQuery, [totalWinnerRefund, winnerId]);
-          console.log(`[Auction Socket] Refunded Rp ${totalWinnerRefund} (previous bids) to winning bidder ${winnerId}`);
-        }
+      if (winnerRefundAmount > 0) {
+        const winnerRefundQuery = `
+          UPDATE users 
+          SET balance = balance + $1
+          WHERE user_id = $2
+        `;
+        await client.query(winnerRefundQuery, [winnerRefundAmount, winnerId]);
+        console.log(`[Auction Socket] Refunded Rp ${winnerRefundAmount} (previous bids) to winner ${winnerId}`);
       }
     }
-
-    // For losing bidders: refund their highest bid
+    
+    // Refund all losing bidders - ALL their bids
     const losingBidsQuery = `
-      SELECT DISTINCT bidder_id, MAX(bid_amount) as bid_amount
+      SELECT bidder_id, SUM(bid_amount) as total_bid_amount
       FROM auction_bids
       WHERE auction_id = $1 AND bidder_id != $2
       GROUP BY bidder_id
@@ -601,8 +581,8 @@ async function closeAuction(io, auctionId) {
           SET balance = balance + $1
           WHERE user_id = $2
         `;
-        await client.query(refundQuery, [losingBid.bid_amount, losingBid.bidder_id]);
-        console.log(`[Auction Socket] Refunded Rp ${losingBid.bid_amount} to bidder ${losingBid.bidder_id}`);
+        await client.query(refundQuery, [losingBid.total_bid_amount, losingBid.bidder_id]);
+        console.log(`[Auction Socket] Refunded Rp ${losingBid.total_bid_amount} (all bids) to losing bidder ${losingBid.bidder_id}`);
       }
     }
 
