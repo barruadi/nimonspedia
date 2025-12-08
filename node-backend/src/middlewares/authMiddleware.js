@@ -13,9 +13,7 @@ const verifyUser = async (req, res, next) => {
       try {
         const token = authHeader.substring(7); // Remove "Bearer " prefix
         const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-        const decoded = jwt.verify(token, secret, {
-          algorithms: ['HS256'] // Whitelist allowed algorithms for security
-        });
+        const decoded = jwt.verify(token, secret);
 
         userId = decoded.user_id || decoded.id || decoded.userId;
 

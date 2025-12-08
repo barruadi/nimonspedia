@@ -42,7 +42,7 @@
 }
 
 .navbar-logo {
-  height: 28px;
+  height: 40px;
   width: auto;
   object-fit: contain;
 }
@@ -186,6 +186,7 @@
   font-size: 13px;
   font-weight: 600;
   color: #6b7280;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
@@ -215,6 +216,7 @@
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 .badge.admin {
@@ -435,6 +437,7 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
   width: fit-content;
 }
 
@@ -669,6 +672,7 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
 }
 
 .status-badge.disabled {
