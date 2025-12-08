@@ -258,7 +258,7 @@ async function initAuctionFormPage() {
             showLoading('Membuat Lelang...', 'Mohon tunggu sebentar');
 
             // Submit to Node.js API
-            const response = await fetch('http://localhost:3000/api/node/auction', {
+            const response = await fetch('http://localhost/api/node/auction', {
                 method: 'POST',
                 credentials: 'include', // Include cookies (PHPSESSID)
                 headers: {
@@ -290,7 +290,7 @@ async function initAuctionFormPage() {
             // Provide more specific error messages
             let errorMessage = error.message;
             if (error.message === 'Failed to fetch') {
-                errorMessage = 'Tidak dapat terhubung ke server. Pastikan Node.js server running di localhost:3000';
+                errorMessage = 'Tidak dapat terhubung ke server. Pastikan Node.js server running di localhost';
             }
             
             showToast('Gagal membuat lelang!', errorMessage, 'error');

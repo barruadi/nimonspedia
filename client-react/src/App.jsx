@@ -4,6 +4,9 @@ import ChatPage from './components/chat/ChatPage'
 import AuctionPage from './components/auction/AuctionPage'
 import AuctionList from './pages/AuctionList'
 import AuctionDetail from './pages/AuctionDetail'
+import AdminLogin from './pages/AdminLogin'
+import AdminDashboard from './pages/AdminDashboard'
+import './components/Button.css'
 
 function HomePage() {
   return (
@@ -55,6 +58,8 @@ function App() {
         <Route path="/auctions" element={<AuctionList />} />
         <Route path="/auction/:id" element={<AuctionDetail />} />
         <Route path="/chat/*" element={<ChatPage />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

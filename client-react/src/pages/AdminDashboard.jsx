@@ -385,7 +385,7 @@ const AdminDashboard = () => {
         <div className="admin-header-content">
           <div className="navbar-brand">
             <img
-              src="/uploads/logo/nimonspedia.png"
+              src="http://localhost/uploads/logo/nimonspedia.png"
               alt="Nimonspedia"
               className="navbar-logo"
               onError={(e) => {

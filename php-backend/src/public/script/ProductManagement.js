@@ -219,7 +219,7 @@ function initProductManagementPage() {
             }
 
             // GET request dengan user_id di query param
-            const response = await fetch(`http://localhost:3000/api/node/seller/auction/status?user_id=${userId}`, {
+            const response = await fetch(`http://localhost/api/node/seller/auction/status?user_id=${userId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {

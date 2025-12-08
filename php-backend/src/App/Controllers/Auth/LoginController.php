@@ -58,6 +58,15 @@ class LoginController
             ];
         }
 
+        // Block admin from logging in via PHP (they must use admin dashboard)
+        if ($existingUser['role'] === 'admin') {
+            http_response_code(403);
+            return [
+                'ok' => false,
+                'error' => 'Akun admin tidak dapat login di sini.'
+            ];
+        }
+
         if (!password_verify($password, $existingUser['password_hash'])) {
             http_response_code(401);
             return [
