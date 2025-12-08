@@ -765,7 +765,7 @@ class Auction {
 
       // Check if auction exists
       const auctionCheck = await client.query(
-        'SELECT auction_id, status, winner_id, product_id FROM auctions WHERE auction_id = $1',
+        'SELECT auction_id, status, winner_id, product_id, current_price FROM auctions WHERE auction_id = $1',
         [auctionId]
       );
 
@@ -804,6 +804,42 @@ class Auction {
       const highestBidResult = await client.query(highestBidQuery, [auctionId]);
       const winnerId = highestBidResult.rows.length > 0 ? highestBidResult.rows[0].bidder_id : null;
 
+      let orderId = null;
+
+      // If there's a winner, create order automatically
+      if (winnerId) {
+        const product = productCheck.rows[0];
+        const finalPrice = auction.current_price;
+
+        // CREATE ORDER AUTOMATICALLY
+        const orderQuery = `
+          INSERT INTO orders (buyer_id, store_id, status, total_amount, created_at)
+          VALUES ($1, $2, 'approved', $3, NOW())
+          RETURNING order_id, status, created_at
+        `;
+        console.log(`[Auction Model] Creating order for stopped auction: buyer=${winnerId}, store=${product.store_id}, amount=${finalPrice}`);
+        const orderResult = await client.query(orderQuery, [winnerId, product.store_id, finalPrice]);
+        
+        if (!orderResult.rows[0]) {
+          throw new Error('Order insert returned no rows');
+        }
+        
+        orderId = orderResult.rows[0].order_id;
+
+        // Insert order item
+        const orderItemQuery = `
+          INSERT INTO order_items (order_id, product_id, price_at, qty)
+          VALUES ($1, $2, $3, 1)
+        `;
+        await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice]);
+
+        console.log(`[Auction Model] ✅ Order ${orderId} created for stopped auction ${auctionId}`);
+        console.log(`  - Buyer: ${winnerId}`);
+        console.log(`  - Store: ${product.store_id}`);
+        console.log(`  - Amount: Rp ${finalPrice}`);
+        console.log(`  - Status: approved`);
+      }
+
       // Update status to 'ended' and set winner
       const updateQuery = `
         UPDATE auctions
@@ -821,7 +857,8 @@ class Auction {
         message: `Auction ${auctionId} stopped successfully`,
         auction_id: result.rows[0].auction_id,
         status: result.rows[0].status,
-        winner_id: result.rows[0].winner_id
+        winner_id: result.rows[0].winner_id,
+        order_id: orderId
       };
 
     } catch (error) {

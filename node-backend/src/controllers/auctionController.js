@@ -497,6 +497,7 @@ class AuctionController {
           winner_id: updatedAuction.winner_id || null,
           winner_name: updatedAuction.winner_name || null,
           final_price: parseInt(updatedAuction.current_price),
+          order_id: result.order_id || null,
           message: result.message
         }
       });
