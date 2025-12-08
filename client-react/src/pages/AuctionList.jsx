@@ -275,6 +275,16 @@ const AuctionList = () => {
       );
     };
 
+    // Real-time auction cancelled (new event from server)
+    const handleAuctionCancelled = (data) => {
+      console.log('[AuctionList] Auction cancelled (socket):', data);
+      
+      // Remove from both active and scheduled lists
+      setAuctions(prevAuctions =>
+        prevAuctions.filter(auction => auction.auction_id !== data.auction_id)
+      );
+    };
+
     // Register socket listeners
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
@@ -284,6 +294,7 @@ const AuctionList = () => {
     socket.on('auction:ended', handleAuctionEnded);
     socket.on('auction:created', handleAuctionCreated);
     socket.on('auction:deleted', handleAuctionDeleted);
+    socket.on('auction:cancelled', handleAuctionCancelled);
     socket.on('price:updated', handlePriceUpdate);
 
     // Cleanup listeners on unmount
@@ -296,6 +307,7 @@ const AuctionList = () => {
       socket.off('auction:ended', handleAuctionEnded);
       socket.off('auction:created', handleAuctionCreated);
       socket.off('auction:deleted', handleAuctionDeleted);
+      socket.off('auction:cancelled', handleAuctionCancelled);
       socket.off('price:updated', handlePriceUpdate);
     };
   }, [socket, activeTab]);

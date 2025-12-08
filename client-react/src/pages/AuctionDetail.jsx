@@ -378,17 +378,47 @@ const AuctionDetail = () => {
       }
     };
 
+    const handleAuctionStarted = (data) => {
+      console.log('[AuctionDetail] Auction started event received:', data);
+      
+      if (data.auction_id === auction.auction_id) {
+        setAuction(prev => ({
+          ...prev,
+          status: 'active',
+          start_time: data.start_time,
+          end_time: data.end_time
+        }));
+        console.log('[AuctionDetail] Auction status updated to active');
+      }
+    };
+
+    const handleAuctionCancelled = (data) => {
+      console.log('[AuctionDetail] Auction cancelled event received:', data);
+      
+      if (data.auction_id === auction.auction_id) {
+        setAuction(prev => ({
+          ...prev,
+          status: 'cancelled'
+        }));
+        setShowCancelModal(false);
+        console.log('[AuctionDetail] Auction status updated to cancelled');
+      }
+    };
+
     const handleAuctionEnded = (data) => {
-      console.log('[AuctionDetail] Auction ended:', data);
+      console.log('[AuctionDetail] Auction ended event received:', data);
       
       if (data.auction_id === auction.auction_id) {
         setAuction(prev => ({
           ...prev,
           status: 'ended',
           winner_id: data.winner_id,
-          winner_name: data.winner_name
+          winner_name: data.winner_name,
+          current_price: data.final_price
         }));
         setCountdownSeconds(0);
+        setShowCancelModal(false);
+        console.log('[AuctionDetail] Auction status updated to ended with winner:', data.winner_name);
       }
     };
 
@@ -398,12 +428,16 @@ const AuctionDetail = () => {
     };
 
     socket.on('auction:bid-update', handleBidUpdate);
+    socket.on('auction:started', handleAuctionStarted);
+    socket.on('auction:cancelled', handleAuctionCancelled);
     socket.on('auction:ended', handleAuctionEnded);
     socket.on('auction:bid-error', handleBidError);
 
     return () => {
       socket.emit('auction:leave', { auctionId: auction.auction_id });
       socket.off('auction:bid-update', handleBidUpdate);
+      socket.off('auction:started', handleAuctionStarted);
+      socket.off('auction:cancelled', handleAuctionCancelled);
       socket.off('auction:ended', handleAuctionEnded);
       socket.off('auction:bid-error', handleBidError);
     };

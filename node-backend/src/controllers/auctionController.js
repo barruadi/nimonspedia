@@ -489,6 +489,19 @@ class AuctionController {
       // Fetch updated auction to get the new winner information
       const updatedAuction = await Auction.findById(auctionId);
 
+      // Emit real-time event to auction room
+      if (global.ioInstance) {
+        console.log('[auctionController] Emitting auction:ended event to auction room', auctionId);
+        global.ioInstance.to(`auction-${auctionId}`).emit('auction:ended', {
+          auction_id: auctionId,
+          status: 'ended',
+          winner_id: updatedAuction.winner_id || null,
+          winner_name: updatedAuction.winner_name || null,
+          final_price: parseInt(updatedAuction.current_price),
+          timestamp: new Date().toISOString()
+        });
+      }
+
       return res.status(200).json({
         ok: true,
         data: {
@@ -577,9 +590,11 @@ class AuctionController {
 
       // Emit Socket.IO event to notify all connected clients about cancelled auction
       if (global.ioInstance) {
-        console.log('[auctionController] Emitting auction:deleted event for auction', auctionId);
-        global.ioInstance.emit('auction:deleted', {
-          auction_id: auctionId
+        console.log('[auctionController] Emitting auction:cancelled event for auction', auctionId);
+        global.ioInstance.to(`auction-${auctionId}`).emit('auction:cancelled', {
+          auction_id: auctionId,
+          status: 'cancelled',
+          timestamp: new Date().toISOString()
         });
       }
 
