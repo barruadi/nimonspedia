@@ -296,3 +296,38 @@ CREATE TABLE IF NOT EXISTS user_feature_access (
 
 CREATE INDEX IF NOT EXISTS idx_feature_user ON user_feature_access(user_id);
 CREATE INDEX IF NOT EXISTS idx_feature_name ON user_feature_access(feature_name);
+
+
+-- REVIEWS
+
+CREATE TABLE IF NOT EXISTS reviews (
+    review_id      INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    order_id       INTEGER NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
+    product_id     INTEGER NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
+    buyer_id       INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    rating         INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text    TEXT CHECK (review_text IS NULL OR char_length(review_text) <= 500),
+    seller_reply   TEXT CHECK (seller_reply IS NULL OR char_length(seller_reply) <= 500),
+    is_hidden      BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    replied_at     TIMESTAMPTZ,
+    CONSTRAINT uq_review_order_product UNIQUE (order_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id) WHERE is_hidden = FALSE;
+CREATE INDEX IF NOT EXISTS idx_reviews_buyer ON reviews(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_order ON reviews(order_id);
+
+
+-- REVIEW IMAGES
+
+CREATE TABLE IF NOT EXISTS review_images (
+    review_image_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    review_id       INTEGER NOT NULL REFERENCES reviews(review_id) ON DELETE CASCADE,
+    image_path      TEXT NOT NULL,
+    display_order   INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_images_review ON review_images(review_id);
