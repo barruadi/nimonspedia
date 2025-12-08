@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE_URL = 'http://localhost:3000/api/node';
+const API_BASE_URL = 'http://localhost/api/node';
 
 export const useAuctions = (status = 'active', page = 1, search = '') => {
   const [auctions, setAuctions] = useState([]);
