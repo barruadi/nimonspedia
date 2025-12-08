@@ -330,7 +330,12 @@ const setupAuctionSocket = (io) => {
 
         // SEND PUSH NOTIFICATION TO SELLER
         try {
-          const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+          const productQuery = `
+            SELECT p.name as product_name
+            FROM auctions a
+            JOIN products p ON a.product_id = p.product_id
+            WHERE a.auction_id = $1
+          `;
           const productResult = await pgPool.query(productQuery, [auctionId]);
           const productName = productResult.rows[0]?.product_name || 'produk';
 
@@ -555,7 +560,12 @@ async function closeAuction(io, auctionId) {
 
     // SEND PUSH NOTIFICATIONS
     try {
-      const productQuery = `SELECT product_name FROM auctions WHERE auction_id = $1`;
+      const productQuery = `
+        SELECT p.name as product_name
+        FROM auctions a
+        JOIN products p ON a.product_id = p.product_id
+        WHERE a.auction_id = $1
+      `;
       const productResult = await client.query(productQuery, [auctionId]);
       const productName = productResult.rows[0]?.product_name || 'produk';
 

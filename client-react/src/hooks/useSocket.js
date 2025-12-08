@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { io } from 'socket.io-client';
 
 // WebSocket URL - connects through NGINX proxy
@@ -12,7 +12,11 @@ export const useSocket = (authData = null) => {
     // Initialize socket connection with optional authentication
     const socketOptions = {
       path: '/socket.io/',
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity
     };
 
     // Add authentication if provided
@@ -52,31 +56,34 @@ export const useSocket = (authData = null) => {
   }, [authData]);
 
   // Helper functions
-  const emit = (event, data) => {
-    if (socketRef.current && connected) {
-      socketRef.current.emit(event, data);
+  const emit = useCallback((event, data, callback) => {
+    if (socketRef.current) {
+      socketRef.current.emit(event, data, callback);
     } else {
-      console.warn('[Socket] Cannot emit, socket not connected');
+      console.warn('[Socket] Cannot emit, socket not initialized. Event:', event);
+      if (callback) {
+        callback({ success: false, error: 'Socket not initialized' });
+      }
     }
-  };
+  }, []);
 
-  const on = (event, callback) => {
+  const on = useCallback((event, callback) => {
     if (socketRef.current) {
       socketRef.current.on(event, callback);
     }
-  };
+  }, []);
 
-  const off = (event, callback) => {
+  const off = useCallback((event, callback) => {
     if (socketRef.current) {
       socketRef.current.off(event, callback);
     }
-  };
+  }, []);
 
-  return {
+  return useMemo(() => ({
     socket: socketRef.current,
     connected,
     emit,
     on,
     off
-  };
+  }), [connected, emit, on, off]);
 };

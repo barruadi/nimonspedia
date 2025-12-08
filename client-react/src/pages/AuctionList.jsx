@@ -15,9 +15,10 @@ const AuctionList = () => {
   const [socketConnected, setSocketConnected] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authData, setAuthData] = useState(null);
 
   // Initialize socket - MUST be before any returns
-  const socket = useSocket();
+  const { socket, connected } = useSocket(authData);
 
   // Check user role on mount
   useEffect(() => {
@@ -42,6 +43,10 @@ const AuctionList = () => {
             };
             console.log('[AuctionList] User data:', userData);
             setCurrentUser(userData);
+            setAuthData({
+              userId: data.user.id,
+              userRole: data.user.role
+            });
             
             // Redirect seller to product management (will happen after this render)
             if (data.user.role === 'seller') {
@@ -93,7 +98,7 @@ const AuctionList = () => {
   useEffect(() => {
     if (!socket) return;
 
-    // Connect event
+    // Define all handlers
     const handleConnect = () => {
       console.log('[AuctionList] Socket connected');
       setSocketConnected(true);
@@ -253,7 +258,7 @@ const AuctionList = () => {
       socket.off('auction:deleted', handleAuctionDeleted);
       socket.off('price:updated', handlePriceUpdate);
     };
-  }, [socket]);
+  }, [socket, activeTab]);
 
   const handleViewDetail = (auctionId) => {
     navigate(`/auction/${auctionId}`);

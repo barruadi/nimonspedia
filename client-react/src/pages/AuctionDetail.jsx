@@ -8,7 +8,8 @@ const API_BASE_URL = 'http://localhost/api/node';
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const socket = useSocket();
+  const [authData, setAuthData] = useState(null);
+  const { socket, connected } = useSocket(authData);
   
   // Auction & Bid Data
   const [auction, setAuction] = useState(null);
@@ -61,6 +62,10 @@ const AuctionDetail = () => {
             };
             console.log('[AuctionDetail] Extracted user data:', userData);
             setCurrentUser(userData);
+            setAuthData({
+              userId: data.user.id,
+              userRole: data.user.role
+            });
             // Ensure user_id is a number
             const userId = parseInt(userData.user_id, 10);
             console.log('[AuctionDetail] Setting currentUserId to:', userId, 'type:', typeof userId);
@@ -71,6 +76,10 @@ const AuctionDetail = () => {
             const userData = data.data || data;
             console.log('[AuctionDetail] Current user fetched (fallback):', userData);
             setCurrentUser(userData);
+            setAuthData({
+              userId: userData.user_id,
+              userRole: userData.role
+            });
             const userId = parseInt(userData.user_id, 10);
             console.log('[AuctionDetail] Setting currentUserId to:', userId, 'type:', typeof userId);
             setCurrentUserId(userId);
@@ -276,11 +285,11 @@ const AuctionDetail = () => {
 
   // Socket setup - join room and listen for updates
   useEffect(() => {
-    if (!socket.socket || !auction || !currentUser) return;
+    if (!socket || !auction || !currentUser) return;
 
     console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
 
-    socket.socket.emit('auction:join', {
+    socket.emit('auction:join', {
       auctionId: auction.auction_id,
       userId: currentUser.user_id
     }, (response) => {
@@ -330,17 +339,17 @@ const AuctionDetail = () => {
       setBidError(data.error || 'Gagal menempatkan penawaran');
     };
 
-    socket.socket.on('auction:bid-update', handleBidUpdate);
-    socket.socket.on('auction:ended', handleAuctionEnded);
-    socket.socket.on('auction:bid-error', handleBidError);
+    socket.on('auction:bid-update', handleBidUpdate);
+    socket.on('auction:ended', handleAuctionEnded);
+    socket.on('auction:bid-error', handleBidError);
 
     return () => {
-      socket.socket.emit('auction:leave', { auctionId: auction.auction_id });
-      socket.socket.off('auction:bid-update', handleBidUpdate);
-      socket.socket.off('auction:ended', handleAuctionEnded);
-      socket.socket.off('auction:bid-error', handleBidError);
+      socket.emit('auction:leave', { auctionId: auction.auction_id });
+      socket.off('auction:bid-update', handleBidUpdate);
+      socket.off('auction:ended', handleAuctionEnded);
+      socket.off('auction:bid-error', handleBidError);
     };
-  }, [id, currentUser?.user_id]);
+  }, [socket, connected, auction, currentUser?.user_id]);
 
   // Place bid via Socket.IO (with validation)
   const handlePlaceBid = useCallback(async () => {
@@ -370,14 +379,14 @@ const AuctionDetail = () => {
         return;
       }
 
-      if (!socket.socket || !socket.connected) {
+      if (!socket || !connected) {
         setBidError('Koneksi socket terputus. Silakan refresh halaman.');
         return;
       }
 
       setSubmittingBid(true);
 
-      socket.socket.emit('auction:place-bid', {
+      socket.emit('auction:place-bid', {
         auctionId: auction.auction_id,
         bidderId: currentUser.user_id,
         bidAmount: bid
