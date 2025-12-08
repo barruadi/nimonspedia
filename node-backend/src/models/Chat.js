@@ -32,7 +32,7 @@ class Chat {
             s.store_name,
             s.logo_path as store_logo,
             u.full_name as seller_name,
-            COUNT(CASE WHEN cm.is_read = false AND cm.sender_id != $1 THEN 1 END) as unread_count,
+            COUNT(CASE WHEN cm.is_read = false AND cm.sender_id != $1 THEN 1 END)::int as unread_count,
             (
               SELECT json_build_object(
                 'message_id', message_id,
@@ -67,7 +67,7 @@ class Chat {
             s.logo_path as store_logo,
             u.full_name as buyer_name,
             u.email as buyer_email,
-            COUNT(CASE WHEN cm.is_read = false AND cm.sender_id != $1 THEN 1 END) as unread_count,
+            COUNT(CASE WHEN cm.is_read = false AND cm.sender_id != $1 THEN 1 END)::int as unread_count,
             (
               SELECT json_build_object(
                 'message_id', message_id,

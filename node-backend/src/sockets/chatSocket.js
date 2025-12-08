@@ -59,19 +59,26 @@ const setupChatSocket = (io) => {
           return;
         }
 
+        // Check who's already in the room before joining
+        const socketsInRoom = await io.in(roomId).fetchSockets();
+        const otherUsersOnline = socketsInRoom
+          .filter(s => s.userId !== socket.userId)
+          .map(s => ({ userId: s.userId, userRole: s.userRole }));
+
         // Join the room
         socket.join(roomId);
         socket.currentChatRoom = roomId;
 
-        console.log(`[Chat] User ${socket.userId} joined room ${roomId}`);
+        console.log(`[Chat] User ${socket.userId} joined room ${roomId}, found ${otherUsersOnline.length} other user(s) online`);
 
         // Get chat room details
         const chatRoom = await Chat.getChatRoom(parseInt(storeId), parseInt(buyerId));
 
-        // Notify user they've joined
+        // Notify user they've joined and who else is online
         socket.emit('chat:joined', {
           roomId,
           chatRoom,
+          otherUsersOnline,
           message: 'Successfully joined chat room'
         });
 

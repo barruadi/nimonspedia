@@ -208,7 +208,9 @@ const ChatList = ({ currentUser, refreshTrigger }) => {
 
       // Increment unread count if message is not from current user
       if (message.sender_id !== currentUser?.user_id) {
-        room.unread_count = (room.unread_count || 0) + 1;
+        // Ensure unread_count is a number by parsing it
+        const currentCount = parseInt(room.unread_count) || 0;
+        room.unread_count = currentCount + 1;
       }
 
       // Remove from current position and add to top

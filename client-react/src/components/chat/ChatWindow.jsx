@@ -39,6 +39,7 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
       setHasMore(true);
       setLoading(true);
       setTyping(false);
+      setOtherUserOnline(false);
 
       // Fetch chat data
       fetchChatRoom();
@@ -61,7 +62,7 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
 
   useEffect(() => {
     console.log('[ChatWindow] Messages state updated:', messages.length, 'messages');
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages]);
 
   const fetchChatRoom = async () => {
@@ -185,26 +186,42 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
 
     socket.on('chat:joined', (data) => {
       console.log('[Chat] Joined room:', data);
+
       // Check if other user is already in the room
-      // This would require backend to send room participants
+      if (data.otherUsersOnline && data.otherUsersOnline.length > 0) {
+        const isOtherUserOnline = data.otherUsersOnline.some(user => user.userId !== currentUser.user_id);
+        if (isOtherUserOnline) {
+          console.log('[Chat] Other user is already online');
+          setOtherUserOnline(true);
+        }
+      }
     });
 
     socket.on('chat:user-joined', (data) => {
-      console.log('[Chat] User joined:', data);
+      console.log('[Chat] User joined:', data, 'Current user:', currentUser.user_id);
       if (data.userId !== currentUser.user_id) {
+        console.log('[Chat] Setting other user as ONLINE');
         setOtherUserOnline(true);
       }
     });
 
     socket.on('chat:user-left', (data) => {
-      console.log('[Chat] User left:', data);
+      console.log('[Chat] User left:', data, 'Current user:', currentUser.user_id);
       if (data.userId !== currentUser.user_id) {
+        console.log('[Chat] Setting other user as OFFLINE');
         setOtherUserOnline(false);
       }
     });
 
     socket.on('chat:new-message', (message) => {
       console.log('[Chat] New message:', message);
+
+      // Check if message belongs to the current chat room
+      const isCurrentChat = message.store_id === parseInt(storeId) && message.buyer_id === parseInt(buyerId);
+      if (!isCurrentChat) {
+        console.log('[Chat] Message is for a different chat room, ignoring in current window');
+        return;
+      }
 
       // Deduplicate: check if message already exists
       setMessages(prev => {
@@ -283,7 +300,14 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
         return;
       }
 
+      // Only update if SOMEONE ELSE read our messages, not if we read them ourselves
+      if (data.readBy === currentUser.user_id) {
+        console.log('[Chat] Ignoring read event - we read our own messages');
+        return;
+      }
+
       // Update message read status for messages from current user
+      // (The other user has now read our messages)
       setMessages(prev =>
         prev.map(msg =>
           msg.sender_id === currentUser.user_id ? { ...msg, is_read: true } : msg
