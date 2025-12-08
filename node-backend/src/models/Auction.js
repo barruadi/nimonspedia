@@ -92,8 +92,10 @@ class Auction {
           a.end_time,
           a.status,
           a.winner_id,
+          a.cancellation_reason,
           p.name as product_name,
           p.image_path,
+          p.description as product_description,
           s.store_id,
           s.store_name,
           s.owner_id as seller_id,
@@ -116,7 +118,9 @@ class Auction {
         status: row.status,
         winner_id: row.winner_id,
         winner_name: row.winner_name,
-        seller_id: row.seller_id
+        seller_id: row.seller_id,
+        cancellation_reason: row.cancellation_reason,
+        product_description_length: row.product_description?.length
       });
 
       return row;
@@ -539,6 +543,69 @@ class Auction {
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Error in Auction.delete:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async cancel(auctionId, cancellationReason) {
+    const pool = this.getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Get auction details before cancelling
+      const auctionCheck = await client.query(
+        'SELECT auction_id, status, product_id, quantity FROM auctions WHERE auction_id = $1',
+        [auctionId]
+      );
+
+      if (auctionCheck.rows.length === 0) {
+        throw new Error('Auction not found');
+      }
+
+      const auction = auctionCheck.rows[0];
+
+      console.log('[Auction.cancel] Starting cancel for auction', auctionId, 'with status:', auction.status);
+
+      // Update auction status to cancelled with reason
+      const cancelQuery = `
+        UPDATE auctions
+        SET status = 'cancelled', cancellation_reason = $2
+        WHERE auction_id = $1
+        RETURNING auction_id, status, cancellation_reason
+      `;
+
+      const result = await client.query(cancelQuery, [auctionId, cancellationReason.trim()]);
+
+      if (result.rows.length === 0) {
+        throw new Error('Failed to cancel auction');
+      }
+
+      // Refund stock to product
+      const refundStockQuery = `
+        UPDATE products 
+        SET stock = stock + $1 
+        WHERE product_id = $2
+      `;
+      await client.query(refundStockQuery, [auction.quantity, auction.product_id]);
+
+      await client.query('COMMIT');
+
+      console.log('[Auction.cancel] Auction cancelled successfully with reason:', cancellationReason);
+
+      return {
+        success: true,
+        message: 'Auction cancelled successfully',
+        auction_id: result.rows[0].auction_id,
+        status: result.rows[0].status,
+        cancellation_reason: result.rows[0].cancellation_reason
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error in Auction.cancel:', error);
       throw error;
     } finally {
       client.release();

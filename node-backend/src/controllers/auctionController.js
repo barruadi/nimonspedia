@@ -127,12 +127,14 @@ class AuctionController {
             status: auction.status,
             winner_id: auction.winner_id,
             winner_name: auction.winner_name || null,
-            seller_id: parseInt(auction.seller_id)
+            seller_id: parseInt(auction.seller_id),
+            cancellation_reason: auction.cancellation_reason || null
           },
           product: {
             product_id: auction.product_id,
             name: auction.product_name,
-            image_path: auction.image_path
+            image_path: auction.image_path,
+            description: auction.product_description || null
           },
           store: {
             store_id: auction.store_id,
@@ -533,6 +535,7 @@ class AuctionController {
     try {
       const auctionId = parseInt(req.params.id);
       const sellerId = req.userId; // From auth middleware
+      const { cancellation_reason } = req.body;
 
       // Validate auction ID
       if (!auctionId || isNaN(auctionId)) {
@@ -547,6 +550,14 @@ class AuctionController {
         return res.status(401).json({
           ok: false,
           error: 'Unauthorized'
+        });
+      }
+
+      // Validate cancellation reason is provided
+      if (!cancellation_reason || !cancellation_reason.trim()) {
+        return res.status(400).json({
+          ok: false,
+          error: 'Cancellation reason is required'
         });
       }
 
@@ -585,8 +596,8 @@ class AuctionController {
         });
       }
 
-      // Cancel the auction
-      const result = await Auction.delete(auctionId);
+      // Cancel the auction with reason
+      const result = await Auction.cancel(auctionId, cancellation_reason);
 
       // Emit Socket.IO event to notify all connected clients about cancelled auction
       if (global.ioInstance) {
@@ -594,6 +605,7 @@ class AuctionController {
         global.ioInstance.to(`auction-${auctionId}`).emit('auction:cancelled', {
           auction_id: auctionId,
           status: 'cancelled',
+          cancellation_reason: cancellation_reason.trim(),
           timestamp: new Date().toISOString()
         });
       }
@@ -602,7 +614,7 @@ class AuctionController {
         ok: true,
         data: {
           auction_id: auctionId,
-          message: result.message
+          message: 'Auction cancelled successfully'
         }
       });
 

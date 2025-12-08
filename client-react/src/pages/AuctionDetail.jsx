@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import './AuctionDetail.css';
@@ -8,6 +8,7 @@ const API_BASE_URL = 'http://localhost/api/node';
 const AuctionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const descriptionRef = useRef(null);
   const [authData, setAuthData] = useState(null);
   const { socket, connected } = useSocket(authData);
   
@@ -36,8 +37,22 @@ const AuctionDetail = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelAction, setCancelAction] = useState('cancel'); // 'cancel' or 'stop'
+  const [cancellationReason, setCancellationReason] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
   const [timeSyncOffset, setTimeSyncOffset] = useState(0); // Offset antara server time dan client time (ms)
+  const [displayedBidsCount, setDisplayedBidsCount] = useState(10); // Load more for bids
+
+  // Load Quill CSS for rich text display
+  useEffect(() => {
+    // Check if Quill CSS is already loaded
+    if (!document.querySelector('link[href*="quill.css"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.css';
+      document.head.appendChild(link);
+      console.log('[AuctionDetail] Quill CSS loaded');
+    }
+  }, []);
 
   // Disable cache untuk page ini
   useEffect(() => {
@@ -202,7 +217,8 @@ const AuctionDetail = () => {
           product_description: responseData.product.description,
           image_path: responseData.product.image_path,
           store_id: responseData.store.store_id,
-          store_name: responseData.store.store_name
+          store_name: responseData.store.store_name,
+          cancellation_reason: responseData.auction.cancellation_reason || null
         };
 
         console.log('[AuctionDetail] Winner data from API:', {
@@ -509,6 +525,13 @@ const AuctionDetail = () => {
     try {
       setCancelLoading(true);
       
+      // Validate reason for cancel action
+      if (action === 'cancel' && !cancellationReason.trim()) {
+        alert('Silakan masukkan alasan pembatalan');
+        setCancelLoading(false);
+        return;
+      }
+      
       const endpoint = action === 'stop' 
         ? `${API_BASE_URL}/auction/${auction.auction_id}/stop`
         : `${API_BASE_URL}/auction/${auction.auction_id}/cancel`;
@@ -519,7 +542,8 @@ const AuctionDetail = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: currentUser.user_id
+          user_id: currentUser.user_id,
+          ...(action === 'cancel' && { cancellation_reason: cancellationReason.trim() })
         })
       });
 
@@ -538,10 +562,12 @@ const AuctionDetail = () => {
         ...prev,
         status: action === 'stop' ? 'ended' : 'cancelled',
         winner_id: data.data?.winner_id || null,
-        winner_name: data.data?.winner_name || null
+        winner_name: data.data?.winner_name || null,
+        ...(action === 'cancel' && { cancellation_reason: cancellationReason.trim() })
       }));
 
       setShowCancelModal(false);
+      setCancellationReason('');
       alert(`Lelang berhasil di${action === 'stop' ? 'hentikan' : 'batalkan'}!`);
 
     } catch (err) {
@@ -657,7 +683,7 @@ const AuctionDetail = () => {
       )}
 
       <div className="detail-container">
-        {/* Left: Image Section */}
+        {/* Left: Image + Description Section */}
         <div className="image-section">
           <div className="image-wrapper">
             <img 
@@ -669,6 +695,22 @@ const AuctionDetail = () => {
               {auction.status === 'active' ? 'ACTIVE' : auction.status === 'scheduled' ? 'SCHEDULED' : auction.status === 'ended' ? 'ENDED' : 'CANCELLED'}
             </span>
           </div>
+
+          {/* Product Description Below Image */}
+          {auction.product_description && (
+            <>
+              {console.log('[AuctionDetail] Rendering description with content:', {
+                hasDescription: !!auction.product_description,
+                descriptionLength: auction.product_description?.length,
+                firstChars: auction.product_description?.substring(0, 100)
+              })}
+              <div 
+                ref={descriptionRef}
+                className="product-description ql-editor"
+                dangerouslySetInnerHTML={{ __html: auction.product_description }}
+              />
+            </>
+          )}
         </div>
 
         {/* Right: Detail Section */}
@@ -676,13 +718,23 @@ const AuctionDetail = () => {
           {/* Product Info */}
           <div className="product-info">
             <h1>{auction.product_name}</h1>
-            {auction.product_description && (
-              <p className="product-description">{auction.product_description}</p>
-            )}
-            <p className="store-info">
-              <span className="label">Toko:</span>
-              <span className="value">{auction.store_name}</span>
-            </p>
+            <div className="product-meta-info">
+              <p className="quantity-info">
+                <span className="label">Jumlah Dilelang:</span>
+                <span className="value">{auction.quantity} pcs</span>
+              </p>
+              <p className="store-info">
+                <span className="label">Toko:</span>
+                <a 
+                  href={`http://localhost/store/${auction.store_id}`}
+                  className="store-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {auction.store_name}
+                </a>
+              </p>
+            </div>
           </div>
 
           {/* Price Info */}
@@ -788,7 +840,10 @@ const AuctionDetail = () => {
 
               {auction.status === 'cancelled' && (
                 <div className="alert alert-error">
-                  Lelang telah dibatalkan oleh penjual
+                  <p><strong>Lelang telah dibatalkan</strong></p>
+                  {auction.cancellation_reason && (
+                    <p className="cancellation-reason">Alasan: {auction.cancellation_reason}</p>
+                  )}
                 </div>
               )}
             </>
@@ -874,7 +929,22 @@ const AuctionDetail = () => {
           <div className="modal-content">
             <h3>Konfirmasi {cancelAction === 'cancel' ? 'Pembatalan' : 'Penghentian'} Lelang</h3>
             {cancelAction === 'cancel' && (
-              <p>Apakah Anda yakin ingin <strong>MEMBATALKAN</strong> lelang ini? Tindakan ini tidak dapat dibatalkan.</p>
+              <>
+                <p>Apakah Anda yakin ingin <strong>MEMBATALKAN</strong> lelang ini? Tindakan ini tidak dapat dibatalkan.</p>
+                <div className="modal-form-group">
+                  <label htmlFor="cancel-reason">Alasan Pembatalan *</label>
+                  <textarea
+                    id="cancel-reason"
+                    className="modal-textarea"
+                    placeholder="Jelaskan alasan pembatalan..."
+                    value={cancellationReason}
+                    onChange={(e) => setCancellationReason(e.target.value)}
+                    maxLength={500}
+                    rows={4}
+                  />
+                  <span className="char-count">{cancellationReason.length}/500</span>
+                </div>
+              </>
             )}
             {cancelAction === 'stop' && (
               <p>Apakah Anda yakin ingin <strong>MENGHENTIKAN</strong> lelang ini sekarang? Penawar tertinggi saat ini akan menjadi pemenang.</p>
@@ -882,7 +952,10 @@ const AuctionDetail = () => {
             <div className="modal-actions">
               <button 
                 className="btn btn-secondary"
-                onClick={() => setShowCancelModal(false)}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason('');
+                }}
                 disabled={cancelLoading}
               >
                 Batal
@@ -890,7 +963,7 @@ const AuctionDetail = () => {
               <button 
                 className={`btn ${cancelAction === 'cancel' ? 'btn-danger' : 'btn-warning'}`}
                 onClick={() => handleStopAuction(cancelAction)}
-                disabled={cancelLoading}
+                disabled={cancelLoading || (cancelAction === 'cancel' && !cancellationReason.trim())}
               >
                 {cancelLoading ? 'Memproses...' : (cancelAction === 'cancel' ? 'Batalkan' : 'Hentikan')}
               </button>
@@ -904,33 +977,45 @@ const AuctionDetail = () => {
         <h2>Riwayat Penawaran - {new Set(bids.map(b => b.bidder_id)).size} Penawar</h2>
         
         {bids.length > 0 ? (
-          <div className="bids-container">
-            {bids.map((bid, index) => (
-              <div 
-                key={`${bid.bid_id}-${index}`}
-                className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''} ${index === 0 ? 'highest-bid' : ''}`}
-              >
-                <div className="bid-rank">#{index + 1}</div>
-                <div className="bid-content">
-                  <div className="bid-top">
-                    <span className="bidder-name">
-                      {bid.bidder_id === currentUser?.user_id ? 'Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
-                    </span>
-                    <span className="bid-time">
-                      {new Date(bid.bid_time).toLocaleString('id-ID', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                      })}
-                    </span>
+          <>
+            <div className="bids-container">
+              {bids.slice(0, displayedBidsCount).map((bid, index) => (
+                <div 
+                  key={`${bid.bid_id}-${index}`}
+                  className={`bid-card ${bid.bidder_id === currentUser?.user_id ? 'own-bid' : ''} ${index === 0 ? 'highest-bid' : ''}`}
+                >
+                  <div className="bid-rank">#{index + 1}</div>
+                  <div className="bid-content">
+                    <div className="bid-top">
+                      <span className="bidder-name">
+                        {bid.bidder_id === currentUser?.user_id ? 'Anda' : bid.bidder_name || `Penawar ${bid.bidder_id}`}
+                      </span>
+                      <span className="bid-time">
+                        {new Date(bid.bid_time).toLocaleString('id-ID', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <span className="bid-amount">{formatPrice(bid.bid_amount)}</span>
                   </div>
-                  <span className="bid-amount">{formatPrice(bid.bid_amount)}</span>
                 </div>
+              ))}
+            </div>
+            {displayedBidsCount < bids.length && (
+              <div className="load-more-container">
+                <button 
+                  className="btn btn-secondary load-more-btn"
+                  onClick={() => setDisplayedBidsCount(prev => prev + 10)}
+                >
+                  Muat {Math.min(10, bids.length - displayedBidsCount)} Penawaran Sebelumnya
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="no-bids-container">
             <p>Belum ada penawaran</p>

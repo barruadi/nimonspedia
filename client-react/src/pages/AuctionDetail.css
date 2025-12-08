@@ -86,8 +86,10 @@
 /* Image Section */
 .image-section {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: flex-start;
+  align-items: stretch;
 }
 
 .image-wrapper {
@@ -96,6 +98,7 @@
   background: #f5f5f5;
   border-radius: 8px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .image-wrapper img {
@@ -155,7 +158,41 @@
   font-weight: 500;
 }
 
-.store-info .value {
+.store-info .value,
+.store-link {
+  font-weight: 600;
+  color: #05AA5B;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.store-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.product-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.quantity-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.quantity-info .label {
+  font-weight: 500;
+}
+
+.quantity-info .value {
   font-weight: 600;
   color: #333;
 }
@@ -324,6 +361,20 @@
   border: 1px solid #ef5350;
 }
 
+.alert-error p {
+  margin: 0;
+}
+
+.alert-error p:first-child {
+  margin-bottom: 8px;
+}
+
+.cancellation-reason {
+  font-size: 13px;
+  color: #d32f2f;
+  font-weight: normal;
+}
+
 .alert-success {
   background: #e8f5e9;
   color: #05AA5B;
@@ -448,10 +499,18 @@
   margin-top: 8px;
 }
 
+/* Load More Container */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 /* Load More Button */
 .load-more-btn {
   display: block;
   width: 100%;
+  max-width: 400px;
   padding: 12px;
   background: #f5f5f5;
   border: 1px solid #ddd;
@@ -461,7 +520,6 @@
   color: #333;
   cursor: pointer;
   transition: all 0.3s;
-  margin-top: 16px;
 }
 
 .load-more-btn:hover {
@@ -569,6 +627,42 @@
 
 .btn-warning:hover:not(:disabled) {
   background: #f57c00;
+}
+
+/* Modal Form Elements */
+.modal-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.modal-form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.modal-textarea {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  color: #333;
+}
+
+.modal-textarea:focus {
+  outline: none;
+  border-color: #05AA5B;
+  box-shadow: 0 0 0 3px rgba(5, 170, 91, 0.1);
+}
+
+.char-count {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
 }
 
 /* New Auction Components */
@@ -994,12 +1088,165 @@
 
 /* Product Description */
 .product-description {
-  margin: 8px 0 0 0;
+  margin: 0;
   font-size: 14px;
+  color: #555;
+  line-height: 1.8;
+  max-height: none;
+  overflow-y: visible;
+  padding: 16px;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Quill editor base styling override */
+.product-description.ql-editor {
+  padding: 16px;
+  font-family: inherit;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  max-height: none;
+}
+
+/* Rich text content styling via Quill classes */
+.product-description p {
+  margin: 0 0 12px 0;
+}
+
+.product-description p:last-child {
+  margin-bottom: 0;
+}
+
+.product-description h1 {
+  font-size: 24px;
+  margin: 16px 0 8px 0;
+  color: #333;
+  font-weight: 700;
+}
+
+.product-description h2 {
+  font-size: 20px;
+  margin: 14px 0 8px 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.product-description h3 {
+  font-size: 18px;
+  margin: 12px 0 6px 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.product-description h4,
+.product-description h5,
+.product-description h6 {
+  margin: 10px 0 4px 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.product-description ul,
+.product-description ol {
+  margin: 8px 0 8px 20px;
+}
+
+.product-description li {
+  margin: 4px 0;
+}
+
+.product-description strong,
+.product-description b {
+  color: #333;
+  font-weight: 700;
+}
+
+.product-description em,
+.product-description i {
+  font-style: italic;
+}
+
+.product-description a {
+  color: #05AA5B;
+  text-decoration: underline;
+}
+
+.product-description a:hover {
+  opacity: 0.8;
+}
+
+.product-description blockquote {
+  margin: 12px 0;
+  padding: 12px 16px;
+  background: #fff;
+  border-left: 3px solid #05AA5B;
   color: #666;
-  line-height: 1.6;
-  max-height: 120px;
-  overflow-y: auto;
+}
+
+.product-description code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.product-description pre {
+  background: #f0f0f0;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.product-description table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.product-description th,
+.product-description td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.product-description th {
+  background: #f0f0f0;
+  font-weight: 600;
+}
+
+/* Quill specific classes */
+.product-description .ql-font-serif {
+  font-family: Georgia, serif;
+}
+
+.product-description .ql-font-monospace {
+  font-family: 'Courier New', monospace;
+}
+
+.product-description .ql-size-large {
+  font-size: 1.5em;
+}
+
+.product-description .ql-size-huge {
+  font-size: 2.5em;
+}
+
+.product-description .ql-color-red {
+  color: #e74c3c;
+}
+
+.product-description .ql-color-blue {
+  color: #3498db;
+}
+
+.product-description .ql-color-green {
+  color: #2ecc71;
 }
 
 /* Responsive */
