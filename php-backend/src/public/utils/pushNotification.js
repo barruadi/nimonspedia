@@ -57,15 +57,20 @@ export async function registerServiceWorker() {
     }
 
     try {
-        let registration = await navigator.serviceWorker.getRegistration('/service-worker.js');
+        // Get existing registration (should be registered by serviceWorkerManager)
+        let registration = await navigator.serviceWorker.getRegistration();
         
         if (!registration) {
-            registration = await navigator.serviceWorker.register('/service-worker.js', {
-                scope: '/'
-            });
-            console.log('Service Worker registered successfully:', registration);
+            // If not registered yet, import and use the manager
+            const { registerServiceWorker } = await import('/utils/serviceWorkerManager.js');
+            registration = await registerServiceWorker();
+            console.log('Service Worker registered via manager:', registration);
         } else {
             console.log('Service Worker already registered:', registration);
+        }
+        
+        if (!registration) {
+            throw new Error('Failed to get service worker registration');
         }
         
         const timeoutPromise = new Promise((_, reject) => {
@@ -223,7 +228,7 @@ export async function isUserSubscribed() {
     }
 
     try {
-        const registration = await navigator.serviceWorker.getRegistration('/service-worker.js');
+        const registration = await navigator.serviceWorker.getRegistration();
         
         if (!registration) {
             console.warn('Service worker not registered yet');

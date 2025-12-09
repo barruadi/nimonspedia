@@ -138,10 +138,11 @@ import {
     }
 
     try {
-      if ('serviceWorker' in navigator) {
-        await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
-        console.log('Service worker registered in Profile.js');
-      }
+      // Use the centralized service worker manager
+      const { registerServiceWorker } = await import('/utils/serviceWorkerManager.js');
+      await registerServiceWorker();
+      console.log('Service worker registered in Profile.js');
+      
       isPushSubscribed = await isUserSubscribed();
       console.log('Push subscription status:', isPushSubscribed);
     } catch (subErr) {

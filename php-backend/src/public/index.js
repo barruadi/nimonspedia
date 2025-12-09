@@ -1,5 +1,29 @@
 import { api } from '/utils/api.js';
 import '/components/Navbar.js';
+import { registerServiceWorker, clearAllCaches, getCacheStats } from '/utils/serviceWorkerManager.js';
+
+// Initialize service worker on page load
+(async () => {
+  try {
+    // Check cache stats
+    const stats = await getCacheStats();
+    console.log('[App] Cache stats:', stats);
+    
+    // If cache is getting large, clear it
+    if (stats.caches) {
+      const totalEntries = stats.caches.reduce((sum, cache) => sum + cache.entryCount, 0);
+      if (totalEntries > 100) {
+        console.warn('[App] Cache entries too large, clearing...');
+        await clearAllCaches();
+      }
+    }
+    
+    // Register service worker
+    await registerServiceWorker();
+  } catch (error) {
+    console.error('[App] Service worker initialization failed:', error);
+  }
+})();
 
 const routes = {
   '/': {
