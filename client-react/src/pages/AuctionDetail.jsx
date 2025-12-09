@@ -355,6 +355,94 @@ const AuctionDetail = () => {
     return () => clearInterval(timer);
   }, [auction, timeSyncOffset]);
 
+  // Auto-sync with server every 30 seconds to correct drift
+  useEffect(() => {
+    if (!auction || auction.status !== 'active' || !auction.end_time) return;
+
+    const autoSyncWithServer = async () => {
+      try {
+        console.log('[AuctionDetail] Auto-sync: Fetching auction data from server...');
+        
+        const url = `${API_BASE_URL}/auction/${id}${currentUser?.user_id ? `?user_id=${currentUser.user_id}` : ''}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          console.warn('[AuctionDetail] Auto-sync: Failed to fetch auction:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!data.ok || !data.data) {
+          console.warn('[AuctionDetail] Auto-sync: Invalid response structure');
+          return;
+        }
+
+        const responseData = data.data;
+        
+        // Calculate time sync offset from server_time if available
+        if (responseData.server_time) {
+          const serverTime = new Date(responseData.server_time).getTime();
+          const clientTime = Date.now();
+          const newOffset = serverTime - clientTime;
+          console.log(`[AuctionDetail] Auto-sync: Correcting drift - old offset=${timeSyncOffset}ms, new offset=${newOffset}ms`);
+          setTimeSyncOffset(newOffset);
+        }
+
+        // Update auction data with latest from server
+        const minIncrement = responseData.auction.min_increment || responseData.auction.minimum_increment || 1000;
+        const updatedAuction = {
+          auction_id: responseData.auction.auction_id,
+          product_id: responseData.auction.product_id,
+          starting_price: responseData.auction.starting_price,
+          current_price: responseData.auction.current_price,
+          min_increment: minIncrement,
+          quantity: responseData.auction.quantity,
+          start_time: responseData.auction.start_time,
+          end_time: responseData.auction.end_time,
+          status: responseData.auction.status,
+          seller_id: responseData.auction.seller_id,
+          winner_id: responseData.auction.winner_id,
+          winner_name: responseData.auction.winner_name,
+          product_name: responseData.product.name,
+          product_description: responseData.product.description,
+          image_path: responseData.product.image_path,
+          store_id: responseData.store.store_id,
+          store_name: responseData.store.store_name,
+          cancellation_reason: responseData.auction.cancellation_reason || null
+        };
+
+        // Only update if significant changes detected
+        if (
+          updatedAuction.status !== auction.status ||
+          updatedAuction.current_price !== auction.current_price ||
+          updatedAuction.end_time !== auction.end_time
+        ) {
+          console.log('[AuctionDetail] Auto-sync: Significant changes detected, updating auction state');
+          setAuction(updatedAuction);
+        } else {
+          console.log('[AuctionDetail] Auto-sync: No significant changes, only correcting time offset');
+        }
+
+        // Update bids if available
+        if (responseData.bid_history && Array.isArray(responseData.bid_history)) {
+          if (responseData.bid_history.length > bids.length) {
+            console.log('[AuctionDetail] Auto-sync: New bids detected, updating bid history');
+            setBids(responseData.bid_history);
+          }
+        }
+
+      } catch (err) {
+        console.error('[AuctionDetail] Auto-sync: Error syncing with server:', err);
+      }
+    };
+
+    // Perform auto-sync every 30 seconds
+    const autoSyncInterval = setInterval(autoSyncWithServer, 30000);
+
+    return () => clearInterval(autoSyncInterval);
+  }, [auction, id, currentUser?.user_id, bids.length]);
+
   // Socket setup - join room and listen for updates
   useEffect(() => {
     if (!socket || !auction || !currentUser) return;
