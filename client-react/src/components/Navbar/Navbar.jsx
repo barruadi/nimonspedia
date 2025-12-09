@@ -215,10 +215,10 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
                 {flags.auction_enabled?.enabled && (
                   <a
                     className="nav-link hide-mobile"
-                    href="/auctions"
+                    href="/auction-history"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleNavClick('/auctions');
+                      handleNavClick('/auction-history');
                     }}
                   >
                     Lelang
@@ -388,10 +388,10 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
               {flags.auction_enabled?.enabled && (
                 <a
                   className="mobile-menu-item"
-                  href="/auctions"
+                  href="/auction-history"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleNavClick('/auctions');
+                    handleNavClick('/auction-history');
                   }}
                 >
                   Lelang

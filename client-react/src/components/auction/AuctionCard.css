@@ -148,6 +148,43 @@
   transform: scale(0.98);
 }
 
+/* Button Variants for Seller View */
+.detail-btn-primary {
+  background: #05AA5B;
+  color: white;
+  border: none;
+}
+
+.detail-btn-primary:hover {
+  background: #048a4a;
+}
+
+.detail-btn-outline {
+  background: transparent;
+  color: #05AA5B;
+  border: 2px solid #05AA5B;
+}
+
+.detail-btn-outline:hover {
+  background: rgba(5, 170, 91, 0.1);
+}
+
+.detail-btn-gray {
+  background: #E8E8E8;
+  color: #666;
+  border: none;
+  cursor: default;
+}
+
+.detail-btn-gray:hover {
+  background: #E8E8E8;
+}
+
+.detail-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .product-name {
     font-size: 13px;

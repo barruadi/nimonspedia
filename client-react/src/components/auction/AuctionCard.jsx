@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './AuctionCard.css';
 
-const AuctionCard = ({ auction, onViewDetail }) => {
+const AuctionCard = ({ auction, onViewDetail, isSellerView = false }) => {
   const [timeLeft, setTimeLeft] = useState('');
+  const navigate = useNavigate();
   const isActive = auction.status === 'active';
   const isScheduled = auction.status === 'scheduled';
 
@@ -115,12 +117,52 @@ const AuctionCard = ({ auction, onViewDetail }) => {
           </div>
         </div>
 
-        <button 
-          className="detail-btn"
-          onClick={() => onViewDetail(auction.auction_id)}
-        >
-          Lihat Detail
-        </button>
+        {/* SELLER VIEW - Different buttons per status */}
+        {isSellerView ? (
+          <>
+            {isScheduled && (
+              <button 
+                className="detail-btn detail-btn-gray"
+                onClick={() => navigate(`/auction/${auction.auction_id}`)}
+              >
+                Detail
+              </button>
+            )}
+            {isActive && (
+              <button 
+                className="detail-btn detail-btn-outline"
+                onClick={() => navigate(`/auction/${auction.auction_id}`)}
+              >
+                Pantau Live
+              </button>
+            )}
+            {auction.status === 'ended' && (
+              <button 
+                className="detail-btn detail-btn-primary"
+                onClick={() => navigate(`/auction/${auction.auction_id}`)}
+              >
+                Lihat Pemenang
+              </button>
+            )}
+            {auction.status === 'cancelled' && (
+              <button 
+                className="detail-btn detail-btn-gray"
+                onClick={() => navigate(`/auction/${auction.auction_id}`)}
+                disabled
+              >
+                Dibatalkan
+              </button>
+            )}
+          </>
+        ) : (
+          /* BUYER VIEW - Standard detail button */
+          <button 
+            className="detail-btn"
+            onClick={() => onViewDetail(auction.auction_id)}
+          >
+            Lihat Detail
+          </button>
+        )}
       </div>
     </div>
   );
