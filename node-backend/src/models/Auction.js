@@ -92,8 +92,10 @@ class Auction {
           a.end_time,
           a.status,
           a.winner_id,
+          a.cancellation_reason,
           p.name as product_name,
           p.image_path,
+          p.description as product_description,
           s.store_id,
           s.store_name,
           s.owner_id as seller_id,
@@ -116,7 +118,9 @@ class Auction {
         status: row.status,
         winner_id: row.winner_id,
         winner_name: row.winner_name,
-        seller_id: row.seller_id
+        seller_id: row.seller_id,
+        cancellation_reason: row.cancellation_reason,
+        product_description_length: row.product_description?.length
       });
 
       return row;
@@ -545,6 +549,69 @@ class Auction {
     }
   }
 
+  static async cancel(auctionId, cancellationReason) {
+    const pool = this.getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Get auction details before cancelling
+      const auctionCheck = await client.query(
+        'SELECT auction_id, status, product_id, quantity FROM auctions WHERE auction_id = $1',
+        [auctionId]
+      );
+
+      if (auctionCheck.rows.length === 0) {
+        throw new Error('Auction not found');
+      }
+
+      const auction = auctionCheck.rows[0];
+
+      console.log('[Auction.cancel] Starting cancel for auction', auctionId, 'with status:', auction.status);
+
+      // Update auction status to cancelled with reason
+      const cancelQuery = `
+        UPDATE auctions
+        SET status = 'cancelled', cancellation_reason = $2
+        WHERE auction_id = $1
+        RETURNING auction_id, status, cancellation_reason
+      `;
+
+      const result = await client.query(cancelQuery, [auctionId, cancellationReason.trim()]);
+
+      if (result.rows.length === 0) {
+        throw new Error('Failed to cancel auction');
+      }
+
+      // Refund stock to product
+      const refundStockQuery = `
+        UPDATE products 
+        SET stock = stock + $1 
+        WHERE product_id = $2
+      `;
+      await client.query(refundStockQuery, [auction.quantity, auction.product_id]);
+
+      await client.query('COMMIT');
+
+      console.log('[Auction.cancel] Auction cancelled successfully with reason:', cancellationReason);
+
+      return {
+        success: true,
+        message: 'Auction cancelled successfully',
+        auction_id: result.rows[0].auction_id,
+        status: result.rows[0].status,
+        cancellation_reason: result.rows[0].cancellation_reason
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error in Auction.cancel:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   static async placeBid(auctionId, bidData) {
     const pool = this.getPool();
     const client = await pool.connect();
@@ -765,7 +832,7 @@ class Auction {
 
       // Check if auction exists
       const auctionCheck = await client.query(
-        'SELECT auction_id, status, winner_id, product_id FROM auctions WHERE auction_id = $1',
+        'SELECT auction_id, status, winner_id, product_id, current_price, quantity FROM auctions WHERE auction_id = $1',
         [auctionId]
       );
 
@@ -804,6 +871,95 @@ class Auction {
       const highestBidResult = await client.query(highestBidQuery, [auctionId]);
       const winnerId = highestBidResult.rows.length > 0 ? highestBidResult.rows[0].bidder_id : null;
 
+      let orderId = null;
+
+      // If there's a winner, create order automatically
+      if (winnerId) {
+        const product = productCheck.rows[0];
+        const finalPrice = auction.current_price;
+
+        // CREATE ORDER AUTOMATICALLY
+        const orderQuery = `
+          INSERT INTO orders (buyer_id, store_id, status, total_amount, created_at)
+          VALUES ($1, $2, 'approved', $3, NOW())
+          RETURNING order_id, status, created_at
+        `;
+        console.log(`[Auction Model] Creating order for stopped auction: buyer=${winnerId}, store=${product.store_id}, amount=${finalPrice}`);
+        const orderResult = await client.query(orderQuery, [winnerId, product.store_id, finalPrice]);
+        
+        if (!orderResult.rows[0]) {
+          throw new Error('Order insert returned no rows');
+        }
+        
+        orderId = orderResult.rows[0].order_id;
+
+        // Insert order item
+        const orderItemQuery = `
+          INSERT INTO order_items (order_id, product_id, price_at, qty)
+          VALUES ($1, $2, $3, $4)
+        `;
+        await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice, auction.quantity]);
+
+        console.log(`[Auction Model] ✅ Order ${orderId} created for stopped auction ${auctionId}`);
+        console.log(`  - Buyer: ${winnerId}`);
+        console.log(`  - Store: ${product.store_id}`);
+        console.log(`  - Amount: Rp ${finalPrice}`);
+        console.log(`  - Status: approved`);
+      }
+
+      // REFUND NON-WINNING BIDS
+      // Winner: refund all bids EXCEPT the highest (winning) bid
+      // Losers: refund ALL bids
+      
+      if (winnerId) {
+        // Refund winner's previous bids (all except max)
+        const winnerPreviousBidsQuery = `
+          SELECT SUM(bid_amount) as total_refund
+          FROM auction_bids
+          WHERE auction_id = $1 AND bidder_id = $2
+          AND bid_amount != (
+            SELECT MAX(bid_amount) 
+            FROM auction_bids 
+            WHERE auction_id = $1 AND bidder_id = $2
+          )
+        `;
+        const winnerRefundResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
+        const winnerRefundAmount = winnerRefundResult.rows[0]?.total_refund || 0;
+        
+        if (winnerRefundAmount > 0) {
+          const winnerRefundQuery = `
+            UPDATE users 
+            SET balance = balance + $1
+            WHERE user_id = $2
+          `;
+          await client.query(winnerRefundQuery, [winnerRefundAmount, winnerId]);
+          console.log(`[Auction Model] Refunded Rp ${winnerRefundAmount} (previous bids) to winner ${winnerId}`);
+        }
+      }
+      
+      // Refund all losing bidders - ALL their bids
+      const losingBidsQuery = `
+        SELECT bidder_id, SUM(bid_amount) as total_bid_amount
+        FROM auction_bids
+        WHERE auction_id = $1 AND bidder_id != $2
+        GROUP BY bidder_id
+      `;
+      const losingBidsResult = await client.query(losingBidsQuery, [auctionId, winnerId || -1]);
+      
+      if (losingBidsResult.rows.length > 0) {
+        console.log(`[Auction Model] Refunding ${losingBidsResult.rows.length} losing bidders for auction ${auctionId}`);
+        
+        for (const losingBid of losingBidsResult.rows) {
+          const refundQuery = `
+            UPDATE users 
+            SET balance = balance + $1
+            WHERE user_id = $2
+          `;
+          await client.query(refundQuery, [losingBid.total_bid_amount, losingBid.bidder_id]);
+          console.log(`[Auction Model] Refunded Rp ${losingBid.total_bid_amount} (all bids) to losing bidder ${losingBid.bidder_id}`);
+        }
+      }
+
       // Update status to 'ended' and set winner
       const updateQuery = `
         UPDATE auctions
@@ -821,7 +977,8 @@ class Auction {
         message: `Auction ${auctionId} stopped successfully`,
         auction_id: result.rows[0].auction_id,
         status: result.rows[0].status,
-        winner_id: result.rows[0].winner_id
+        winner_id: result.rows[0].winner_id,
+        order_id: orderId
       };
 
     } catch (error) {

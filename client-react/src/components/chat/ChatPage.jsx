@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 import './ChatPage.css';
 
 const ChatPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatListRefreshTrigger, setChatListRefreshTrigger] = useState(0);
@@ -16,6 +18,17 @@ const ChatPage = () => {
   useEffect(() => {
     fetchCurrentUser();
   }, []);
+
+  // Handle store_id query parameter to create/open chat
+  useEffect(() => {
+    const storeId = searchParams.get('store_id');
+    const productId = searchParams.get('product_id');
+
+    if (storeId && currentUser && !loading) {
+      console.log('[ChatPage] Detected store_id in URL, creating/opening chat');
+      createOrOpenChat(parseInt(storeId), productId);
+    }
+  }, [searchParams, currentUser, loading]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -56,6 +69,31 @@ const ChatPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Create or open chat with a store
+  const createOrOpenChat = async (storeId, productId = null) => {
+    try {
+      const response = await fetch(`/api/node/chat/${storeId}/${currentUser.user_id}?user_id=${currentUser.user_id}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      if (data.ok) {
+        console.log('[ChatPage] Chat room ready:', data.data);
+
+        // Navigate to the chat with product_id if provided
+        const chatUrl = `/chat/${storeId}/${currentUser.user_id}${productId ? `?product_id=${productId}` : ''}`;
+        navigate(chatUrl);
+      } else {
+        console.error('[ChatPage] Failed to create/open chat:', data.error);
+      }
+    } catch (error) {
+      console.error('[ChatPage] Error creating/opening chat:', error);
     }
   };
 

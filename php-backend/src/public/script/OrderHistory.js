@@ -202,16 +202,24 @@ function showDetailModal(order) {
   const itemsList = (order.items || [])
     .map(
       (item) => `
-    <div class="order-item">
+    <div class="order-item" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border-bottom: 1px solid #E5E7EB;">
       <img src="${item.image_path || "/images/placeholder.png"}" alt="${escapeHtml(
         item.product_name
-      )}" class="order-item-image">
-      <div class="order-item-details">
-        <div class="name">${escapeHtml(item.product_name)}</div>
-        <div class="qty-price">${item.qty} x ${formatPrice(item.price_at)} = ${formatPrice(
+      )}" class="order-item-image" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+      <div class="order-item-details" style="flex: 1;">
+        <div class="name" style="font-weight: 600; margin-bottom: 0.25rem;">${escapeHtml(item.product_name)}</div>
+        <div class="qty-price" style="color: #6b7280; font-size: 0.875rem;">${item.qty} x ${formatPrice(item.price_at)} = ${formatPrice(
         item.subtotal
       )}</div>
       </div>
+      ${item.show_review_button ? `
+        <button class="btn-review-product"
+                data-order-id="${order.order_id}"
+                data-product-id="${item.product_id}"
+                style="padding: 0.5rem 1rem; background: #28a745; color: white; border: none; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+          Tulis Review
+        </button>
+      ` : ''}
     </div>
   `
     )
@@ -299,6 +307,16 @@ function showDetailModal(order) {
   if (confirmBtn) {
     confirmBtn.addEventListener('click', () => handleConfirmReceived(order.order_id));
   }
+
+  // Add event listeners for review buttons
+  const reviewButtons = detailContent.querySelectorAll('.btn-review-product');
+  reviewButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const orderId = btn.getAttribute('data-order-id');
+      const productId = btn.getAttribute('data-product-id');
+      window.location.href = `/review/product/${productId}?order_id=${orderId}`;
+    });
+  });
 }
 
 async function handleConfirmReceived(orderId) {

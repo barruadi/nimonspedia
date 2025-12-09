@@ -2,7 +2,7 @@
 
 use App\Models\Category;
 use App\Middlewares\{AuthMiddleware, RoleMiddleware};
-use App\Controllers\Seller\{DashboardController, ProductManagementController, OrderManagementController, ExportController};
+use App\Controllers\Seller\{DashboardController, ProductManagementController, OrderManagementController, ExportController, ReviewManagementController};
 
 $auth = AuthMiddleware::requireAuth();
 $roleSeller = RoleMiddleware::allow(['seller']);
@@ -34,7 +34,11 @@ $router->group([
         $deliveryDays = isset($body['delivery_days']) ? (int)$body['delivery_days'] : 0;
         return OrderManagementController::setDeliveryTime($id, $deliveryDays);
     });
-}); 
+
+    // Review management routes
+    $r->post('/reviews/{id}/reply',         fn($req, $id) => ReviewManagementController::replyToReview($req, (int)$id));
+    $r->put('/reviews/{id}/toggle',         fn($req, $id) => ReviewManagementController::toggleVisibility($req, (int)$id));
+});
 
 // Public Endpoint: GET /api/categories returns Category list
 $router->get('/api/categories', function() {

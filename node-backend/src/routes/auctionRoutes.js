@@ -11,19 +11,22 @@ const { requireAuction } = require('../middlewares/featureFlagMiddleware');
 router.get('/auctions', requireAuction(), auctionController.getAllAuctions);
 
 /**
- * Get auction detail (initial load)
+ * Get auction detail (initial load) 
+ * Protected: buyer & seller only (conditional page at frontend)
  */
-router.get('/auction/:id', requireAuction(), auctionController.getAuctionById);
+router.get('/auction/:id', requireAuction(), verifyUser, auctionController.getAuctionById);
 
 /**
  * Get bids for an auction
+ * Protected: buyer & seller only (conditional page at frontend)
  */
-router.get('/auction/:id/bids', requireAuction(), auctionController.getBidHistory);
+router.get('/auction/:id/bids', requireAuction(), verifyUser, auctionController.getBidHistory);
 
 /**
  * Place bid on auction
+ * Protected: buyer & seller (seller validated in controller)
  */
-router.post('/auction/:id/bids', requireAuction(), auctionController.placeBid);
+router.post('/auction/:id/bids', requireAuction(), verifyUser, auctionController.placeBid);
 
 /**
  * Stop auction (seller action - ends with current winner)

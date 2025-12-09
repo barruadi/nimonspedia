@@ -4,6 +4,7 @@ namespace App\Controllers\Buyer;
 
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Review;
 use App\Services\SearchService;
 use App\Core\View;
 use App\Core\Database;
@@ -33,13 +34,23 @@ class ProductController
         $auctionStmt->execute(['product_id' => $productId]);
         $auction = $auctionStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
+        // Get review statistics
+        $reviewStats = Review::getProductStats((int) $productId);
+
+        // Get latest reviews (first 5)
+        $latestReviews = Review::getByProductId((int) $productId, 5, 0);
+
         http_response_code(200);
         return [
             'ok' => true,
             'data' => [
                 'product' => $product,
                 'store' => $store ?? null,
-                'auction' => $auction
+                'auction' => $auction,
+                'reviews' => [
+                    'stats' => $reviewStats,
+                    'latest' => $latestReviews
+                ]
             ]
         ];
     }
