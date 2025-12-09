@@ -89,39 +89,72 @@ class CheckoutController
     public function confirmOrder($req): array
     {
         if (!isset($_SESSION['user'])) { header('Location: /login'); exit; }
-        
+
         $userId = (int)$_SESSION['user']['user_id'];
         $sel    = $_SESSION['checkout_selection'] ?? [];
-    
+
         $snapshot     = Cart::snapshotSelection($sel);
         $total        = (int)($snapshot['summary']['total'] ?? 0);
-        $user_balance = (int)User::getBalance($userId);
-    
-        if ($user_balance < $total) {
-            return ['ok'=>false, 'error'=>'balance not enough'];
-        }
-    
+
         $address = $_POST['address'] ?? null;
-    
+
+        // Create order WITHOUT deducting balance
+        // Payment will be handled by Midtrans payment gateway
         $result = Cart::finalizeOrderFromSelection($userId, $sel, $address);
         if (!$result['ok']) {
             $_SESSION['flash'] = $result['error'] ?? 'Gagal checkout';
             header('Location: /cart'); exit;
         }
-    
+
         unset($_SESSION['checkout_selection']);
-    
-        // Deduct balance
-        User::updateBalance($userId, (int)floor($user_balance - $total));
-    
-        // Collect created order ids for success page
+
+        // Collect created order ids
         $orderIds = array_map(fn($o)=>(int)$o['order_id'], $result['orders'] ?? []);
+
+        // Store order IDs in session for payment page
+        $_SESSION['pending_payment_orders'] = $orderIds;
+
+        // Redirect to payment page instead of success page
+        // The payment page will call Node.js API to create Midtrans payment
         $qs = $orderIds ? implode(',', $orderIds) : '';
-    
-        header('Location: /checkout/success'.($qs ? '?order_id='.$qs : ''));
+        header('Location: /checkout/payment'.($qs ? '?order_id='.$qs : ''));
         exit;
     }
     
+    public function paymentPage(): void {
+        $user = $_SESSION['user'] ?? null;
+        if (!$user) { header('Location: /login'); exit; }
+
+        $ids = isset($_GET['order_id']) ? explode(',', $_GET['order_id']) : [];
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+
+        if (!$ids) { header('Location: /orders'); exit; }
+
+        // Load orders to display
+        $orders = [];
+        $grandTotal = 0;
+        foreach ($ids as $oid) {
+            $o = Order::findByIdWithItems($oid);
+            if (!$o || (int)$o['buyer_id'] !== (int)$user['user_id']) continue;
+            $orders[] = [
+                'order_id'   => $o['order_id'],
+                'store_name' => $o['store_name'] ?? 'Toko',
+                'total'      => $o['total_amount'] ?? 0,
+                'items'      => $o['items'] ?? [],
+            ];
+            $grandTotal += (int)($o['total_amount'] ?? 0);
+        }
+
+        if (!$orders) { header('Location: /orders'); exit; }
+
+        View::render('CheckoutPayment.php', [
+            'user'         => $user,
+            'orders'       => $orders,
+            'total'        => $grandTotal,
+            'first_order_id' => $ids[0] ?? null
+        ]);
+    }
+
     public function successPage(): void {
         $user = $_SESSION['user'] ?? null;
         if (!$user) { header('Location: /login'); exit; }

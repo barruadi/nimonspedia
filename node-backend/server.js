@@ -13,6 +13,7 @@ const adminApp = require('./src/routes/admin');
 const auctionApp = require('./src/routes/auctionRoutes');
 const chatApp = require('./src/routes/chatRoutes');
 const pushApp = require('./src/routes/push');
+const paymentApp = require('./src/routes/paymentRoutes');
 
 // Import socket handlers
 const { setupAuctionSocket, checkAndStartScheduledAuctions } = require('./src/sockets/auctionSocket');
@@ -70,6 +71,7 @@ app.use('/admin', adminApp);
 app.use('/', auctionApp);
 app.use('/', chatApp);
 app.use('/', pushApp);
+app.use('/', paymentApp);
 
 // Create HTTP server for Socket.IO
 const PORT = process.env.PORT || 3000;
