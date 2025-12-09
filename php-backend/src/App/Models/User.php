@@ -197,7 +197,7 @@ class User {
             SET balance = :amount,
                 updated_at = NOW()
             WHERE user_id = :user_id
-            AND (balance + :amount) >= 0
+            AND :amount >= 0
         ");
 
         $stmt->execute([

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSocket } from '../../hooks/useSocket';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
@@ -8,6 +8,7 @@ import './ChatWindow.css';
 const ChatWindow = ({ currentUser, onMessageSent }) => {
   const { storeId, buyerId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Memoize authData to prevent socket reconnections on every render
   const authData = useMemo(() => {
@@ -26,6 +27,7 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [otherUserOnline, setOtherUserOnline] = useState(false);
+  const [productPreviewSent, setProductPreviewSent] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -41,6 +43,7 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
       setLoading(true);
       setTyping(false);
       setOtherUserOnline(false);
+      setProductPreviewSent(false); // Reset product preview sent flag
 
       // Fetch chat data
       fetchChatRoom();
@@ -65,6 +68,51 @@ const ChatWindow = ({ currentUser, onMessageSent }) => {
     console.log('[ChatWindow] Messages state updated:', messages.length, 'messages');
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages]);
+
+  // Auto-send product preview when product_id is in URL
+  useEffect(() => {
+    const productId = searchParams.get('product_id');
+
+    if (productId && socket && connected && !loading && !productPreviewSent && currentUser) {
+      console.log('[ChatWindow] Auto-sending product preview for product:', productId);
+
+      // Fetch product details
+      const sendProductPreview = async () => {
+        try {
+          const response = await fetch(`/api/product/${productId}`, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+          if (data.ok && data.data && data.data.product) {
+            const product = data.data.product;
+
+            // Send product preview message
+            handleSendMessage({
+              messageType: 'item_preview',
+              content: `Product: ${product.name}`,
+              productId: parseInt(productId)
+            });
+
+            setProductPreviewSent(true);
+
+            // Remove product_id from URL after sending
+            searchParams.delete('product_id');
+            setSearchParams(searchParams, { replace: true });
+
+            console.log('[ChatWindow] Product preview sent successfully');
+          }
+        } catch (error) {
+          console.error('[ChatWindow] Failed to send product preview:', error);
+        }
+      };
+
+      sendProductPreview();
+    }
+  }, [socket, connected, loading, productPreviewSent, searchParams, currentUser]);
 
   const fetchChatRoom = async () => {
     if (!currentUser) return;

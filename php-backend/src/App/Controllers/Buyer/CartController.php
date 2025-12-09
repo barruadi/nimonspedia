@@ -96,13 +96,40 @@ class CartController
     public function setQuantity($req): array
     {
         $user_id = $_SESSION['user']['user_id'];
-        
+
         $product_id = (int) $req['body']['product_id'];
         $qty = (int) $req['body']['qty'];
 
+        // Validate quantity is positive
+        if ($qty <= 0) {
+            Cart::remove($user_id, $product_id);
+            $snap = Cart::getSnapshot($user_id);
+            return [
+                'ok' => true,
+                'snap' => $snap
+            ];
+        }
+
+        // Check stock availability before updating
+        $product = Product::findById($product_id);
+        if (!$product) {
+            http_response_code(404);
+            return ['ok' => false, 'error' => 'Produk tidak ditemukan'];
+        }
+
+        $stock = (int)$product['stock'];
+        if ($qty > $stock) {
+            http_response_code(400);
+            return [
+                'ok' => false,
+                'error' => "Stok tidak mencukupi. Stok tersedia: $stock"
+            ];
+        }
+
+        // Update quantity
         Cart::setQuantity($user_id, $product_id, $qty);
-        Cart::syncWithStock($user_id);
-        
+
+        // Return updated cart snapshot
         $snap = Cart::getSnapshot($user_id);
         return [
             'ok' => true,

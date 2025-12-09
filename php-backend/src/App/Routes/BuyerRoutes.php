@@ -4,7 +4,7 @@ use App\Core;
 
 use App\Core\Application;
 use App\Middlewares\{AuthMiddleware, RoleMiddleware};
-use App\Controllers\Buyer\{ProductController, CartController, CheckoutController, StoreController, OrderController};
+use App\Controllers\Buyer\{ProductController, CartController, CheckoutController, StoreController, OrderController, ReviewController};
 
 $auth = AuthMiddleware::requireAuth();
 $prohibitRole = RoleMiddleware::prohibit(['seller']);
@@ -33,4 +33,12 @@ $router->group([
     $r->post('/cart/remove', fn($req) => (new CartController())->removeProduct($req));
     $r->post('/checkout/selection', fn($req) => (new CheckoutController())->saveSelection($req));
     $r->post('/orders/received', fn($req) => (new OrderController())->markAsReceived($req));
+
+    // Review routes
+    $r->post('/reviews', fn($req) => (new ReviewController())->submitReview($req));
+    $r->get('/product/{id}/reviews', fn($req, $id) => (new ReviewController())->getProductReviews($req, (int)$id));
 });
+
+// Review pages (authenticated buyers)
+$router->get('/reviews', fn($req) => (new ReviewController())->showReviewablePage(), [$auth, $roleBuyer]);
+$router->get('/review/product/{id}', fn($req, $id) => (new ReviewController())->showReviewForm($req, (int)$id), [$auth, $roleBuyer]);
