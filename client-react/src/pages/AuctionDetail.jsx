@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar/Navbar';
 import { useSocket } from '../hooks/useSocket';
 import './AuctionDetail.css';
 
@@ -685,7 +686,9 @@ const AuctionDetail = () => {
   });
 
   return (
-    <div className="auction-detail-page">
+    <>
+      <Navbar role={isSeller ? 'seller' : 'buyer'} />
+      <div className="auction-detail-page">
       {isSeller ? (
         <button className="back-btn" onClick={() => window.location.href = 'http://localhost/seller/products'}>← Kembali ke Product Management</button>
       ) : (
@@ -1040,7 +1043,8 @@ const AuctionDetail = () => {
         )}
       </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

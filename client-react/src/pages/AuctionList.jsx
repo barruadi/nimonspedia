@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar/Navbar';
 import AuctionCard from '../components/auction/AuctionCard';
 import { useAuctions } from '../hooks/useAuctions'
 import { useSocket } from '../hooks/useSocket';
@@ -342,7 +343,9 @@ const AuctionList = () => {
   }
 
   return (
-    <div className="auction-list-container">
+    <>
+      <Navbar role="buyer" />
+      <div className="auction-list-container">
       <button className="back-list-btn" onClick={() => navigate(-1)}>← Kembali</button>
       
       <header className="list-header">
@@ -441,7 +444,8 @@ const AuctionList = () => {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
