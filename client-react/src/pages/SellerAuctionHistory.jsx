@@ -71,8 +71,12 @@ const SellerAuctionHistory = () => {
         setLoading(true);
         setError(null);
 
+        // Use query parameter approach since Node backend supports it
         const response = await fetch(
-          `${API_BASE_URL}/auctions?seller_id=${currentUser.user_id}`
+          `${API_BASE_URL}/auctions?seller_id=${currentUser.user_id}`,
+          {
+            credentials: 'include'
+          }
         );
 
         if (!response.ok) {
@@ -218,6 +222,36 @@ const SellerAuctionHistory = () => {
   const handleCreateAuction = () => {
     window.location.href = 'http://localhost/seller/products';
   };
+
+  // Loading state - show loading while fetching user
+  if (loading && !currentUser) {
+    return (
+      <div className="seller-auction-history-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Memuat data lelang...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth check - show message if not authenticated as seller
+  if (!currentUser) {
+    return (
+      <div className="seller-auction-history-page">
+        <div className="error-container">
+          <h2>⛔ Akses Ditolak</h2>
+          <p>Anda harus login sebagai seller untuk mengakses halaman ini</p>
+          <button 
+            onClick={() => window.location.href = 'http://localhost/login'}
+            className="primary-btn"
+          >
+            Kembali ke Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

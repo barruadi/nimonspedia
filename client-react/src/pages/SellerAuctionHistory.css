@@ -156,6 +156,12 @@
   margin: 20px;
 }
 
+.error-container h2 {
+  font-size: 20px;
+  color: #DC2626;
+  margin: 0;
+}
+
 .error-container h3 {
   font-size: 18px;
   color: #DC2626;
@@ -168,6 +174,24 @@
   margin: 0;
   text-align: center;
   max-width: 400px;
+}
+
+.error-container .primary-btn {
+  padding: 12px 24px;
+  background: #05AA5B;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  margin-top: 16px;
+}
+
+.error-container .primary-btn:hover {
+  background: #048a4a;
+  transform: translateY(-2px);
 }
 
 .retry-btn {
@@ -185,6 +209,24 @@
 
 .retry-btn:hover {
   background: #B91C1C;
+}
+
+.primary-btn {
+  padding: 12px 24px;
+  background: #05AA5B;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  margin-top: 16px;
+}
+
+.primary-btn:hover {
+  background: #048a4a;
+  transform: translateY(-2px);
 }
 
 /* ===== EMPTY STATE ===== */
