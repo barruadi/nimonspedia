@@ -126,7 +126,7 @@ class AppNavbar extends HTMLElement {
         <a class="nav-link hide-mobile" href="/seller/dashboard" data-nav>Dashboard</a>
         <a class="nav-link hide-mobile" href="/seller/products" data-nav>Produk</a>
         <a class="nav-link hide-mobile" href="/seller/orders" data-nav>Orders</a>
-        ${flags.auction_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/auctions" data-nav>Lelang</a>' : ''}
+        ${flags.auction_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/auction-history" data-nav>Lelang</a>' : ''}
         ${flags.chat_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/chat" data-nav>Chat</a>' : ''}
         <span class="saldo seller-saldo hide-mobile">
           Saldo: <span class="val">${balance}</span>
@@ -153,7 +153,7 @@ class AppNavbar extends HTMLElement {
         <a class="mobile-menu-item" href="/seller/dashboard" data-nav data-mobile-item>Dashboard</a>
         <a class="mobile-menu-item" href="/seller/products" data-nav data-mobile-item>Produk</a>
         <a class="mobile-menu-item" href="/seller/orders" data-nav data-mobile-item>Orders</a>
-        ${flags.auction_enabled?.enabled ? '<a class="mobile-menu-item" href="/auctions" data-nav data-mobile-item>Lelang</a>' : ''}
+        ${flags.auction_enabled?.enabled ? '<a class="mobile-menu-item" href="/auction-history" data-nav data-mobile-item>Lelang</a>' : ''}
         ${flags.chat_enabled?.enabled ? '<a class="mobile-menu-item" href="/chat" data-nav data-mobile-item>Chat</a>' : ''}
         <div class="mobile-menu-item mobile-saldo seller-mobile-saldo">
           Saldo: <span class="val">${balance}</span>
