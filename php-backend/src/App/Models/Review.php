@@ -347,4 +347,72 @@ class Review
 
         return $review ?: null;
     }
+
+    /**
+     * Get all reviews for seller's products with pagination
+     */
+    public static function getByStoreId(int $storeId, int $limit = 20, int $offset = 0): array
+    {
+        $sql = "
+            SELECT
+                r.review_id,
+                r.rating,
+                r.review_text,
+                r.seller_reply,
+                r.created_at,
+                r.replied_at,
+                r.is_hidden,
+                r.product_id,
+                p.name as product_name,
+                p.image_path as product_image,
+                u.full_name as buyer_name,
+                COALESCE(
+                    json_agg(
+                        json_build_object('image_path', ri.image_path, 'display_order', ri.display_order)
+                        ORDER BY ri.display_order
+                    ) FILTER (WHERE ri.review_image_id IS NOT NULL),
+                    '[]'
+                ) as images
+            FROM reviews r
+            JOIN products p ON r.product_id = p.product_id
+            JOIN users u ON r.buyer_id = u.user_id
+            LEFT JOIN review_images ri ON r.review_id = ri.review_id
+            WHERE p.store_id = :store_id
+            GROUP BY r.review_id, p.name, p.image_path, u.full_name
+            ORDER BY r.created_at DESC
+            LIMIT :limit OFFSET :offset
+        ";
+
+        $stmt = self::db()->prepare($sql);
+        $stmt->bindValue(':store_id', $storeId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Decode JSON images
+        foreach ($reviews as &$review) {
+            $review['images'] = json_decode($review['images'], true);
+        }
+
+        return $reviews;
+    }
+
+    /**
+     * Count total reviews for a store
+     */
+    public static function countByStoreId(int $storeId): int
+    {
+        $sql = "
+            SELECT COUNT(*)
+            FROM reviews r
+            JOIN products p ON r.product_id = p.product_id
+            WHERE p.store_id = :store_id
+        ";
+
+        $stmt = self::db()->prepare($sql);
+        $stmt->execute(['store_id' => $storeId]);
+        return (int)$stmt->fetchColumn();
+    }
 }
