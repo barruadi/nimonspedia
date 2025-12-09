@@ -238,7 +238,7 @@ ON CONFLICT (category_id, product_id) DO NOTHING;
 
 
 -- ============================================================
--- 6. AUCTIONS (NEW! - Extended for pagination testing)
+-- 6. AUCTIONS
 -- ============================================================
 
 -- 1. Mechanical Keyboard RGB (Gadget Hub - Rina)
@@ -266,7 +266,7 @@ FROM p;
 -- 6. AUCTIONS (Extended version for pagination testing)
 -- ============================================================
 
--- -- ACTIVE AUCTIONS (10+)
+-- ACTIVE AUCTIONS (10+)
 -- -- 1. Mechanical Keyboard RGB (Gadget Hub - Rina)
 -- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Mechanical Keyboard RGB' LIMIT 1)
 -- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
@@ -403,26 +403,26 @@ FROM p;
 -- FROM p CROSS JOIN u;
 
 
--- -- ============================================================
--- -- 7. AUCTION BIDS (NEW!)
--- -- ============================================================
--- -- Bids for Active Auction (Gadget Hub - Mechanical Keyboard)
--- WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'active' LIMIT 1),
---      bob AS (SELECT user_id FROM users WHERE email = 'bob@buyer.com'),
---      carol AS (SELECT user_id FROM users WHERE email = 'carol@buyer.com')
--- INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
--- SELECT a.auction_id, bob.user_id, a.starting_price + 20000, NOW() - INTERVAL '45 minutes'
--- FROM a CROSS JOIN bob
--- UNION ALL
--- SELECT a.auction_id, carol.user_id, a.starting_price + 50000, NOW() - INTERVAL '10 minutes'
--- FROM a CROSS JOIN carol;
+-- ============================================================
+-- 7. AUCTION BIDS 
+-- ============================================================
+-- Bids for Active Auction (Gadget Hub - Mechanical Keyboard)
+WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'active' LIMIT 1),
+     bob AS (SELECT user_id FROM users WHERE email = 'bob@buyer.com'),
+     carol AS (SELECT user_id FROM users WHERE email = 'carol@buyer.com')
+INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+SELECT a.auction_id, bob.user_id, a.starting_price + 20000, NOW() - INTERVAL '45 minutes'
+FROM a CROSS JOIN bob
+UNION ALL
+SELECT a.auction_id, carol.user_id, a.starting_price + 50000, NOW() - INTERVAL '10 minutes'
+FROM a CROSS JOIN carol;
 
--- -- Bids for Ended Auction (Fashionista Store - Handbag)
--- WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'ended' LIMIT 1),
---      alice AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
--- INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
--- SELECT a.auction_id, alice.user_id, a.starting_price + 200000, NOW() - INTERVAL '1 day 2 hours'
--- FROM a CROSS JOIN alice;
+-- Bids for Ended Auction (Fashionista Store - Handbag)
+WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'ended' LIMIT 1),
+     alice AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
+INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+SELECT a.auction_id, alice.user_id, a.starting_price + 200000, NOW() - INTERVAL '1 day 2 hours'
+FROM a CROSS JOIN alice;
 
 
 -- ============================================================
