@@ -2,15 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE_URL = 'http://localhost/api/node';
 
-export const useAuctions = (status = 'active', page = 1, search = '', limit = 10) => {
+export const useAuctions = (status = 'active', cursor = null, search = '', limit = 10) => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
-    page: 1,
     limit: 10,
-    totalCount: 0,
-    totalPages: 0
+    hasNextPage: false,
+    nextCursor: null
   });
 
   const fetchAuctions = useCallback(async () => {
@@ -21,14 +20,14 @@ export const useAuctions = (status = 'active', page = 1, search = '', limit = 10
       // Build query parameters
       const params = new URLSearchParams({
         status: status || 'active',
-        page: page || 1,
         limit: limit || 10,
-        ...(search && { q: search })
+        ...(search && { q: search }),
+        ...(cursor && { cursor })
       });
 
-      console.log('[useAuctions] Fetching with params:', {
+      console.log('[useAuctions] Fetching with cursor-based params:', {
         status: status || 'active',
-        page: page || 1,
+        cursor: cursor || '(none)',
         limit: limit || 10,
         search: search || '(none)'
       });
@@ -53,10 +52,9 @@ export const useAuctions = (status = 'active', page = 1, search = '', limit = 10
 
       setAuctions(data.data || []);
       setPagination({
-        page: data.meta.page,
         limit: data.meta.limit,
-        totalCount: data.meta.totalCount,
-        totalPages: data.meta.totalPages
+        hasNextPage: data.meta.hasNextPage,
+        nextCursor: data.meta.nextCursor
       });
 
     } catch (err) {
@@ -66,7 +64,7 @@ export const useAuctions = (status = 'active', page = 1, search = '', limit = 10
     } finally {
       setLoading(false);
     }
-  }, [status, page, search, limit]);
+  }, [status, cursor, search, limit]);
 
   // Fetch when dependencies change
   useEffect(() => {

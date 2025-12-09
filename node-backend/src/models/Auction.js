@@ -8,10 +8,9 @@ class Auction {
     return db.getInstance();
   }
 
-  static async findAll({ page = 1, limit = 10, status = null, search = null, seller_id = null }) {
+  static async findAll({ limit = 10, cursor = null, status = null, search = null, seller_id = null }) {
     try {
       const pool = this.getPool();
-      const offset = (page - 1) * limit;
       
       let query = `
         SELECT 
@@ -29,8 +28,7 @@ class Auction {
           p.image_path,
           s.store_id,
           s.store_name,
-          COUNT(DISTINCT b.bid_id) as bid_count,
-          COUNT(*) OVER () as total_count
+          COUNT(DISTINCT b.bid_id) as bid_count
         FROM auctions a
         JOIN products p ON a.product_id = p.product_id
         JOIN stores s ON p.store_id = s.store_id
@@ -60,21 +58,77 @@ class Auction {
         paramCount++;
       }
 
-      query += ` GROUP BY a.auction_id, p.product_id, s.store_id ORDER BY a.start_time DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-      params.push(limit, offset);
+      // Cursor-based pagination: compare (start_time, auction_id) pair
+      // Using composite ordering to ensure consistent pagination
+      if (cursor) {
+        // Cursor format: "timestamp_ms:auction_id" where timestamp_ms is milliseconds since epoch
+        const parts = cursor.split(':');
+        if (parts.length !== 2) {
+          throw new Error(`Invalid cursor format: ${cursor}`);
+        }
+        
+        const cursorTimeMs = parseInt(parts[0]);
+        const cursorId = parseInt(parts[1]);
+        
+        if (isNaN(cursorTimeMs) || isNaN(cursorId)) {
+          throw new Error(`Invalid cursor values: timeMs=${parts[0]}, id=${parts[1]}`);
+        }
+        
+        // Convert milliseconds to timestamp
+        const cursorTime = new Date(cursorTimeMs).toISOString();
+        
+        console.log('[Auction.findAll] Cursor details:', {
+          cursor,
+          cursorTimeMs,
+          cursorTime,
+          cursorId
+        });
+        
+        query += ` AND (a.start_time < $${paramCount} OR (a.start_time = $${paramCount + 1} AND a.auction_id < $${paramCount + 2}))`;
+        params.push(cursorTime, cursorTime, cursorId);
+        paramCount += 3;
+      }
+
+      query += ` GROUP BY a.auction_id, p.product_id, s.store_id ORDER BY a.start_time DESC, a.auction_id DESC LIMIT $${paramCount}`;
+      params.push(limit + 1); // Fetch one extra to determine if there are more results
+
+      console.log('[Auction.findAll] Query:', {
+        query: query.substring(0, 100) + '...',
+        paramCount,
+        queryLength: query.length,
+        paramsCount: params.length
+      });
 
       const result = await pool.query(query, params);
 
-      const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
-      const totalPages = Math.ceil(totalCount / limit);
+      console.log('[Auction.findAll] Query result rows:', result.rows.length);
+
+      // Determine if there are more results
+      const hasNextPage = result.rows.length > limit;
+      const data = hasNextPage ? result.rows.slice(0, limit) : result.rows;
+
+      // Generate next cursor from the last item
+      let nextCursor = null;
+      if (hasNextPage && data.length > 0) {
+        const lastItem = data[data.length - 1];
+        // Use milliseconds since epoch for consistent format
+        const lastItemTimeMs = new Date(lastItem.start_time).getTime();
+        nextCursor = `${lastItemTimeMs}:${lastItem.auction_id}`;
+        
+        console.log('[Auction.findAll] Generated nextCursor:', {
+          lastItemId: lastItem.auction_id,
+          lastItemStartTime: lastItem.start_time,
+          lastItemTimeMs,
+          nextCursor
+        });
+      }
 
       return {
-        data: result.rows,
+        data,
         meta: {
-          page,
           limit,
-          totalCount,
-          totalPages
+          hasNextPage,
+          nextCursor
         }
       };
 

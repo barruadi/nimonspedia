@@ -12,7 +12,8 @@ const AuctionList = () => {
   const [activeTab, setActiveTab] = useState('active');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [cursor, setCursor] = useState(null); // Current cursor for pagination
+  const [cursorHistory, setCursorHistory] = useState([]); // Stack of cursors for back navigation
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [auctions, setAuctions] = useState([]);
   const [socketConnected, setSocketConnected] = useState(false);
@@ -122,7 +123,8 @@ const AuctionList = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput);
-      setPage(1);
+      setCursor(null); // Reset cursor when search changes
+      setCursorHistory([]); // Reset cursor history
     }, 500);
 
     return () => clearTimeout(timer);
@@ -133,7 +135,7 @@ const AuctionList = () => {
   const shouldFetchAuctions = currentUser && currentUser.role === 'buyer';
   const { auctions: apiAuctions, loading: loadingAuctions, error, pagination } = useAuctions(
     shouldFetchAuctions ? activeTab : 'active',
-    shouldFetchAuctions ? page : 1,
+    shouldFetchAuctions ? cursor : null,
     shouldFetchAuctions ? search : '',
     shouldFetchAuctions ? itemsPerPage : 10
   );
@@ -327,20 +329,31 @@ const AuctionList = () => {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setPage(1);
+    setCursor(null); // Reset cursor when switching tabs
+    setCursorHistory([]); // Reset cursor history
   };
 
   const handleItemsPerPageChange = (newLimit) => {
     setItemsPerPage(newLimit);
-    setPage(1);
+    setCursor(null); // Reset cursor when changing limit
+    setCursorHistory([]); // Reset cursor history
   };
 
   const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (cursorHistory.length > 0) {
+      const newHistory = [...cursorHistory];
+      const prevCursor = newHistory.pop();
+      setCursorHistory(newHistory);
+      setCursor(prevCursor);
+    }
   };
 
   const handleNextPage = () => {
-    if (page < pagination.totalPages) setPage(page + 1);
+    if (pagination.hasNextPage && pagination.nextCursor) {
+      // Save current cursor to history before moving to next
+      setCursorHistory([...cursorHistory, cursor]);
+      setCursor(pagination.nextCursor);
+    }
   };
 
   // CONDITIONAL CHECKS AFTER ALL HOOKS
@@ -403,20 +416,16 @@ const AuctionList = () => {
               <button
                 className="pagination-btn-small"
                 onClick={handlePrevPage}
-                disabled={page === 1}
+                disabled={cursorHistory.length === 0}
                 title="Halaman sebelumnya"
               >
                 ← Sebelumnya
               </button>
 
-              <span className="page-info-inline">
-                {pagination.page || 1} / {pagination.totalPages || 1}
-              </span>
-
               <button
                 className="pagination-btn-small"
                 onClick={handleNextPage}
-                disabled={page >= (pagination.totalPages || 1)}
+                disabled={!pagination.hasNextPage}
                 title="Halaman berikutnya"
               >
                 Berikutnya →
