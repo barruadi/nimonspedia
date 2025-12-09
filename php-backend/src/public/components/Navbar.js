@@ -37,27 +37,38 @@ class AppNavbar extends HTMLElement {
   async fetchSession() {
     try {
       const res = await api.get('/me'); // { authenticated, user: { role, name, balance, cartCount? } }
-      
+
       // Check if response is valid
       if (!res) {
         console.warn('[Navbar] Empty response from /api/me');
-        return { authenticated: false, user: null };
+        return { authenticated: false, user: null, flags: null };
       }
-      
+
       // Check if response has error property
       if (res.error) {
         console.error('[Navbar] Error from /api/me:', res.error);
-        return { authenticated: false, user: null };
+        return { authenticated: false, user: null, flags: null };
       }
-      
+
       if (res.authenticated !== true) {
-        return { authenticated: false, user: null };
+        return { authenticated: false, user: null, flags: null };
       }
-      
-      return { authenticated: true, user: res.user || null };
+
+      // Fetch feature flags
+      let flags = null;
+      try {
+        const flagsRes = await api.get('/feature-flags');
+        if (flagsRes && flagsRes.ok && flagsRes.flags) {
+          flags = flagsRes.flags;
+        }
+      } catch (flagsErr) {
+        console.warn('[Navbar] Failed to fetch feature flags:', flagsErr);
+      }
+
+      return { authenticated: true, user: res.user || null, flags };
     } catch (err) {
       console.error('[Navbar] Failed to fetch session:', err);
-      return { authenticated: false, user: null };
+      return { authenticated: false, user: null, flags: null };
     }
   }
 
@@ -79,13 +90,20 @@ class AppNavbar extends HTMLElement {
   }
   
   render() {
-    const s = this._session || { authenticated: false, user: null };
+    const s = this._session || { authenticated: false, user: null, flags: null };
     const loggedIn = !!s.authenticated && !!s.user;
     const role = loggedIn ? (String(s.user.role || '').toLowerCase()) : 'guest';
     const name = (s.user?.name || '').trim() || 'Pengguna';
     const initials = this.initials(name);
     const balance = this.formatIDR(Number(s.user?.balance ?? 0));
     const cartCount = Number(s.user?.cartCount ?? 0);
+
+    // Feature flags (default to enabled if not loaded yet)
+    const flags = s.flags || {
+      auction_enabled: { enabled: true },
+      chat_enabled: { enabled: true },
+      checkout_enabled: { enabled: true }
+    };
 
     // Determine logo link based on role
     const logoLink = (role === 'seller') ? '/seller/dashboard' : '/products';
@@ -108,6 +126,8 @@ class AppNavbar extends HTMLElement {
         <a class="nav-link hide-mobile" href="/seller/dashboard" data-nav>Dashboard</a>
         <a class="nav-link hide-mobile" href="/seller/products" data-nav>Produk</a>
         <a class="nav-link hide-mobile" href="/seller/orders" data-nav>Orders</a>
+        ${flags.auction_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/auction" data-nav>Lelang</a>' : ''}
+        ${flags.chat_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/chat" data-nav>Chat</a>' : ''}
         <span class="saldo seller-saldo hide-mobile">
           Saldo: <span class="val">${balance}</span>
         </span>
@@ -133,6 +153,8 @@ class AppNavbar extends HTMLElement {
         <a class="mobile-menu-item" href="/seller/dashboard" data-nav data-mobile-item>Dashboard</a>
         <a class="mobile-menu-item" href="/seller/products" data-nav data-mobile-item>Produk</a>
         <a class="mobile-menu-item" href="/seller/orders" data-nav data-mobile-item>Orders</a>
+        ${flags.auction_enabled?.enabled ? '<a class="mobile-menu-item" href="/auction" data-nav data-mobile-item>Lelang</a>' : ''}
+        ${flags.chat_enabled?.enabled ? '<a class="mobile-menu-item" href="/chat" data-nav data-mobile-item>Chat</a>' : ''}
         <div class="mobile-menu-item mobile-saldo seller-mobile-saldo">
           Saldo: <span class="val">${balance}</span>
         </div>
@@ -142,10 +164,14 @@ class AppNavbar extends HTMLElement {
     } else {
       // --- Buyer view (cart with badge, Saldo, profile pill) ---
       rightHTML = `
+          ${flags.auction_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/auction" data-nav>Lelang</a>' : ''}
+          ${flags.chat_enabled?.enabled ? '<a class="nav-link hide-mobile" href="/chat" data-nav>Chat</a>' : ''}
+          ${flags.checkout_enabled?.enabled ? `
           <a class="nav-link cart-link hide-mobile" href="/cart" data-nav title="Keranjang">
             <span class="cart"></span>
             ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
           </a>
+          ` : ''}
           <span class="saldo buyer-saldo hide-mobile" id="saldo-trigger" title="Top Up Saldo">
             Saldo: <span class="val">${balance}</span>
           </span>
@@ -172,10 +198,14 @@ class AppNavbar extends HTMLElement {
           </div>
       `;
       mobileMenuHTML = `
+        ${flags.auction_enabled?.enabled ? '<a class="mobile-menu-item" href="/auction" data-nav data-mobile-item>Lelang</a>' : ''}
+        ${flags.chat_enabled?.enabled ? '<a class="mobile-menu-item" href="/chat" data-nav data-mobile-item>Chat</a>' : ''}
+        ${flags.checkout_enabled?.enabled ? `
         <a class="mobile-menu-item" href="/cart" data-nav data-mobile-item>
           <span>Keranjang</span>
           ${cartCount > 0 ? `<span class="cart-badge-mobile">${cartCount}</span>` : ''}
         </a>
+        ` : ''}
         <div class="mobile-menu-item mobile-saldo buyer-mobile-saldo" id="saldo-trigger-mobile">
           Saldo: <span class="val">${balance}</span>
         </div>
