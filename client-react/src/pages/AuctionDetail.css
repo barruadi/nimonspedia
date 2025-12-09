@@ -431,6 +431,12 @@
   flex-shrink: 0;
 }
 
+/* Bottom Spacer for Padding Gap */
+.auction-detail-spacer {
+  flex-shrink: 0;
+  height: 60px;
+}
+
 .bids-section h2 {
   margin: 0 0 20px;
   font-size: 22px;

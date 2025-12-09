@@ -1130,6 +1130,9 @@ const AuctionDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Bottom Spacer for Padding */}
+      <div className="auction-detail-spacer"></div>
       </div>
       </div>
     </>
