@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import AuctionCard from '../components/auction/AuctionCard';
+import SocketIndicator from '../components/SocketIndicator';
 import { useAuctions } from '../hooks/useAuctions'
 import { useSocket } from '../hooks/useSocket';
 import './AuctionList.css';
@@ -21,6 +22,11 @@ const AuctionList = () => {
 
   // Initialize socket - MUST be before any returns
   const { socket, connected } = useSocket(authData);
+
+  // Sync socket connection state
+  useEffect(() => {
+    setSocketConnected(connected);
+  }, [connected]);
 
   // Disable cache untuk page ini
   useEffect(() => {
@@ -472,6 +478,8 @@ const AuctionList = () => {
         )}
       </div>
       </div>
+
+      <SocketIndicator connected={socketConnected} />
     </>
   );
 };

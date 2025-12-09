@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import AuctionCard from '../components/auction/AuctionCard';
+import SocketIndicator from '../components/SocketIndicator';
 import { useSocket } from '../hooks/useSocket';
 import './SellerAuctionHistory.css';
 
@@ -222,8 +223,8 @@ const SellerAuctionHistory = () => {
     <>
       <Navbar role="seller" />
       <div className="seller-auction-history-page">
-        <div className="history-container">
-          {/* Header Section */}
+        {/* Header Section - Fixed at top */}
+        <div className="history-header-section">
           <div className="history-header">
             <div className="header-content">
               <h1>Daftar Lelang Saya</h1>
@@ -268,7 +269,10 @@ const SellerAuctionHistory = () => {
               {auctions.filter(a => a.status === 'cancelled').length})
             </button>
           </div>
+        </div>
 
+        {/* Content Area - Scrollable */}
+        <div className="history-content">
           {/* Loading State */}
           {loading && (
             <div className="loading-container">
@@ -329,6 +333,8 @@ const SellerAuctionHistory = () => {
           )}
         </div>
       </div>
+
+      <SocketIndicator connected={connected} />
     </>
   );
 };

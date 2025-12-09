@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
+import SocketIndicator from '../components/SocketIndicator';
 import { useSocket } from '../hooks/useSocket';
 import './AuctionDetail.css';
 
@@ -1135,6 +1136,8 @@ const AuctionDetail = () => {
       <div className="auction-detail-spacer"></div>
       </div>
       </div>
+
+      <SocketIndicator connected={connected} />
     </>
   );
 };
