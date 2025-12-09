@@ -148,7 +148,7 @@ async function createOrderPayment(req, res) {
 
     // Get order details
     const orderResult = await pool.query(
-      `SELECT o.order_id, o.buyer_id, o.total_price, o.status,
+      `SELECT o.order_id, o.buyer_id, o.total_amount, o.status,
               u.email, u.full_name
        FROM orders o
        JOIN users u ON o.buyer_id = u.user_id
@@ -165,13 +165,8 @@ async function createOrderPayment(req, res) {
 
     const order = orderResult.rows[0];
 
-    // Check if order is in correct status for payment
-    if (order.status !== 'waiting_approval') {
-      return res.status(400).json({
-        ok: false,
-        error: 'Order is not in waiting_approval status'
-      });
-    }
+    // Note: Order can be created without immediate payment
+    // Status could be 'waiting_approval' or any status where payment hasn't been made
 
     // Check if payment already exists for this order
     const existingPayment = await pool.query(
@@ -214,7 +209,7 @@ async function createOrderPayment(req, res) {
 
     // Get order items for item_details
     const itemsResult = await pool.query(
-      `SELECT oi.product_id, oi.quantity, oi.price_at_order, p.name
+      `SELECT oi.product_id, oi.qty, oi.price_at, p.name
        FROM order_items oi
        JOIN products p ON oi.product_id = p.product_id
        WHERE oi.order_id = $1`,
@@ -223,8 +218,8 @@ async function createOrderPayment(req, res) {
 
     const itemDetails = itemsResult.rows.map(item => ({
       id: `product-${item.product_id}`,
-      price: item.price_at_order,
-      quantity: item.quantity,
+      price: item.price_at,
+      quantity: item.qty,
       name: item.name
     }));
 
@@ -232,7 +227,7 @@ async function createOrderPayment(req, res) {
     const parameter = {
       transaction_details: {
         order_id: transactionOrderId,
-        gross_amount: order.total_price
+        gross_amount: order.total_amount
       },
       customer_details: {
         first_name: order.full_name,
@@ -257,7 +252,7 @@ async function createOrderPayment(req, res) {
         transaction_id, order_id, user_id, related_order_id,
         type, gross_amount, status, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-      [transactionOrderId, transactionOrderId, userId, order_id, 'order', order.total_price, 'pending']
+      [transactionOrderId, transactionOrderId, userId, order_id, 'order', order.total_amount, 'pending']
     );
 
     console.log('[Payment/Order] Snap token created:', transaction.token);

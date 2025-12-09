@@ -15,6 +15,7 @@ $router->get('/products', fn($req) => (new ProductController())->showAllProducts
 
 $router->get('/checkout', fn($req) => (new CheckoutController())->showCheckout(), [$checkoutEnabled]);
 $router->post('/checkout/submit', fn($req) => (new CheckoutController())->confirmOrder($req), [$checkoutEnabled]);
+$router->get('/checkout/payment', fn($req) => (new CheckoutController())->paymentPage(), [$checkoutEnabled]);
 $router->get('/checkout/success', fn($req) => (new CheckoutController())->successPage(), [$checkoutEnabled]);
 $router->post('/checkout/confirm', fn($req) => (new CheckoutController())->confirmOrder($req), [$checkoutEnabled]);
 $router->get('/api/store/{id}', fn($req, $id) => StoreController::getStoreDetail($req, (int)$id));
