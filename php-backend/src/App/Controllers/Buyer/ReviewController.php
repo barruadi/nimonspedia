@@ -147,7 +147,7 @@ class ReviewController
             return $uploadedPaths;
         }
 
-        $uploadDir = __DIR__ . '/../../../../public/uploads/reviews/';
+        $uploadDir = __DIR__ . '/../../../public/uploads/reviews/';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }

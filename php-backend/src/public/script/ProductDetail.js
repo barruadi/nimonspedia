@@ -256,7 +256,8 @@ async function handleAddToCart() {
                     showToast('Silakan login terlebih dahulu', 'Anda harus login untuk memulai chat', 'error');
                     return;
                 }
-                window.location.href = `/chat?store_id=${store.store_id}`;
+                // Redirect to chat with store_id and product_id for automatic product preview
+                window.location.href = `/chat?store_id=${store.store_id}&product_id=${currentProduct.product_id}`;
             });
 
             if (!isUserLoggedIn) {
