@@ -968,58 +968,12 @@ class Auction {
         console.log(`  - Status: approved`);
       }
 
-      // REFUND NON-WINNING BIDS
-      // Winner: refund all bids EXCEPT the highest (winning) bid
-      // Losers: refund ALL bids
-      
-      if (winnerId) {
-        // Refund winner's previous bids (all except max)
-        const winnerPreviousBidsQuery = `
-          SELECT SUM(bid_amount) as total_refund
-          FROM auction_bids
-          WHERE auction_id = $1 AND bidder_id = $2
-          AND bid_amount != (
-            SELECT MAX(bid_amount) 
-            FROM auction_bids 
-            WHERE auction_id = $1 AND bidder_id = $2
-          )
-        `;
-        const winnerRefundResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
-        const winnerRefundAmount = winnerRefundResult.rows[0]?.total_refund || 0;
-        
-        if (winnerRefundAmount > 0) {
-          const winnerRefundQuery = `
-            UPDATE users 
-            SET balance = balance + $1
-            WHERE user_id = $2
-          `;
-          await client.query(winnerRefundQuery, [winnerRefundAmount, winnerId]);
-          console.log(`[Auction Model] Refunded Rp ${winnerRefundAmount} (previous bids) to winner ${winnerId}`);
-        }
-      }
-      
-      // Refund all losing bidders - ALL their bids
-      const losingBidsQuery = `
-        SELECT bidder_id, SUM(bid_amount) as total_bid_amount
-        FROM auction_bids
-        WHERE auction_id = $1 AND bidder_id != $2
-        GROUP BY bidder_id
-      `;
-      const losingBidsResult = await client.query(losingBidsQuery, [auctionId, winnerId || -1]);
-      
-      if (losingBidsResult.rows.length > 0) {
-        console.log(`[Auction Model] Refunding ${losingBidsResult.rows.length} losing bidders for auction ${auctionId}`);
-        
-        for (const losingBid of losingBidsResult.rows) {
-          const refundQuery = `
-            UPDATE users 
-            SET balance = balance + $1
-            WHERE user_id = $2
-          `;
-          await client.query(refundQuery, [losingBid.total_bid_amount, losingBid.bidder_id]);
-          console.log(`[Auction Model] Refunded Rp ${losingBid.total_bid_amount} (all bids) to losing bidder ${losingBid.bidder_id}`);
-        }
-      }
+      // NO BALANCE REFUNDS AT STOP
+      // All balance operations (deduct & refund) happen during bidding:
+      // - DEDUCT: When bid is placed
+      // - REFUND: Immediately when user is outbid
+      // This prevents double-refunds and keeps balance logic in one place (bidding handler)
+      console.log(`[Auction Model] Auction ${auctionId} stopped - no balance refunds needed (all handled during bidding)`);
 
       // Update status to 'ended' and set winner
       const updateQuery = `

@@ -722,6 +722,7 @@ async function closeAuction(io, auctionId) {
 
     // COMMIT
     await client.query('COMMIT');
+    console.log(`[Auction Socket] Transaction committed for auction ${auctionId}`);
 
     // BROADCAST auction:ended to room
     io.to(`auction-${auctionId}`).emit('auction:ended', {
@@ -733,9 +734,9 @@ async function closeAuction(io, auctionId) {
     });
 
     // EMIT order:created event to winner
-    if (winnerId) {
+    if (winnerId && orderId) {
       io.to(`user-${winnerId}`).emit('order:created', {
-        order_id: orderId || null,
+        order_id: orderId,
         auction_id: auctionId,
         product_name: productName || 'produk',
         final_price: finalPrice,
@@ -743,11 +744,15 @@ async function closeAuction(io, auctionId) {
         message: 'Order Anda dari hasil lelang sudah dibuat dengan status approved'
       });
       console.log(`[Auction Socket] Emitted order:created event to winner ${winnerId} (order: ${orderId})`);
+    } else if (!winnerId) {
+      console.log(`[Auction Socket] No winner for auction ${auctionId}, no order created`);
+    } else if (!orderId) {
+      console.log(`[Auction Socket] ⚠️ WARNING: Winner ${winnerId} exists but order was not created for auction ${auctionId}`);
     }
 
-    console.log(`[Auction Socket] Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
+    console.log(`[Auction Socket] Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName}), Order: ${orderId || 'NOT CREATED'}`);
 
-    // SEND PUSH NOTIFICATIONS
+    // SEND PUSH NOTIFICATIONS (using pgPool for post-transaction queries)
     try {
       const productQuery = `
         SELECT p.name as product_name
@@ -755,14 +760,14 @@ async function closeAuction(io, auctionId) {
         JOIN products p ON a.product_id = p.product_id
         WHERE a.auction_id = $1
       `;
-      const productResult = await client.query(productQuery, [auctionId]);
-      const productName = productResult.rows[0]?.product_name || 'produk';
+      const productResult = await pgPool.query(productQuery, [auctionId]);
+      const notificationProductName = productResult.rows[0]?.product_name || 'produk';
 
       // Notify winner
       if (winnerId && winnerName) {
         await sendAuctionWonNotification(
           winnerId,
-          productName,
+          notificationProductName,
           finalPrice,
           winnerName
         );
@@ -777,13 +782,13 @@ async function closeAuction(io, auctionId) {
         JOIN stores s ON p.store_id = s.store_id
         WHERE a.auction_id = $1
       `;
-      const sellerResult = await client.query(sellerQuery, [auctionId]);
+      const sellerResult = await pgPool.query(sellerQuery, [auctionId]);
       const sellerId = sellerResult.rows[0]?.owner_id;
 
       if (sellerId) {
         await sendAuctionEndedSellerNotification(
           sellerId,
-          productName,
+          notificationProductName,
           winnerName || 'Tidak ada pemenang',
           finalPrice
         );
