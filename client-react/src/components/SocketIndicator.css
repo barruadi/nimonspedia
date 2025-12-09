@@ -1,0 +1,87 @@
+/* Socket Indicator - Minimalis Design */
+.socket-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.socket-indicator.connected {
+  background: rgba(5, 170, 91, 0.15);
+  color: #05AA5B;
+  border: 1px solid rgba(5, 170, 91, 0.3);
+}
+
+.socket-indicator.disconnected {
+  background: rgba(255, 107, 107, 0.15);
+  color: #FF6B6B;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.socket-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.socket-indicator.connected .socket-dot {
+  background: #05AA5B;
+  animation: pulse-connected 2s infinite;
+}
+
+.socket-indicator.disconnected .socket-dot {
+  background: #FF6B6B;
+  animation: pulse-disconnected 1s infinite;
+}
+
+.socket-text {
+  white-space: nowrap;
+}
+
+@keyframes pulse-connected {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(5, 170, 91, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(5, 170, 91, 0);
+  }
+}
+
+@keyframes pulse-disconnected {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .socket-indicator {
+    bottom: 16px;
+    right: 16px;
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  .socket-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .socket-text {
+    display: none;
+  }
+}

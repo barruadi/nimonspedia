@@ -238,48 +238,191 @@ ON CONFLICT (category_id, product_id) DO NOTHING;
 
 
 -- ============================================================
--- 6. AUCTIONS (NEW!)
+-- 6. AUCTIONS (NEW! - Extended for pagination testing)
 -- ============================================================
--- 1. Active Auction (Gadget Hub - Rina) - Mechanical Keyboard RGB
+
+-- 1. Mechanical Keyboard RGB (Gadget Hub - Rina)
 WITH p AS (SELECT product_id, price FROM products WHERE name = 'Mechanical Keyboard RGB' LIMIT 1)
 INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
 SELECT product_id, price - 200000, price - 50000, 10000, 5, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '2 days', 'active'
 FROM p;
 
--- 2. Scheduled Auction (FreshMart - Budi) - Organic Apples Fuji
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Organic Apples Fuji (1kg)' LIMIT 1)
-INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
-SELECT product_id, price - 5000, price - 5000, 1000, 10, NOW() + INTERVAL '1 day', NULL, 'scheduled'
-FROM p;
-
--- 3. Ended Auction (Fashionista Store - Charlie) - Women's Designer Handbag (Winner: Alice)
-WITH p AS (SELECT product_id, price FROM products WHERE name = 'Leather Shoulder Bag Classic' LIMIT 1),
+-- 2. Leather Shoulder Bag Classic (Fashionista - Charlie) - Already ended (Winner: Alice)
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Women''s Tote Bag Leather' LIMIT 1),
      u AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
 INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status, winner_id)
 SELECT p.product_id, p.price - 300000, p.price - 100000, 50000, 1, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day', 'ended', u.user_id
 FROM p CROSS JOIN u;
 
+-- 3. Organic Apples Fuji (FreshMart - Budi) - starts in 1 day
+WITH p AS (SELECT product_id, price FROM products WHERE name = 'Organic Apples Fuji (1kg)' LIMIT 1)
+INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+SELECT product_id, price - 5000, price - 5000, 1000, 10, NOW() + INTERVAL '1 day', NULL, 'scheduled'
+FROM p;
+
+
 
 -- ============================================================
--- 7. AUCTION BIDS (NEW!)
+-- 6. AUCTIONS (Extended version for pagination testing)
 -- ============================================================
--- Bids for Active Auction (Gadget Hub - Mechanical Keyboard)
-WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'active' LIMIT 1),
-     bob AS (SELECT user_id FROM users WHERE email = 'bob@buyer.com'),
-     carol AS (SELECT user_id FROM users WHERE email = 'carol@buyer.com')
-INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
-SELECT a.auction_id, bob.user_id, a.starting_price + 20000, NOW() - INTERVAL '45 minutes'
-FROM a CROSS JOIN bob
-UNION ALL
-SELECT a.auction_id, carol.user_id, a.starting_price + 50000, NOW() - INTERVAL '10 minutes'
-FROM a CROSS JOIN carol;
 
--- Bids for Ended Auction (Fashionista Store - Handbag)
-WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'ended' LIMIT 1),
-     alice AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
-INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
-SELECT a.auction_id, alice.user_id, a.starting_price + 200000, NOW() - INTERVAL '1 day 2 hours'
-FROM a CROSS JOIN alice;
+-- -- ACTIVE AUCTIONS (10+)
+-- -- 1. Mechanical Keyboard RGB (Gadget Hub - Rina)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Mechanical Keyboard RGB' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 200000, price - 50000, 10000, 5, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '2 days', 'active'
+-- FROM p;
+
+-- -- 2. Wireless Mouse Logitech (Gadget Hub - Rina)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Wireless Mouse Logitech' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 50000, price - 20000, 5000, 10, NOW() - INTERVAL '30 minutes', NOW() + INTERVAL '1 day 12 hours', 'active'
+-- FROM p;
+
+-- -- 3. Noise-Canceling Headphones Sony (Gadget Hub - Rina)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Noise-Canceling Headphones Sony' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 500000, price - 200000, 50000, 3, NOW() - INTERVAL '2 hours', NOW() + INTERVAL '3 days 5 hours', 'active'
+-- FROM p;
+
+-- -- 4. USB-C Hub 7-in-1 (Gadget Hub - Rina)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'USB-C Hub 7-in-1' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 100000, price - 30000, 10000, 8, NOW() - INTERVAL '45 minutes', NOW() + INTERVAL '1 day 18 hours', 'active'
+-- FROM p;
+
+-- -- 5. Organic Bananas Cavendish (FreshMart - Budi)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Organic Bananas Cavendish (1kg)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 10000, price - 3000, 1000, 20, NOW() - INTERVAL '20 minutes', NOW() + INTERVAL '12 hours 40 minutes', 'active'
+-- FROM p;
+
+-- -- 6. Arabica Coffee Beans (FreshMart - Budi)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Arabica Coffee Beans (500g)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 30000, price - 10000, 5000, 15, NOW() - INTERVAL '1 hour 10 minutes', NOW() + INTERVAL '2 days 8 hours', 'active'
+-- FROM p;
+
+-- -- 7. Greek Yogurt Plain (FreshMart - Budi)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Greek Yogurt Plain (500g)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 15000, price - 5000, 2000, 25, NOW() - INTERVAL '35 minutes', NOW() + INTERVAL '1 day 5 hours', 'active'
+-- FROM p;
+
+-- -- 8. Free-Range Eggs Large (FreshMart - Budi)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Free-Range Eggs Large (10pcs)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 25000, price - 8000, 3000, 30, NOW() - INTERVAL '50 minutes', NOW() + INTERVAL '20 hours 10 minutes', 'active'
+-- FROM p;
+
+-- -- 9. Denim Jeans Slim Fit (Fashionista - Charlie)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Denim Jeans Slim Fit' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 100000, price - 40000, 10000, 12, NOW() - INTERVAL '1 hour 25 minutes', NOW() + INTERVAL '2 days 14 hours', 'active'
+-- FROM p;
+
+-- -- 10. Women's Floral Dress (Fashionista - Charlie)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Women''s Floral Dress' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 80000, price - 25000, 5000, 8, NOW() - INTERVAL '40 minutes', NOW() + INTERVAL '1 day 16 hours', 'active'
+-- FROM p;
+
+-- -- 11. Sneakers Canvas Unisex (Fashionista - Charlie)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Sneakers Canvas Unisex' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 60000, price - 20000, 5000, 20, NOW() - INTERVAL '55 minutes', NOW() + INTERVAL '3 days 2 hours', 'active'
+-- FROM p;
+
+-- -- SCHEDULED AUCTIONS (10+)
+-- -- 12. Organic Apples Fuji (FreshMart - Budi) - starts in 1 day
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Organic Apples Fuji (1kg)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 5000, price - 5000, 1000, 10, NOW() + INTERVAL '1 day', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 13. True Wireless Earbuds (Gadget Hub - Rina) - starts in 2 days
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'True Wireless Earbuds' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 150000, price - 150000, 20000, 7, NOW() + INTERVAL '2 days', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 14. Bluetooth Speaker JBL (Gadget Hub - Rina) - starts in 3 days
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Bluetooth Speaker JBL' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 200000, price - 200000, 25000, 6, NOW() + INTERVAL '3 days', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 15. Power Bank 20000mAh (Gadget Hub - Rina) - starts in 4 days
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Power Bank 20000mAh' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 75000, price - 75000, 10000, 15, NOW() + INTERVAL '4 days', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 16. Whole Milk UHT (FreshMart - Budi) - starts in 5 hours
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Whole Milk UHT (1L)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 8000, price - 8000, 1000, 50, NOW() + INTERVAL '5 hours', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 17. Green Tea Matcha Powder (FreshMart - Budi) - starts in 8 hours
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Green Tea Matcha Powder (100g)' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 50000, price - 50000, 5000, 12, NOW() + INTERVAL '8 hours', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 18. Men's Formal Shirt Blue (Fashionista - Charlie) - starts in 12 hours
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Men''s Formal Shirt Blue' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 70000, price - 70000, 10000, 14, NOW() + INTERVAL '12 hours', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 19. Women's Cardigan Gray (Fashionista - Charlie) - starts in 18 hours
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Women''s Cardigan Gray' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 80000, price - 80000, 10000, 9, NOW() + INTERVAL '18 hours', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 20. Men's Leather Belt Brown (Fashionista - Charlie) - starts in 24 hours
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Men''s Leather Belt Brown' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 40000, price - 40000, 5000, 18, NOW() + INTERVAL '24 hours', NULL, 'scheduled'
+-- FROM p;
+
+-- -- 21. Leather Shoulder Bag Classic (Fashionista - Charlie) - starts in 36 hours
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Leather Shoulder Bag Classic' LIMIT 1)
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status)
+-- SELECT product_id, price - 400000, price - 400000, 50000, 5, NOW() + INTERVAL '36 hours', NULL, 'scheduled'
+-- FROM p;
+
+-- -- ENDED AUCTION (1)
+-- -- 22. Leather Shoulder Bag Classic (Fashionista - Charlie) - Already ended (Winner: Alice)
+-- WITH p AS (SELECT product_id, price FROM products WHERE name = 'Women''s Tote Bag Leather' LIMIT 1),
+--      u AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
+-- INSERT INTO auctions (product_id, starting_price, current_price, min_increment, quantity, start_time, end_time, status, winner_id)
+-- SELECT p.product_id, p.price - 300000, p.price - 100000, 50000, 1, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day', 'ended', u.user_id
+-- FROM p CROSS JOIN u;
+
+
+-- -- ============================================================
+-- -- 7. AUCTION BIDS (NEW!)
+-- -- ============================================================
+-- -- Bids for Active Auction (Gadget Hub - Mechanical Keyboard)
+-- WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'active' LIMIT 1),
+--      bob AS (SELECT user_id FROM users WHERE email = 'bob@buyer.com'),
+--      carol AS (SELECT user_id FROM users WHERE email = 'carol@buyer.com')
+-- INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+-- SELECT a.auction_id, bob.user_id, a.starting_price + 20000, NOW() - INTERVAL '45 minutes'
+-- FROM a CROSS JOIN bob
+-- UNION ALL
+-- SELECT a.auction_id, carol.user_id, a.starting_price + 50000, NOW() - INTERVAL '10 minutes'
+-- FROM a CROSS JOIN carol;
+
+-- -- Bids for Ended Auction (Fashionista Store - Handbag)
+-- WITH a AS (SELECT auction_id, starting_price FROM auctions WHERE status = 'ended' LIMIT 1),
+--      alice AS (SELECT user_id FROM users WHERE email = 'alice@buyer.com')
+-- INSERT INTO auction_bids (auction_id, bidder_id, bid_amount, bid_time)
+-- SELECT a.auction_id, alice.user_id, a.starting_price + 200000, NOW() - INTERVAL '1 day 2 hours'
+-- FROM a CROSS JOIN alice;
 
 
 -- ============================================================

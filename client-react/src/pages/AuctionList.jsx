@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import AuctionCard from '../components/auction/AuctionCard';
+import SocketIndicator from '../components/SocketIndicator';
 import { useAuctions } from '../hooks/useAuctions'
 import { useSocket } from '../hooks/useSocket';
 import './AuctionList.css';
@@ -12,6 +13,7 @@ const AuctionList = () => {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [auctions, setAuctions] = useState([]);
   const [socketConnected, setSocketConnected] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -20,6 +22,11 @@ const AuctionList = () => {
 
   // Initialize socket - MUST be before any returns
   const { socket, connected } = useSocket(authData);
+
+  // Sync socket connection state
+  useEffect(() => {
+    setSocketConnected(connected);
+  }, [connected]);
 
   // Disable cache untuk page ini
   useEffect(() => {
@@ -127,7 +134,8 @@ const AuctionList = () => {
   const { auctions: apiAuctions, loading: loadingAuctions, error, pagination } = useAuctions(
     shouldFetchAuctions ? activeTab : 'active',
     shouldFetchAuctions ? page : 1,
-    shouldFetchAuctions ? search : ''
+    shouldFetchAuctions ? search : '',
+    shouldFetchAuctions ? itemsPerPage : 10
   );
 
   // Sync API data with local state
@@ -322,6 +330,11 @@ const AuctionList = () => {
     setPage(1);
   };
 
+  const handleItemsPerPageChange = (newLimit) => {
+    setItemsPerPage(newLimit);
+    setPage(1);
+  };
+
   const handlePrevPage = () => {
     if (page > 1) setPage(page - 1);
   };
@@ -371,15 +384,60 @@ const AuctionList = () => {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="search-container">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Cari produk..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
+        {/* Search Bar & Pagination Controls Row */}
+        <div className="search-pagination-row">
+          {/* Search Bar */}
+          <div className="search-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Cari produk..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+
+          {/* Pagination Controls - Right aligned */}
+          {!loadingAuctions && (
+            <div className="pagination-controls-inline">
+              <button
+                className="pagination-btn-small"
+                onClick={handlePrevPage}
+                disabled={page === 1}
+                title="Halaman sebelumnya"
+              >
+                ← Sebelumnya
+              </button>
+
+              <span className="page-info-inline">
+                {pagination.page || 1} / {pagination.totalPages || 1}
+              </span>
+
+              <button
+                className="pagination-btn-small"
+                onClick={handleNextPage}
+                disabled={page >= (pagination.totalPages || 1)}
+                title="Halaman berikutnya"
+              >
+                Berikutnya →
+              </button>
+
+              <select 
+                className="items-per-page-inline"
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                title="Jumlah item per halaman"
+              >
+                <option value={4}>4</option>
+                <option value={6}>6</option>
+                <option value={8}>8</option>
+                <option value={10}>10</option>
+                <option value={12}>12</option>
+                <option value={15}>15</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -419,32 +477,9 @@ const AuctionList = () => {
           </div>
         )}
       </div>
-
-      {/* Pagination - Fixed */}
-      {!loadingAuctions && pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="pagination-btn"
-            onClick={handlePrevPage}
-            disabled={page === 1}
-          >
-            ← Sebelumnya
-          </button>
-
-          <span className="page-info">
-            Halaman {pagination.page} dari {pagination.totalPages}
-          </span>
-
-          <button
-            className="pagination-btn"
-            onClick={handleNextPage}
-            disabled={page >= pagination.totalPages}
-          >
-            Berikutnya →
-          </button>
-        </div>
-      )}
       </div>
+
+      <SocketIndicator connected={socketConnected} />
     </>
   );
 };

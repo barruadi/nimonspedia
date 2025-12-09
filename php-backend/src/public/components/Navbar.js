@@ -198,7 +198,7 @@ class AppNavbar extends HTMLElement {
           </div>
       `;
       mobileMenuHTML = `
-        ${flags.auction_enabled?.enabled ? '<a class="mobile-menu-item" href="/auction" data-nav data-mobile-item>Lelang</a>' : ''}
+        ${flags.auction_enabled?.enabled ? '<a class="mobile-menu-item" href="/auctions" data-nav data-mobile-item>Lelang</a>' : ''}
         ${flags.chat_enabled?.enabled ? '<a class="mobile-menu-item" href="/chat" data-nav data-mobile-item>Chat</a>' : ''}
         ${flags.checkout_enabled?.enabled ? `
         <a class="mobile-menu-item" href="/cart" data-nav data-mobile-item>

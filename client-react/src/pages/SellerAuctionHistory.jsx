@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import AuctionCard from '../components/auction/AuctionCard';
+import SocketIndicator from '../components/SocketIndicator';
 import { useSocket } from '../hooks/useSocket';
 import './SellerAuctionHistory.css';
 
@@ -70,8 +71,12 @@ const SellerAuctionHistory = () => {
         setLoading(true);
         setError(null);
 
+        // Use query parameter approach since Node backend supports it
         const response = await fetch(
-          `${API_BASE_URL}/auctions?seller_id=${currentUser.user_id}`
+          `${API_BASE_URL}/auctions?seller_id=${currentUser.user_id}`,
+          {
+            credentials: 'include'
+          }
         );
 
         if (!response.ok) {
@@ -218,12 +223,42 @@ const SellerAuctionHistory = () => {
     window.location.href = 'http://localhost/seller/products';
   };
 
+  // Loading state - show loading while fetching user
+  if (loading && !currentUser) {
+    return (
+      <div className="seller-auction-history-page">
+        <div className="loading-container">
+          <div className="spinner"></div>
+          <p>Memuat data lelang...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Auth check - show message if not authenticated as seller
+  if (!currentUser) {
+    return (
+      <div className="seller-auction-history-page">
+        <div className="error-container">
+          <h2>⛔ Akses Ditolak</h2>
+          <p>Anda harus login sebagai seller untuk mengakses halaman ini</p>
+          <button 
+            onClick={() => window.location.href = 'http://localhost/login'}
+            className="primary-btn"
+          >
+            Kembali ke Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <Navbar role="seller" />
       <div className="seller-auction-history-page">
-        <div className="history-container">
-          {/* Header Section */}
+        {/* Header Section - Fixed at top */}
+        <div className="history-header-section">
           <div className="history-header">
             <div className="header-content">
               <h1>Daftar Lelang Saya</h1>
@@ -268,7 +303,10 @@ const SellerAuctionHistory = () => {
               {auctions.filter(a => a.status === 'cancelled').length})
             </button>
           </div>
+        </div>
 
+        {/* Content Area - Scrollable */}
+        <div className="history-content">
           {/* Loading State */}
           {loading && (
             <div className="loading-container">
@@ -329,6 +367,8 @@ const SellerAuctionHistory = () => {
           )}
         </div>
       </div>
+
+      <SocketIndicator connected={connected} />
     </>
   );
 };

@@ -85,7 +85,9 @@ async function initAuctionFormPage() {
             // Set minimum start time to NOW (must be > current time)
             // Use local time, not UTC for datetime-local input
             const now = new Date();
-            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+            // Add 1 minute to current time for better UX (prevent current minute submission)
+            const oneMinuteLater = new Date(now.getTime() + 60000);
+            const localDateTime = new Date(oneMinuteLater.getTime() - oneMinuteLater.getTimezoneOffset() * 60000)
                 .toISOString().slice(0, 16);
             startTimeInput.min = localDateTime;
             startTimeInput.value = localDateTime;
