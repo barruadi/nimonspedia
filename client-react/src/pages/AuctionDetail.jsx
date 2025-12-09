@@ -450,9 +450,9 @@ const AuctionDetail = () => {
 
     console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
 
+    // Note: userId is now verified server-side from socket authentication
     socket.emit('auction:join', {
-      auctionId: auction.auction_id,
-      userId: currentUser.user_id
+      auctionId: auction.auction_id
     }, (response) => {
       if (response?.success) {
         console.log('[AuctionDetail] Successfully joined auction room');
@@ -594,9 +594,9 @@ const AuctionDetail = () => {
 
       setSubmittingBid(true);
 
+      // Note: bidderId is now verified server-side from socket authentication
       socket.emit('auction:place-bid', {
         auctionId: auction.auction_id,
-        bidderId: currentUser.user_id,
         bidAmount: bid
       }, (response) => {
         if (response?.success) {

@@ -22,34 +22,118 @@ const auctionTimers = new Map();
  * @param {Socket.IO} io - Socket.IO instance
  */
 const setupAuctionSocket = (io) => {
+  console.log('[Auction Socket Setup] Starting auction socket setup...');
+  
+  // Middleware to authenticate socket connections
+  io.use(async (socket, next) => {
+    console.log(`[Auction Socket Auth] New connection attempt: ${socket.id}`);
+    console.log(`[Auction Socket Auth] Handshake headers:`, socket.handshake.headers);
+    console.log(`[Auction Socket Auth] Handshake auth:`, socket.handshake.auth);
+    
+    try {
+      const userId = socket.handshake.auth.userId;
+      const userRole = socket.handshake.auth.userRole;
+
+      console.log(`[Auction Socket Auth] Extracted from handshake - userId: "${userId}" (type: ${typeof userId}), userRole: "${userRole}" (type: ${typeof userRole})`);
+
+      // Validate required auth data
+      if (!userId || !userRole) {
+        console.warn(`[Auction Socket Auth] ❌ Authentication failed: missing data. userId: ${userId}, userRole: ${userRole}`);
+        return next(new Error('Authentication required: missing userId or userRole'));
+      }
+
+      // Verify userId is a valid integer
+      const parsedUserId = parseInt(userId);
+      console.log(`[Auction Socket Auth] Parsed userId: ${parsedUserId}, isNaN: ${isNaN(parsedUserId)}`);
+      
+      if (isNaN(parsedUserId)) {
+        console.warn(`[Auction Socket Auth] ❌ Invalid userId format: "${userId}"`);
+        return next(new Error('Invalid userId format'));
+      }
+
+      console.log(`[Auction Socket Auth] Querying database for user ${parsedUserId}...`);
+      
+      // Verify user exists in database
+      const userQuery = `
+        SELECT user_id, role, full_name
+        FROM users
+        WHERE user_id = $1
+      `;
+      const pgPool = pool.getInstance();
+      const userResult = await pgPool.query(userQuery, [parsedUserId]);
+
+      console.log(`[Auction Socket Auth] Database query result: ${userResult.rows.length} row(s) found`);
+
+      if (userResult.rows.length === 0) {
+        console.warn(`[Auction Socket Auth] ❌ User ${parsedUserId} not found in database`);
+        return next(new Error('User not found'));
+      }
+
+      const dbUser = userResult.rows[0];
+      console.log(`[Auction Socket Auth] Database user data:`, dbUser);
+
+      // Verify role matches (prevent role spoofing)
+      if (dbUser.role !== userRole) {
+        console.warn(`[Auction Socket Auth] ❌ Role mismatch - DB: "${dbUser.role}", provided: "${userRole}"`);
+        return next(new Error('Role mismatch'));
+      }
+
+      // Store authenticated user data on socket
+      socket.userId = parsedUserId;
+      socket.userRole = userRole;
+      socket.userName = dbUser.full_name;
+
+      console.log(`[Auction Socket Auth] ✅ User authenticated - socket: ${socket.id}, userId: ${parsedUserId}, role: ${userRole}, name: ${dbUser.full_name}`);
+      next();
+    } catch (error) {
+      console.error('[Auction Socket Auth] ❌ Authentication error:', error.message);
+      console.error('[Auction Socket Auth] Error stack:', error.stack);
+      next(new Error('Authentication failed: ' + error.message));
+    }
+  });
+
+  console.log('[Auction Socket Setup] Middleware registered, setting up connection handler...');
+
   io.on('connection', (socket) => {
-    console.log(`[Auction Socket] User connected: ${socket.id}`);
+    console.log(`[Auction Socket] ✅ User CONNECTED: ${socket.id} (userId: ${socket.userId}, role: ${socket.userRole}, name: ${socket.userName})`);
 
     /**
      * EVENT: auction:join
      * Client joins auction room to receive real-time updates
      * 
-     * Payload: { auctionId: number, userId: number }
+     * Payload: { auctionId: number }
+     * Uses authenticated userId from socket
      */
     socket.on('auction:join', (data, callback) => {
       try {
-        const { auctionId, userId } = data;
+        const { auctionId } = data;
 
-        if (!auctionId || !userId) {
+        // Validate auctionId
+        if (!auctionId) {
           return callback?.({
             success: false,
-            error: 'Missing auctionId or userId'
+            error: 'Missing auctionId'
           });
         }
 
-        socket.join(`auction-${auctionId}`);
-        socket.auctionId = auctionId;
-        socket.userId = userId;
+        const parsedAuctionId = parseInt(auctionId);
+        if (isNaN(parsedAuctionId)) {
+          return callback?.({
+            success: false,
+            error: 'Invalid auctionId format'
+          });
+        }
 
-        console.log(`[Auction Socket] User ${userId} joined auction ${auctionId} (socket: ${socket.id})`);
+        // Join auction room
+        socket.join(`auction-${parsedAuctionId}`);
+        socket.auctionId = parsedAuctionId;
 
-        io.to(`auction-${auctionId}`).emit('auction:user-joined', {
-          userId,
+        console.log(`[Auction Socket] User ${socket.userId} (${socket.userName}) joined auction ${parsedAuctionId} (socket: ${socket.id})`);
+
+        io.to(`auction-${parsedAuctionId}`).emit('auction:user-joined', {
+          userId: socket.userId,
+          userName: socket.userName,
+          userRole: socket.userRole,
           timestamp: new Date().toISOString()
         });
 
@@ -129,14 +213,16 @@ const setupAuctionSocket = (io) => {
       let client;
       
       try {
-        const { auctionId, bidderId, bidAmount } = data;
+        const { auctionId, bidAmount } = data;
+        // Use authenticated userId instead of trusting client data
+        const bidderId = socket.userId;
         
         client = await pgPool.connect();
 
-        console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
+        console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId} (${socket.userName}), Amount ${bidAmount}`);
 
         // ===== VALIDATION =====
-        if (!auctionId || !bidderId || !bidAmount) {
+        if (!auctionId || !bidAmount) {
           return callback?.({
             success: false,
             error: 'Missing required fields'
@@ -147,6 +233,14 @@ const setupAuctionSocket = (io) => {
           return callback?.({
             success: false,
             error: 'Invalid bid amount'
+          });
+        }
+
+        // Verify user role (only buyers can bid, not sellers)
+        if (socket.userRole === 'seller') {
+          return callback?.({
+            success: false,
+            error: 'Sellers cannot place bids'
           });
         }
 
