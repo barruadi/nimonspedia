@@ -10,6 +10,7 @@ class AuctionController {
       const limit = parseInt(req.query.limit) || 10;
       const status = req.query.status || null;
       const search = req.query.q || null;
+      const seller_id = req.query.seller_id ? parseInt(req.query.seller_id) : null;
 
       // Validate pagination params
       if (page < 1 || limit < 1 || limit > 100) {
@@ -32,7 +33,8 @@ class AuctionController {
         page,
         limit,
         status,
-        search
+        search,
+        seller_id
       });
 
       return res.status(200).json({

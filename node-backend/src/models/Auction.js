@@ -8,7 +8,7 @@ class Auction {
     return db.getInstance();
   }
 
-  static async findAll({ page = 1, limit = 10, status = null, search = null }) {
+  static async findAll({ page = 1, limit = 10, status = null, search = null, seller_id = null }) {
     try {
       const pool = this.getPool();
       const offset = (page - 1) * limit;
@@ -40,6 +40,13 @@ class Auction {
 
       const params = [];
       let paramCount = 1;
+
+      // Add seller_id filter if provided
+      if (seller_id) {
+        query += ` AND s.owner_id = $${paramCount}`;
+        params.push(seller_id);
+        paramCount++;
+      }
 
       if (status) {
         query += ` AND a.status = $${paramCount}`;
