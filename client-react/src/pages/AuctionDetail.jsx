@@ -474,6 +474,24 @@ const AuctionDetail = () => {
         setTimeSyncOffset(offset);
       }
       
+      // CRITICAL: Handle balance updates from socket for live sync
+      if (data.balance_updates && currentUserId) {
+        console.log('[AuctionDetail] Balance updates from socket:', data.balance_updates);
+        
+        // Update current user's balance if they're affected
+        if (data.balance_updates[currentUserId]) {
+          const newBalance = parseInt(data.balance_updates[currentUserId]) || 0;
+          setUserBalance(newBalance);
+          console.log(`[AuctionDetail] ✅ Own balance updated to: ${newBalance}`);
+        }
+        
+        // If we were outbid, show feedback
+        if (data.outbid_user_id === currentUserId) {
+          console.log(`[AuctionDetail] ⚠️ We were outbid! Refunded: ${data.outbid_refund_amount}`);
+          // Balance already updated above
+        }
+      }
+      
       if (data.auction_id === auction.auction_id) {
         // Update auction state with new end_time from server
         setAuction(prev => ({
