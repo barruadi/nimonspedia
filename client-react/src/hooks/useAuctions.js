@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 const API_BASE_URL = 'http://localhost/api/node';
 
-export const useAuctions = (status = 'active', page = 1, search = '') => {
+export const useAuctions = (status = 'active', page = 1, search = '', limit = 10) => {
   const [auctions, setAuctions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,8 +22,15 @@ export const useAuctions = (status = 'active', page = 1, search = '') => {
       const params = new URLSearchParams({
         status: status || 'active',
         page: page || 1,
-        limit: 10,
+        limit: limit || 10,
         ...(search && { q: search })
+      });
+
+      console.log('[useAuctions] Fetching with params:', {
+        status: status || 'active',
+        page: page || 1,
+        limit: limit || 10,
+        search: search || '(none)'
       });
 
       const response = await fetch(`${API_BASE_URL}/auctions?${params}`);
@@ -33,6 +40,12 @@ export const useAuctions = (status = 'active', page = 1, search = '') => {
       }
 
       const data = await response.json();
+
+      console.log('[useAuctions] Response:', {
+        ok: data.ok,
+        dataCount: data.data?.length || 0,
+        meta: data.meta
+      });
 
       if (!data.ok) {
         throw new Error(data.error || 'Failed to fetch auctions');
@@ -53,7 +66,7 @@ export const useAuctions = (status = 'active', page = 1, search = '') => {
     } finally {
       setLoading(false);
     }
-  }, [status, page, search]);
+  }, [status, page, search, limit]);
 
   // Fetch when dependencies change
   useEffect(() => {
