@@ -6,9 +6,13 @@
   color: #333;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .back-btn {
+  flex-shrink: 0;
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
@@ -22,7 +26,7 @@
   font-weight: 500;
   color: #ffffff;
   transition: all 0.3s;
-  margin: 20px 0 24px 20px;
+  margin: 20px 20px 0 20px;
   min-width: auto;
   width: fit-content;
 }
@@ -30,6 +34,32 @@
 .back-btn:hover {
   background: #048a47;
   border-color: #048a47;
+}
+
+/* Content Wrapper - Scrollable */
+.auction-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar styling */
+.auction-detail-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.auction-detail-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.auction-detail-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.auction-detail-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Loading & Error States */
@@ -73,7 +103,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
-  margin: 0 auto 40px;
+  margin: 24px auto;
   padding: 30px;
   max-width: 1200px;
   width: 100%;
@@ -81,6 +111,7 @@
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
 /* Image Section */
@@ -397,6 +428,7 @@
   max-width: 1200px;
   width: 100%;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .bids-section h2 {
@@ -1251,10 +1283,27 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .auction-detail-page {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .auction-detail-content {
+    overflow-y: visible;
+    height: auto;
+    max-height: none;
+  }
+
+  .back-btn {
+    margin: 12px 12px 0 12px;
+  }
+
   .detail-container {
     grid-template-columns: 1fr;
     gap: 24px;
     padding: 16px;
+    margin: 12px auto;
   }
 
   .meta-grid {
@@ -1269,12 +1318,9 @@
     grid-template-columns: 32px 1fr;
   }
 
-  .auction-detail-page {
-    padding: 12px;
-  }
-
   .bids-section {
     padding: 16px;
+    margin: 12px auto 40px;
   }
 
   .price-section {

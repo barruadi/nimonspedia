@@ -1,8 +1,10 @@
+/* Main Container with full height and scroll structure */
 .auction-list-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 /* Back Button for List */
@@ -33,10 +35,14 @@
   background: #036d37;
 }
 
+/* Header Section - Fixed at top, doesn't scroll */
 .list-header {
-  margin-bottom: 30px;
-  margin-top: 50px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 20px;
   text-align: center;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .list-header h1 {
@@ -50,6 +56,14 @@
   font-size: 16px;
   color: #666;
   margin: 0;
+}
+
+/* Tab Navigation & Search - Fixed, doesn't scroll */
+.auction-list-controls {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 /* Tab Navigation */
@@ -85,7 +99,7 @@
 
 /* Search Container */
 .search-container {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .search-input {
@@ -101,6 +115,15 @@
 
 .search-input:focus {
   border-color: #05AA5B;
+}
+
+/* Content Area - Scrollable */
+.auction-list-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  scroll-behavior: smooth;
 }
 
 /* Grid Layout */
@@ -149,14 +172,16 @@
   margin: 0;
 }
 
-/* Pagination */
+/* Pagination - Fixed at bottom, doesn't scroll */
 .pagination {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 16px;
-  padding: 24px;
-  margin-top: 32px;
+  padding: 16px 20px;
+  background-color: #fafafa;
+  border-top: 1px solid #e0e0e0;
 }
 
 .pagination-btn {
@@ -189,9 +214,33 @@
   text-align: center;
 }
 
+/* Custom scrollbar styling for content area */
+.auction-list-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.auction-list-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.auction-list-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.auction-list-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .auction-list-container {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .list-header {
     padding: 16px;
   }
 
@@ -203,8 +252,13 @@
     font-size: 14px;
   }
 
+  .auction-list-controls {
+    padding: 12px 16px;
+  }
+
   .tab-navigation {
     gap: 8px;
+    margin-bottom: 12px;
   }
 
   .tab-btn {
@@ -212,8 +266,19 @@
     font-size: 14px;
   }
 
+  .search-container {
+    margin-bottom: 12px;
+  }
+
   .search-input {
     max-width: 100%;
+  }
+
+  .auction-list-content {
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+    padding: 16px;
   }
 
   .auctions-grid {
@@ -224,6 +289,7 @@
   .pagination {
     flex-direction: column;
     gap: 12px;
+    padding: 12px 16px;
   }
 
   .pagination-btn {

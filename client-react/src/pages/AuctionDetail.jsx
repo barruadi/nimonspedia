@@ -692,62 +692,63 @@ const AuctionDetail = () => {
         <button className="back-btn" onClick={() => navigate('/auctions')}>← Kembali ke Lelang</button>
       )}
 
-      <div className="detail-container">
-        {/* Left: Image + Description Section */}
-        <div className="image-section">
-          <div className="image-wrapper">
-            <img 
-              src={auction.image_path || '/placeholder.png'} 
-              alt={auction.product_name}
-              onError={(e) => e.target.src = '/placeholder.png'}
-            />
-            <span className={`status-badge status-${auction.status}`}>
-              {auction.status === 'active' ? 'ACTIVE' : auction.status === 'scheduled' ? 'SCHEDULED' : auction.status === 'ended' ? 'ENDED' : 'CANCELLED'}
-            </span>
-          </div>
-
-          {/* Product Description Below Image */}
-          {auction.product_description && (
-            <>
-              {console.log('[AuctionDetail] Rendering description with content:', {
-                hasDescription: !!auction.product_description,
-                descriptionLength: auction.product_description?.length,
-                firstChars: auction.product_description?.substring(0, 100)
-              })}
-              <div 
-                ref={descriptionRef}
-                className="product-description ql-editor"
-                dangerouslySetInnerHTML={{ __html: auction.product_description }}
+      <div className="auction-detail-content">
+        <div className="detail-container">
+          {/* Left: Image + Description Section */}
+          <div className="image-section">
+            <div className="image-wrapper">
+              <img 
+                src={auction.image_path || '/placeholder.png'} 
+                alt={auction.product_name}
+                onError={(e) => e.target.src = '/placeholder.png'}
               />
-            </>
-          )}
-        </div>
-
-        {/* Right: Detail Section */}
-        <div className="detail-section">
-          {/* Product Info */}
-          <div className="product-info">
-            <h1>{auction.product_name}</h1>
-            <div className="product-meta-info">
-              <p className="quantity-info">
-                <span className="label">Jumlah Dilelang:</span>
-                <span className="value">{auction.quantity} pcs</span>
-              </p>
-              <p className="store-info">
-                <span className="label">Toko:</span>
-                <a 
-                  href={`http://localhost/store/${auction.store_id}`}
-                  className="store-link"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {auction.store_name}
-                </a>
-              </p>
+              <span className={`status-badge status-${auction.status}`}>
+                {auction.status === 'active' ? 'ACTIVE' : auction.status === 'scheduled' ? 'SCHEDULED' : auction.status === 'ended' ? 'ENDED' : 'CANCELLED'}
+              </span>
             </div>
+
+            {/* Product Description Below Image */}
+            {auction.product_description && (
+              <>
+                {console.log('[AuctionDetail] Rendering description with content:', {
+                  hasDescription: !!auction.product_description,
+                  descriptionLength: auction.product_description?.length,
+                  firstChars: auction.product_description?.substring(0, 100)
+                })}
+                <div 
+                  ref={descriptionRef}
+                  className="product-description ql-editor"
+                  dangerouslySetInnerHTML={{ __html: auction.product_description }}
+                />
+              </>
+            )}
           </div>
 
-          {/* Price Info */}
+          {/* Right: Detail Section */}
+          <div className="detail-section">
+            {/* Product Info */}
+            <div className="product-info">
+              <h1>{auction.product_name}</h1>
+              <div className="product-meta-info">
+                <p className="quantity-info">
+                  <span className="label">Jumlah Dilelang:</span>
+                  <span className="value">{auction.quantity} pcs</span>
+                </p>
+                <p className="store-info">
+                  <span className="label">Toko:</span>
+                  <a 
+                    href={`http://localhost/store/${auction.store_id}`}
+                    className="store-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {auction.store_name}
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            {/* Price Info */}
           <div className="price-section">
             <div className="price-card">
               <span className="price-label">Harga Awal</span>
@@ -1037,6 +1038,7 @@ const AuctionDetail = () => {
             )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

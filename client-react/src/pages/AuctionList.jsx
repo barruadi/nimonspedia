@@ -350,68 +350,74 @@ const AuctionList = () => {
         <p>Jelajahi berbagai produk yang sedang atau akan diluncurkan</p>
       </header>
 
-      {/* Tab Navigation */}
-      <div className="tab-navigation">
-        <button
-          className={`tab-btn ${activeTab === 'active' ? 'active' : ''}`}
-          onClick={() => handleTabChange('active')}
-        >
-          Lelang Berlangsung
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
-          onClick={() => handleTabChange('scheduled')}
-        >
-          Lelang Akan Datang
-        </button>
+      {/* Controls Section - Fixed */}
+      <div className="auction-list-controls">
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
+          <button
+            className={`tab-btn ${activeTab === 'active' ? 'active' : ''}`}
+            onClick={() => handleTabChange('active')}
+          >
+            Lelang Berlangsung
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'scheduled' ? 'active' : ''}`}
+            onClick={() => handleTabChange('scheduled')}
+          >
+            Lelang Akan Datang
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Cari produk..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="search-container">
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Cari produk..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
+      {/* Content Section - Scrollable */}
+      <div className="auction-list-content">
+        {/* Loading State */}
+        {loadingAuctions && (
+          <div className="loading-container">
+            <p>Memuat lelang...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="error-container">
+            <p>⚠️ {error}</p>
+          </div>
+        )}
+
+        {/* Auctions Grid */}
+        {!loadingAuctions && !error && auctions.length > 0 && (
+          <div className="auctions-grid">
+            {auctions.map((auction) => (
+              <AuctionCard
+                key={auction.auction_id}
+                auction={auction}
+                onViewDetail={handleViewDetail}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loadingAuctions && !error && auctions.length === 0 && (
+          <div className="empty-state">
+            <p>Tidak ada lelang ditemukan</p>
+          </div>
+        )}
       </div>
 
-      {/* Loading State */}
-      {loadingAuctions && (
-        <div className="loading-container">
-          <p>Memuat lelang...</p>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="error-container">
-          <p>⚠️ {error}</p>
-        </div>
-      )}
-
-      {/* Auctions Grid */}
-      {!loadingAuctions && !error && auctions.length > 0 && (
-        <div className="auctions-grid">
-          {auctions.map((auction) => (
-            <AuctionCard
-              key={auction.auction_id}
-              auction={auction}
-              onViewDetail={handleViewDetail}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loadingAuctions && !error && auctions.length === 0 && (
-        <div className="empty-state">
-          <p>Tidak ada lelang ditemukan</p>
-        </div>
-      )}
-
-      {/* Pagination */}
+      {/* Pagination - Fixed */}
       {!loadingAuctions && pagination.totalPages > 1 && (
         <div className="pagination">
           <button
