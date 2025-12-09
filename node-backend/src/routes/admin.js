@@ -249,19 +249,38 @@ router.put('/users/:userId/flags', authJWT, adminOnly, async (req, res) => {
         });
       }
 
-      const upsertQuery = `
-        INSERT INTO user_feature_access (user_id, feature_name, is_enabled, reason, updated_at)
-        VALUES ($1, $2, $3, $4, NOW())
-        ON CONFLICT (user_id, feature_name)
-        DO UPDATE SET is_enabled = $3, reason = $4, updated_at = NOW()
+      // Check if entry exists
+      const checkQuery = `
+        SELECT access_id FROM user_feature_access
+        WHERE user_id = $1 AND feature_name = $2
       `;
+      const checkResult = await pool.query(checkQuery, [userId, featureName]);
 
-      await pool.query(upsertQuery, [
-        userId,
-        featureName,
-        data.isEnabled,
-        data.isEnabled ? null : data.reason
-      ]);
+      if (checkResult.rows.length > 0) {
+        // Update existing
+        const updateQuery = `
+          UPDATE user_feature_access
+          SET is_enabled = $1, reason = $2, updated_at = NOW()
+          WHERE access_id = $3
+        `;
+        await pool.query(updateQuery, [
+          data.isEnabled,
+          data.isEnabled ? null : data.reason,
+          checkResult.rows[0].access_id
+        ]);
+      } else {
+        // Insert new
+        const insertQuery = `
+          INSERT INTO user_feature_access (user_id, feature_name, is_enabled, reason, updated_at)
+          VALUES ($1, $2, $3, $4, NOW())
+        `;
+        await pool.query(insertQuery, [
+          userId,
+          featureName,
+          data.isEnabled,
+          data.isEnabled ? null : data.reason
+        ]);
+      }
     }
 
     return res.json({
@@ -328,18 +347,37 @@ router.put('/global-flags', authJWT, adminOnly, async (req, res) => {
         });
       }
 
-      const upsertQuery = `
-        INSERT INTO user_feature_access (user_id, feature_name, is_enabled, reason, updated_at)
-        VALUES (NULL, $1, $2, $3, NOW())
-        ON CONFLICT (user_id, feature_name) WHERE user_id IS NULL
-        DO UPDATE SET is_enabled = $2, reason = $3, updated_at = NOW()
+      // Check if global entry exists
+      const checkQuery = `
+        SELECT access_id FROM user_feature_access
+        WHERE user_id IS NULL AND feature_name = $1
       `;
+      const checkResult = await pool.query(checkQuery, [featureName]);
 
-      await pool.query(upsertQuery, [
-        featureName,
-        data.isEnabled,
-        data.isEnabled ? null : data.reason
-      ]);
+      if (checkResult.rows.length > 0) {
+        // Update existing
+        const updateQuery = `
+          UPDATE user_feature_access
+          SET is_enabled = $1, reason = $2, updated_at = NOW()
+          WHERE access_id = $3
+        `;
+        await pool.query(updateQuery, [
+          data.isEnabled,
+          data.isEnabled ? null : data.reason,
+          checkResult.rows[0].access_id
+        ]);
+      } else {
+        // Insert new
+        const insertQuery = `
+          INSERT INTO user_feature_access (user_id, feature_name, is_enabled, reason, updated_at)
+          VALUES (NULL, $1, $2, $3, NOW())
+        `;
+        await pool.query(insertQuery, [
+          featureName,
+          data.isEnabled,
+          data.isEnabled ? null : data.reason
+        ]);
+      }
     }
 
     return res.json({

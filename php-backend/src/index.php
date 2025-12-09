@@ -27,5 +27,6 @@ require __DIR__ . '/App/Routes/BuyerRoutes.php';
 require __DIR__ . '/App/Routes/ProductRoutes.php';
 require __DIR__ . '/App/Routes/ProfileRoutes.php';
 require __DIR__ . '/App/Routes/SellerRoutes.php';
+require __DIR__ . '/App/Routes/FeatureFlagRoutes.php';
 
 $app->run();
