@@ -85,7 +85,36 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
 
   const handleNavClick = (href) => {
     setShowMobileMenu(false);
-    navigate(href);
+
+    // Define React routes that should use SPA navigation
+    const reactRoutes = [
+      '/',
+      '/auction',
+      '/auctions',
+      '/auction-history',
+      '/chat',
+      '/admin/login',
+      '/admin/dashboard'
+    ];
+
+    // Check if a path is a React route
+    const isReactRoute = (path) => {
+      // Exact matches
+      if (reactRoutes.includes(path)) return true;
+      // Pattern matches
+      if (path.startsWith('/auction/') && path !== '/auction') return true; // /auction/:id
+      if (path.startsWith('/chat')) return true; // /chat/*
+      if (path.startsWith('/admin/')) return true; // /admin/*
+      return false;
+    };
+
+    // If it's a React route, use React Router navigation
+    if (isReactRoute(href)) {
+      navigate(href);
+    } else {
+      // Otherwise, do a full page refresh for PHP pages
+      window.location.href = href;
+    }
   };
 
   const handleLogout = async () => {
