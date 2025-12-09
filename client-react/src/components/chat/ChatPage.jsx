@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
+import Navbar from '../Navbar/Navbar';
 import './ChatPage.css';
 
 const ChatPage = () => {
@@ -104,56 +105,62 @@ const ChatPage = () => {
 
   if (loading) {
     return (
-      <div className="chat-page-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading chat...</p>
-      </div>
+      <>
+        <Navbar />
+        <div className="chat-page-loading">
+          <div className="loading-spinner"></div>
+          <p>Loading chat...</p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className={`chat-page ${isChatOpen ? 'chat-open' : ''}`}>
-      <div className="chat-sidebar">
-        <ChatList
-          currentUser={currentUser}
-          refreshTrigger={chatListRefreshTrigger}
-        />
-      </div>
-      <div className="chat-main">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <div className="chat-empty-state">
-                <div className="empty-content">
-                  <svg
-                    width="120"
-                    height="120"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#ccc"
-                    strokeWidth="1"
-                  >
-                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                  </svg>
-                  <h2>Select a conversation</h2>
-                  <p>Choose a chat from the list to start messaging</p>
+    <>
+      <Navbar />
+      <div className={`chat-page ${isChatOpen ? 'chat-open' : ''}`}>
+        <div className="chat-sidebar">
+          <ChatList
+            currentUser={currentUser}
+            refreshTrigger={chatListRefreshTrigger}
+          />
+        </div>
+        <div className="chat-main">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <div className="chat-empty-state">
+                  <div className="empty-content">
+                    <svg
+                      width="120"
+                      height="120"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#ccc"
+                      strokeWidth="1"
+                    >
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    <h2>Select a conversation</h2>
+                    <p>Choose a chat from the list to start messaging</p>
+                  </div>
                 </div>
-              </div>
-            }
-          />
-          <Route
-            path="/:storeId/:buyerId"
-            element={
-              <ChatWindow
-                currentUser={currentUser}
-                onMessageSent={handleChatListRefresh}
-              />
-            }
-          />
-        </Routes>
+              }
+            />
+            <Route
+              path="/:storeId/:buyerId"
+              element={
+                <ChatWindow
+                  currentUser={currentUser}
+                  onMessageSent={handleChatListRefresh}
+                />
+              }
+            />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

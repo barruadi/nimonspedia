@@ -1,10 +1,10 @@
 .chat-page {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 60px);
   width: 100vw;
   overflow: hidden;
   position: fixed;
-  top: 0;
+  top: 60px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -29,7 +29,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: calc(100vh - 60px);
+  margin-top: 60px;
   background-color: #f8f9fa;
 }
 

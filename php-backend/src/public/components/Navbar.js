@@ -268,12 +268,41 @@ class AppNavbar extends HTMLElement {
   }
 
   wireSpaLinks() {
+    // Define React routes that should use SPA navigation
+    const reactRoutes = [
+      '/',
+      '/auction',
+      '/auctions',
+      '/auction-history',
+      '/chat',
+      '/admin/login',
+      '/admin/dashboard'
+    ];
+
+    // Check if a path is a React route
+    const isReactRoute = (path) => {
+      // Exact matches
+      if (reactRoutes.includes(path)) return true;
+      // Pattern matches
+      if (path.startsWith('/auction/') && path !== '/auction') return true; // /auction/:id
+      if (path.startsWith('/chat')) return true; // /chat/*
+      if (path.startsWith('/admin/')) return true; // /admin/*
+      return false;
+    };
+
     this.querySelectorAll('[data-nav]').forEach(a => {
       a.addEventListener('click', (e) => {
         if (!window.render) return;
         if (a.origin !== location.origin) return;
-        e.preventDefault();
+
         const href = a.getAttribute('href');
+
+        // If the target is not a React route, do a full page refresh
+        if (!isReactRoute(href)) {
+          return; // Allow default browser navigation
+        }
+
+        e.preventDefault();
 
         // Close mobile menu if item is clicked
         if (a.hasAttribute('data-mobile-item')) {

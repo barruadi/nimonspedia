@@ -36,8 +36,17 @@ $router->group([
     });
 
     // Review management routes
+    $r->get('/reviews',                     fn($req) => (new ReviewManagementController())->getStoreReviews($req));
     $r->post('/reviews/{id}/reply',         fn($req, $id) => ReviewManagementController::replyToReview($req, (int)$id));
-    $r->put('/reviews/{id}/toggle',         fn($req, $id) => ReviewManagementController::toggleVisibility($req, (int)$id));
+    $r->post('/reviews/{id}/toggle-visibility', fn($req, $id) => ReviewManagementController::toggleVisibility($req, (int)$id));
+});
+
+// Seller page routes (not API)
+$router->group([
+    'prefix'      => '/seller',
+    'middleware'  => [$auth, $roleSeller],
+], function($r) {
+    $r->get('/reviews',                     fn($req) => (new ReviewManagementController())->showReviewsPage());
 });
 
 // Public Endpoint: GET /api/categories returns Category list
