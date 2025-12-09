@@ -22,34 +22,118 @@ const auctionTimers = new Map();
  * @param {Socket.IO} io - Socket.IO instance
  */
 const setupAuctionSocket = (io) => {
+  console.log('[Auction Socket Setup] Starting auction socket setup...');
+  
+  // Middleware to authenticate socket connections
+  io.use(async (socket, next) => {
+    console.log(`[Auction Socket Auth] New connection attempt: ${socket.id}`);
+    console.log(`[Auction Socket Auth] Handshake headers:`, socket.handshake.headers);
+    console.log(`[Auction Socket Auth] Handshake auth:`, socket.handshake.auth);
+    
+    try {
+      const userId = socket.handshake.auth.userId;
+      const userRole = socket.handshake.auth.userRole;
+
+      console.log(`[Auction Socket Auth] Extracted from handshake - userId: "${userId}" (type: ${typeof userId}), userRole: "${userRole}" (type: ${typeof userRole})`);
+
+      // Validate required auth data
+      if (!userId || !userRole) {
+        console.warn(`[Auction Socket Auth] Authentication failed: missing data. userId: ${userId}, userRole: ${userRole}`);
+        return next(new Error('Authentication required: missing userId or userRole'));
+      }
+
+      // Verify userId is a valid integer
+      const parsedUserId = parseInt(userId);
+      console.log(`[Auction Socket Auth] Parsed userId: ${parsedUserId}, isNaN: ${isNaN(parsedUserId)}`);
+      
+      if (isNaN(parsedUserId)) {
+        console.warn(`[Auction Socket Auth] Invalid userId format: "${userId}"`);
+        return next(new Error('Invalid userId format'));
+      }
+
+      console.log(`[Auction Socket Auth] Querying database for user ${parsedUserId}...`);
+      
+      // Verify user exists in database
+      const userQuery = `
+        SELECT user_id, role, full_name
+        FROM users
+        WHERE user_id = $1
+      `;
+      const pgPool = pool.getInstance();
+      const userResult = await pgPool.query(userQuery, [parsedUserId]);
+
+      console.log(`[Auction Socket Auth] Database query result: ${userResult.rows.length} row(s) found`);
+
+      if (userResult.rows.length === 0) {
+        console.warn(`[Auction Socket Auth] User ${parsedUserId} not found in database`);
+        return next(new Error('User not found'));
+      }
+
+      const dbUser = userResult.rows[0];
+      console.log(`[Auction Socket Auth] Database user data:`, dbUser);
+
+      // Verify role matches (prevent role spoofing)
+      if (dbUser.role !== userRole) {
+        console.warn(`[Auction Socket Auth] Role mismatch - DB: "${dbUser.role}", provided: "${userRole}"`);
+        return next(new Error('Role mismatch'));
+      }
+
+      // Store authenticated user data on socket
+      socket.userId = parsedUserId;
+      socket.userRole = userRole;
+      socket.userName = dbUser.full_name;
+
+      console.log(`[Auction Socket Auth] User authenticated - socket: ${socket.id}, userId: ${parsedUserId}, role: ${userRole}, name: ${dbUser.full_name}`);
+      next();
+    } catch (error) {
+      console.error('[Auction Socket Auth] Authentication error:', error.message);
+      console.error('[Auction Socket Auth] Error stack:', error.stack);
+      next(new Error('Authentication failed: ' + error.message));
+    }
+  });
+
+  console.log('[Auction Socket Setup] Middleware registered, setting up connection handler...');
+
   io.on('connection', (socket) => {
-    console.log(`[Auction Socket] User connected: ${socket.id}`);
+    console.log(`[Auction Socket] User CONNECTED: ${socket.id} (userId: ${socket.userId}, role: ${socket.userRole}, name: ${socket.userName})`);
 
     /**
      * EVENT: auction:join
      * Client joins auction room to receive real-time updates
      * 
-     * Payload: { auctionId: number, userId: number }
+     * Payload: { auctionId: number }
+     * Uses authenticated userId from socket
      */
     socket.on('auction:join', (data, callback) => {
       try {
-        const { auctionId, userId } = data;
+        const { auctionId } = data;
 
-        if (!auctionId || !userId) {
+        // Validate auctionId
+        if (!auctionId) {
           return callback?.({
             success: false,
-            error: 'Missing auctionId or userId'
+            error: 'Missing auctionId'
           });
         }
 
-        socket.join(`auction-${auctionId}`);
-        socket.auctionId = auctionId;
-        socket.userId = userId;
+        const parsedAuctionId = parseInt(auctionId);
+        if (isNaN(parsedAuctionId)) {
+          return callback?.({
+            success: false,
+            error: 'Invalid auctionId format'
+          });
+        }
 
-        console.log(`[Auction Socket] User ${userId} joined auction ${auctionId} (socket: ${socket.id})`);
+        // Join auction room
+        socket.join(`auction-${parsedAuctionId}`);
+        socket.auctionId = parsedAuctionId;
 
-        io.to(`auction-${auctionId}`).emit('auction:user-joined', {
-          userId,
+        console.log(`[Auction Socket] User ${socket.userId} (${socket.userName}) joined auction ${parsedAuctionId} (socket: ${socket.id})`);
+
+        io.to(`auction-${parsedAuctionId}`).emit('auction:user-joined', {
+          userId: socket.userId,
+          userName: socket.userName,
+          userRole: socket.userRole,
           timestamp: new Date().toISOString()
         });
 
@@ -129,14 +213,16 @@ const setupAuctionSocket = (io) => {
       let client;
       
       try {
-        const { auctionId, bidderId, bidAmount } = data;
+        const { auctionId, bidAmount } = data;
+        // Use authenticated userId instead of trusting client data
+        const bidderId = socket.userId;
         
         client = await pgPool.connect();
 
-        console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId}, Amount ${bidAmount}`);
+        console.log(`[Auction Socket] Bid attempt - Auction ${auctionId}, Bidder ${bidderId} (${socket.userName}), Amount ${bidAmount}`);
 
         // ===== VALIDATION =====
-        if (!auctionId || !bidderId || !bidAmount) {
+        if (!auctionId || !bidAmount) {
           return callback?.({
             success: false,
             error: 'Missing required fields'
@@ -147,6 +233,14 @@ const setupAuctionSocket = (io) => {
           return callback?.({
             success: false,
             error: 'Invalid bid amount'
+          });
+        }
+
+        // Verify user role (only buyers can bid, not sellers)
+        if (socket.userRole === 'seller') {
+          return callback?.({
+            success: false,
+            error: 'Sellers cannot place bids'
           });
         }
 
@@ -236,7 +330,27 @@ const setupAuctionSocket = (io) => {
           });
         }
 
-        // STEP 5: DEDUCT BALANCE FROM BUYER
+        // STEP 5: REFUND PREVIOUS BIDDER (if exists and different user)
+        let previousBidderRefundAmount = 0;
+        if (previousBid && previousBid.bidder_id !== bidderId) {
+          // Lock previous bidder's row
+          const prevBidderQuery = `
+            SELECT user_id, balance FROM users WHERE user_id = $1 FOR UPDATE
+          `;
+          const prevBidderResult = await client.query(prevBidderQuery, [previousBid.bidder_id]);
+          
+          if (prevBidderResult.rows.length > 0) {
+            // Refund their bid amount
+            previousBidderRefundAmount = previousBid.bid_amount;
+            const refundQuery = `
+              UPDATE users SET balance = balance + $1 WHERE user_id = $2
+            `;
+            await client.query(refundQuery, [previousBidderRefundAmount, previousBid.bidder_id]);
+            console.log(`[Auction Socket] Refunded ${previousBidderRefundAmount} to user ${previousBid.bidder_id}`);
+          }
+        }
+
+        // STEP 6: DEDUCT BALANCE FROM NEW BUYER
         const deductQuery = `
           UPDATE users 
           SET balance = balance - $1
@@ -278,6 +392,18 @@ const setupAuctionSocket = (io) => {
         `;
         const bidHistoryResult = await client.query(bidHistoryQuery, [auctionId]);
 
+        // STEP 10: FETCH FINAL BALANCES FOR BOTH AFFECTED USERS (before commit, within transaction)
+        const newBidderBalanceQuery = `SELECT balance FROM users WHERE user_id = $1`;
+        const newBidderBalanceResult = await client.query(newBidderBalanceQuery, [bidderId]);
+        const newBidderFinalBalance = newBidderBalanceResult.rows[0]?.balance || 0;
+
+        let previousBidderFinalBalance = null;
+        if (previousBid && previousBid.bidder_id !== bidderId) {
+          const prevBidderBalanceQuery = `SELECT balance FROM users WHERE user_id = $1`;
+          const prevBidderBalanceResult = await client.query(prevBidderBalanceQuery, [previousBid.bidder_id]);
+          previousBidderFinalBalance = prevBidderBalanceResult.rows[0]?.balance || 0;
+        }
+
         // COMMIT TRANSACTION
         await client.query('COMMIT');
         console.log(`[Auction Socket] Transaction committed for auction ${auctionId}`);
@@ -294,17 +420,25 @@ const setupAuctionSocket = (io) => {
         auctionTimers.set(auctionId, timer);
         console.log(`[Auction Socket] 15s timer set for auction ${auctionId}`);
 
-        // SUCCESS - Callback to bidder
+        // SUCCESS - Callback to bidder with final balance
         callback?.({
           success: true,
           data: {
-            newBalance: buyer.balance - bidAmount,
+            newBalance: newBidderFinalBalance,
             bidId: newBid.bid_id,
             newPrice: bidAmount
           }
         });
 
-        // BROADCAST TO ROOM
+        // BUILD BALANCE UPDATES OBJECT - Include both users affected
+        const balanceUpdates = {
+          [bidderId]: newBidderFinalBalance
+        };
+        if (previousBid && previousBid.bidder_id !== bidderId && previousBidderFinalBalance !== null) {
+          balanceUpdates[previousBid.bidder_id] = previousBidderFinalBalance;
+        }
+
+        // BROADCAST TO ROOM - With balance updates for live sync
         io.to(`auction-${auctionId}`).emit('auction:bid-update', {
           auction_id: auctionId,
           bidder_id: bidderId,
@@ -314,7 +448,11 @@ const setupAuctionSocket = (io) => {
           new_end_time: newEndTime.toISOString(),
           server_time: new Date().toISOString(),
           is_first_bid: !previousBid,
-          bid_history: bidHistoryResult.rows
+          bid_history: bidHistoryResult.rows,
+          // CRITICAL: Balance updates untuk socket sync
+          balance_updates: balanceUpdates,
+          outbid_user_id: previousBid && previousBid.bidder_id !== bidderId ? previousBid.bidder_id : null,
+          outbid_refund_amount: previousBidderRefundAmount
         });
 
         console.log(`[Auction Socket] Broadcast bid-update to auction ${auctionId}`);
@@ -474,7 +612,7 @@ async function closeAuction(io, auctionId) {
   const client = await pgPool.connect();
   
   try {
-    console.log(`[Auction Socket] ⏰ Auto-closing auction ${auctionId}`);
+    console.log(`[Auction Socket] Auto-closing auction ${auctionId}`);
 
     // BEGIN transaction
     await client.query('BEGIN');
@@ -538,7 +676,7 @@ async function closeAuction(io, auctionId) {
       const orderResult = await client.query(orderQuery, [winnerId, product.store_id, finalPrice]);
       
       if (!orderResult.rows[0]) {
-        console.error(`[Auction Socket] ❌ ORDER INSERT FAILED for auction ${auctionId}`);
+        console.error(`[Auction Socket] ORDER INSERT FAILED for auction ${auctionId}`);
         throw new Error('Order insert returned no rows');
       }
       
@@ -552,65 +690,19 @@ async function closeAuction(io, auctionId) {
       `;
       await client.query(orderItemQuery, [orderId, auction.product_id, finalPrice, auction.quantity]);
 
-      console.log(`[Auction Socket] ✅ Order ${orderId} created for auction ${auctionId}:`);
+      console.log(`[Auction Socket] Order ${orderId} created for auction ${auctionId}:`);
       console.log(`  - Buyer: ${winnerId}`);
       console.log(`  - Store: ${product.store_id}`);
       console.log(`  - Amount: Rp ${finalPrice}`);
       console.log(`  - Status: approved`);
     }
 
-    // REFUND NON-WINNING BIDS
-    // Winner: refund all bids EXCEPT the highest (winning) bid
-    // Losers: refund ALL bids
-    
-    if (winnerId) {
-      // Refund winner's previous bids (all except max)
-      const winnerPreviousBidsQuery = `
-        SELECT SUM(bid_amount) as total_refund
-        FROM auction_bids
-        WHERE auction_id = $1 AND bidder_id = $2
-        AND bid_amount != (
-          SELECT MAX(bid_amount) 
-          FROM auction_bids 
-          WHERE auction_id = $1 AND bidder_id = $2
-        )
-      `;
-      const winnerRefundResult = await client.query(winnerPreviousBidsQuery, [auctionId, winnerId]);
-      const winnerRefundAmount = winnerRefundResult.rows[0]?.total_refund || 0;
-      
-      if (winnerRefundAmount > 0) {
-        const winnerRefundQuery = `
-          UPDATE users 
-          SET balance = balance + $1
-          WHERE user_id = $2
-        `;
-        await client.query(winnerRefundQuery, [winnerRefundAmount, winnerId]);
-        console.log(`[Auction Socket] Refunded Rp ${winnerRefundAmount} (previous bids) to winner ${winnerId}`);
-      }
-    }
-    
-    // Refund all losing bidders - ALL their bids
-    const losingBidsQuery = `
-      SELECT bidder_id, SUM(bid_amount) as total_bid_amount
-      FROM auction_bids
-      WHERE auction_id = $1 AND bidder_id != $2
-      GROUP BY bidder_id
-    `;
-    const losingBidsResult = await client.query(losingBidsQuery, [auctionId, winnerId || -1]);
-    
-    if (losingBidsResult.rows.length > 0) {
-      console.log(`[Auction Socket] Refunding ${losingBidsResult.rows.length} losing bidders for auction ${auctionId}`);
-      
-      for (const losingBid of losingBidsResult.rows) {
-        const refundQuery = `
-          UPDATE users 
-          SET balance = balance + $1
-          WHERE user_id = $2
-        `;
-        await client.query(refundQuery, [losingBid.total_bid_amount, losingBid.bidder_id]);
-        console.log(`[Auction Socket] Refunded Rp ${losingBid.total_bid_amount} (all bids) to losing bidder ${losingBid.bidder_id}`);
-      }
-    }
+    // NO BALANCE REFUNDS AT CLOSE
+    // All balance operations (deduct & refund) happen during bidding:
+    // - DEDUCT: When bid is placed
+    // - REFUND: Immediately when user is outbid
+    // This prevents double-refunds and keeps balance logic in one place (bidding handler)
+    console.log(`[Auction Socket] Auction ${auctionId} closed - no balance refunds needed (all handled during bidding)`);
 
     // UPDATE AUCTION STATUS TO ENDED
     const updateQuery = `
@@ -630,6 +722,7 @@ async function closeAuction(io, auctionId) {
 
     // COMMIT
     await client.query('COMMIT');
+    console.log(`[Auction Socket] Transaction committed for auction ${auctionId}`);
 
     // BROADCAST auction:ended to room
     io.to(`auction-${auctionId}`).emit('auction:ended', {
@@ -641,9 +734,9 @@ async function closeAuction(io, auctionId) {
     });
 
     // EMIT order:created event to winner
-    if (winnerId) {
+    if (winnerId && orderId) {
       io.to(`user-${winnerId}`).emit('order:created', {
-        order_id: orderId || null,
+        order_id: orderId,
         auction_id: auctionId,
         product_name: productName || 'produk',
         final_price: finalPrice,
@@ -651,11 +744,15 @@ async function closeAuction(io, auctionId) {
         message: 'Order Anda dari hasil lelang sudah dibuat dengan status approved'
       });
       console.log(`[Auction Socket] Emitted order:created event to winner ${winnerId} (order: ${orderId})`);
+    } else if (!winnerId) {
+      console.log(`[Auction Socket] No winner for auction ${auctionId}, no order created`);
+    } else if (!orderId) {
+      console.log(`[Auction Socket] ⚠️ WARNING: Winner ${winnerId} exists but order was not created for auction ${auctionId}`);
     }
 
-    console.log(`[Auction Socket] ✅ Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName})`);
+    console.log(`[Auction Socket] Auction ${auctionId} closed. Winner: ${winnerId} (${winnerName}), Order: ${orderId || 'NOT CREATED'}`);
 
-    // SEND PUSH NOTIFICATIONS
+    // SEND PUSH NOTIFICATIONS (using pgPool for post-transaction queries)
     try {
       const productQuery = `
         SELECT p.name as product_name
@@ -663,14 +760,14 @@ async function closeAuction(io, auctionId) {
         JOIN products p ON a.product_id = p.product_id
         WHERE a.auction_id = $1
       `;
-      const productResult = await client.query(productQuery, [auctionId]);
-      const productName = productResult.rows[0]?.product_name || 'produk';
+      const productResult = await pgPool.query(productQuery, [auctionId]);
+      const notificationProductName = productResult.rows[0]?.product_name || 'produk';
 
       // Notify winner
       if (winnerId && winnerName) {
         await sendAuctionWonNotification(
           winnerId,
-          productName,
+          notificationProductName,
           finalPrice,
           winnerName
         );
@@ -685,13 +782,13 @@ async function closeAuction(io, auctionId) {
         JOIN stores s ON p.store_id = s.store_id
         WHERE a.auction_id = $1
       `;
-      const sellerResult = await client.query(sellerQuery, [auctionId]);
+      const sellerResult = await pgPool.query(sellerQuery, [auctionId]);
       const sellerId = sellerResult.rows[0]?.owner_id;
 
       if (sellerId) {
         await sendAuctionEndedSellerNotification(
           sellerId,
-          productName,
+          notificationProductName,
           winnerName || 'Tidak ada pemenang',
           finalPrice
         );

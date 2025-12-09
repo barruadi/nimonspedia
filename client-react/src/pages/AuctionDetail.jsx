@@ -450,9 +450,9 @@ const AuctionDetail = () => {
 
     console.log(`[AuctionDetail] Joining auction room: ${auction.auction_id}`);
 
+    // Note: userId is now verified server-side from socket authentication
     socket.emit('auction:join', {
-      auctionId: auction.auction_id,
-      userId: currentUser.user_id
+      auctionId: auction.auction_id
     }, (response) => {
       if (response?.success) {
         console.log('[AuctionDetail] Successfully joined auction room');
@@ -472,6 +472,24 @@ const AuctionDetail = () => {
         const offset = serverTime - clientTime;
         console.log(`[AuctionDetail] Time sync: server=${serverTime}, client=${clientTime}, offset=${offset}ms`);
         setTimeSyncOffset(offset);
+      }
+      
+      // CRITICAL: Handle balance updates from socket for live sync
+      if (data.balance_updates && currentUserId) {
+        console.log('[AuctionDetail] Balance updates from socket:', data.balance_updates);
+        
+        // Update current user's balance if they're affected
+        if (data.balance_updates[currentUserId]) {
+          const newBalance = parseInt(data.balance_updates[currentUserId]) || 0;
+          setUserBalance(newBalance);
+          console.log(`[AuctionDetail] ✅ Own balance updated to: ${newBalance}`);
+        }
+        
+        // If we were outbid, show feedback
+        if (data.outbid_user_id === currentUserId) {
+          console.log(`[AuctionDetail] ⚠️ We were outbid! Refunded: ${data.outbid_refund_amount}`);
+          // Balance already updated above
+        }
       }
       
       if (data.auction_id === auction.auction_id) {
@@ -594,9 +612,9 @@ const AuctionDetail = () => {
 
       setSubmittingBid(true);
 
+      // Note: bidderId is now verified server-side from socket authentication
       socket.emit('auction:place-bid', {
         auctionId: auction.auction_id,
-        bidderId: currentUser.user_id,
         bidAmount: bid
       }, (response) => {
         if (response?.success) {

@@ -2,22 +2,52 @@ const Auction = require('../models/Auction');
 
 class AuctionController {
   /**
-   * Get all auctions with requested filters & pagination
+   * Get all auctions with requested filters & cursor-based pagination
    */
   static async getAllAuctions(req, res) {
     try {
-      const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
+      const cursor = req.query.cursor || null;
       const status = req.query.status || null;
       const search = req.query.q || null;
       const seller_id = req.query.seller_id ? parseInt(req.query.seller_id) : null;
 
       // Validate pagination params
-      if (page < 1 || limit < 1 || limit > 100) {
+      if (limit < 1 || limit > 100) {
         return res.status(400).json({
           ok: false,
-          error: 'Invalid pagination parameters. Page and limit must be positive, limit max 100.'
+          error: 'Invalid limit parameter. Must be positive and max 100.'
         });
+      }
+
+      // Validate cursor format if provided (should contain ":" separator with milliseconds:id format)
+      if (cursor) {
+        const parts = cursor.split(':');
+        if (parts.length !== 2) {
+          console.log('[getAllAuctions] Invalid cursor parts:', {
+            cursor,
+            partsLength: parts.length
+          });
+          return res.status(400).json({
+            ok: false,
+            error: 'Invalid cursor format. Expected format: timestamp_ms:auction_id (e.g., 1733754000000:123)'
+          });
+        }
+
+        const cursorTimeMs = parseInt(parts[0]);
+        const cursorId = parseInt(parts[1]);
+
+        if (isNaN(cursorTimeMs) || isNaN(cursorId)) {
+          console.log('[getAllAuctions] Invalid cursor values:', {
+            cursor,
+            cursorTimeMs: parts[0],
+            cursorId: parts[1]
+          });
+          return res.status(400).json({
+            ok: false,
+            error: 'Invalid cursor format. Both parts must be numbers. Expected: timestamp_ms:auction_id'
+          });
+        }
       }
 
       // Validate status if provided
@@ -29,12 +59,27 @@ class AuctionController {
         });
       }
 
-      const result = await Auction.findAll({
-        page,
+      console.log('[getAllAuctions] Request params:', {
         limit,
+        cursor,
+        status,
+        search: search ? `${search.substring(0, 20)}...` : null,
+        seller_id
+      });
+
+      const result = await Auction.findAll({
+        limit,
+        cursor,
         status,
         search,
         seller_id
+      });
+
+      console.log('[getAllAuctions] Response meta:', {
+        dataCount: result.data.length,
+        limit: result.meta.limit,
+        hasNextPage: result.meta.hasNextPage,
+        nextCursor: result.meta.nextCursor ? `${result.meta.nextCursor.substring(0, 20)}...` : null
       });
 
       return res.status(200).json({
@@ -54,10 +99,9 @@ class AuctionController {
           winner_id: row.winner_id
         })),
         meta: {
-          page: result.meta.page,
           limit: result.meta.limit,
-          totalCount: result.meta.totalCount,
-          totalPages: result.meta.totalPages
+          hasNextPage: result.meta.hasNextPage,
+          nextCursor: result.meta.nextCursor || null
         }
       });
 

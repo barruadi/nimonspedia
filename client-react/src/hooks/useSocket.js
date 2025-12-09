@@ -9,24 +9,29 @@ export const useSocket = (authData = null) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Initialize socket connection with optional authentication
+    // Only initialize socket if authData is available
+    if (!authData || !authData.userId || !authData.userRole) {
+      console.log('[Socket] Waiting for auth data before connecting... Current authData:', authData);
+      return;
+    }
+
+    console.log('[Socket] Creating socket with auth data:', authData);
+
+    // Initialize socket connection with authentication
     const socketOptions = {
       path: '/socket.io/',
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity
-    };
-
-    // Add authentication if provided
-    if (authData && authData.userId && authData.userRole) {
-      socketOptions.auth = {
+      reconnectionAttempts: Infinity,
+      auth: {
         userId: authData.userId,
         userRole: authData.userRole
-      };
-    }
+      }
+    };
 
+    console.log('[Socket] Socket options:', socketOptions);
     socketRef.current = io(SOCKET_URL, socketOptions);
 
     // Connection event
@@ -47,9 +52,10 @@ export const useSocket = (authData = null) => {
       setConnected(false);
     });
 
-    // Cleanup on unmount
+    // Cleanup on unmount or authData change
     return () => {
       if (socketRef.current) {
+        console.log('[Socket] Disconnecting socket due to cleanup');
         socketRef.current.disconnect();
       }
     };
