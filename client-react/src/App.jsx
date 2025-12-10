@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import './App.css'
+import './components/ToastNotification'
 import ChatPage from './components/chat/ChatPage'
 import AuctionPage from './components/auction/AuctionPage'
 import AuctionList from './pages/AuctionList'
@@ -52,19 +53,22 @@ function NotFound() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/auction" element={<AuctionPage />} />
-        <Route path="/auctions" element={<AuctionList />} />
-        <Route path="/auction/:id" element={<AuctionDetail />} />
-        <Route path="/auction-history" element={<SellerAuctionHistory />} />
-        <Route path="/chat/*" element={<ChatPage />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <>
+      <app-toast></app-toast>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/auction" element={<AuctionPage />} />
+          <Route path="/auctions" element={<AuctionList />} />
+          <Route path="/auction/:id" element={<AuctionDetail />} />
+          <Route path="/auction-history" element={<SellerAuctionHistory />} />
+          <Route path="/chat/*" element={<ChatPage />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </>
   )
 }
 

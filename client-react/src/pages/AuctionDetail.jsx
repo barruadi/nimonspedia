@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import SocketIndicator from '../components/SocketIndicator';
 import { useSocket } from '../hooks/useSocket';
+import { showToast } from '../utils/toast';
 import './AuctionDetail.css';
 
 const API_BASE_URL = 'http://localhost/api/node';
@@ -645,7 +646,7 @@ const AuctionDetail = () => {
       
       // Validate reason for cancel action
       if (action === 'cancel' && !cancellationReason.trim()) {
-        alert('Silakan masukkan alasan pembatalan');
+        showToast('Silakan masukkan alasan pembatalan', '', 'error');
         setCancelLoading(false);
         return;
       }
@@ -686,7 +687,8 @@ const AuctionDetail = () => {
 
       setShowCancelModal(false);
       setCancellationReason('');
-      alert(`Lelang berhasil di${action === 'stop' ? 'hentikan' : 'batalkan'}!`);
+      const actionText = action === 'stop' ? 'dihentikan' : 'dibatalkan';
+      showToast(`Lelang berhasil ${actionText}!`, '', 'success');
 
     } catch (err) {
       console.error('[AuctionDetail] Error stopping auction:', err);
@@ -694,10 +696,10 @@ const AuctionDetail = () => {
       
       // If error says there are bids, refresh page to get latest data
       if (errorMsg.includes('existing bids')) {
-        alert('Penawaran baru telah diterima. Halaman akan di-refresh untuk menampilkan data terbaru.');
+        showToast('Penawaran baru telah diterima', 'Halaman akan di-refresh untuk menampilkan data terbaru', 'error');
         setTimeout(() => window.location.reload(), 2000);
       } else {
-        alert(errorMsg);
+        showToast('Gagal menghentikan lelang', errorMsg, 'error');
       }
     } finally {
       setCancelLoading(false);
