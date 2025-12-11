@@ -16,16 +16,17 @@ services:
       - client-react
 
   php-backend:
-    build: ./php-backend 
+    build: ./php-backend
     container_name: nimons_php_fpm
     volumes:
       - ./php-backend:/var/www/html
     ports:
-      - "8080:8080" 
+      - "8080:8080"
     env_file:
       - ./.env
     depends_on:
-      - postgres 
+      - postgres
+      - redis 
 
   node-backend:
     build: ./node-backend
@@ -41,6 +42,7 @@ services:
     command: npm run dev
     depends_on:
       - postgres
+      - redis
 
   client-react:
     build: ./client-react 
@@ -63,5 +65,15 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
 
+  redis:
+    image: redis:7-alpine
+    container_name: nimons_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+
 volumes:
   pgdata:
+  redisdata:

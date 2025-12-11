@@ -74,3 +74,92 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Push Notification Event Handler
+self.addEventListener('push', (event) => {
+  console.log('[Service Worker] Push notification received:', event);
+
+  let notificationData = {
+    title: 'Nimons Notification',
+    body: 'You have a new notification',
+    icon: '/logo-192.png',
+    badge: '/logo-192.png',
+    tag: 'nimons-notification',
+    requireInteraction: false,
+  };
+
+  // Parse notification data if available
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      console.log('[Service Worker] Push data:', data);
+
+      notificationData = {
+        title: data.title || notificationData.title,
+        body: data.body || notificationData.body,
+        icon: data.icon || notificationData.icon,
+        badge: data.badge || notificationData.badge,
+        tag: data.tag || notificationData.tag,
+        data: data.data || {},
+        requireInteraction: data.requireInteraction !== undefined ? data.requireInteraction : false,
+      };
+
+      // Add action buttons if provided
+      if (data.actions && Array.isArray(data.actions)) {
+        notificationData.actions = data.actions;
+      }
+
+      // Add image if provided
+      if (data.image) {
+        notificationData.image = data.image;
+      }
+    } catch (error) {
+      console.error('[Service Worker] Error parsing push data:', error);
+    }
+  }
+
+  const promiseChain = self.registration.showNotification(
+    notificationData.title,
+    notificationData
+  );
+
+  event.waitUntil(promiseChain);
+});
+
+// Notification Click Event Handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification clicked:', event.notification.tag);
+
+  event.notification.close();
+
+  // Handle action button clicks
+  if (event.action) {
+    console.log('[Service Worker] Action clicked:', event.action);
+    // Handle specific actions here
+  }
+
+  // Get the URL to open from notification data
+  let urlToOpen = '/';
+
+  if (event.notification.data && event.notification.data.url) {
+    urlToOpen = event.notification.data.url;
+  }
+
+  // Open or focus the app window
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window open
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+
+      // If no window is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

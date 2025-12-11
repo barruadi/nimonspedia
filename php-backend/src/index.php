@@ -1,5 +1,12 @@
 <?php
 
+// Configure Redis as session handler
+$redisHost = getenv('REDIS_HOST') ?: 'redis';
+$redisPort = getenv('REDIS_PORT') ?: 6379;
+
+ini_set('session.save_handler', 'redis');
+ini_set('session.save_path', "tcp://{$redisHost}:{$redisPort}?database=0");
+
 $cookieLifetime = 7 * 24 * 60 * 60;
 session_set_cookie_params([
     'lifetime' => $cookieLifetime,

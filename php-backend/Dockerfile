@@ -12,8 +12,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* # Bersihkan cache
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_pgsql \ 
-    && docker-php-ext-enable pdo_pgsql # <-- AKTIFKAN EKSTENSI
+    && docker-php-ext-install gd pdo pdo_pgsql \
+    && docker-php-ext-enable pdo_pgsql
+
+# Install Redis extension
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
 WORKDIR /var/www/html
 

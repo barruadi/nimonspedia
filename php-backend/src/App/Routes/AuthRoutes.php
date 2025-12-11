@@ -65,8 +65,34 @@ $router->post('/api/_echo', fn($req) => [
 ]);
 
 $router->get('/api/session', function ($req) {
+    $u = $_SESSION['user'] ?? null;
+
+    if (!$u) {
+        return [
+            'authenticated' => false,
+            'session_id' => session_id(),
+            'user' => null
+        ];
+    }
+
+    // Fetch fresh balance from database
+    $freshBalance = \App\Models\User::getBalance((int)$u['user_id']);
+
+    // Update session with fresh balance
+    if ($freshBalance !== null) {
+        $_SESSION['user']['balance'] = $freshBalance;
+        $u['balance'] = $freshBalance;
+    }
+
     return [
-        'session' => $_SESSION,
+        'authenticated' => true,
         'session_id' => session_id(),
+        'user' => [
+            'userId' => $u['user_id'],
+            'userRole' => $u['role'],
+            'fullName' => $u['full_name'],
+            'email' => $u['email'],
+            'balance' => $u['balance'],
+        ]
     ];
 });

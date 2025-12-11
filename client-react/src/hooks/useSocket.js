@@ -9,13 +9,31 @@ export const useSocket = (authData = null) => {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Only initialize socket if authData is available
-    if (!authData || !authData.userId || !authData.userRole) {
+    // Determine authentication method
+    // Priority: sessionId (new method) > userId/userRole (legacy)
+    let authConfig = null;
+
+    if (authData?.sessionId && authData?.user) {
+      // Session-based authentication (preferred)
+      authConfig = {
+        sessionId: authData.sessionId,
+        userId: authData.user.userId,
+        userRole: authData.user.userRole
+      };
+      console.log('[Socket] Using session-based auth:', { sessionId: authData.sessionId, userId: authData.user.userId });
+    } else if (authData?.userId && authData?.userRole) {
+      // Legacy authentication (fallback)
+      authConfig = {
+        userId: authData.userId,
+        userRole: authData.userRole
+      };
+      console.log('[Socket] Using legacy auth:', { userId: authData.userId, userRole: authData.userRole });
+    } else {
       console.log('[Socket] Waiting for auth data before connecting... Current authData:', authData);
       return;
     }
 
-    console.log('[Socket] Creating socket with auth data:', authData);
+    console.log('[Socket] Creating socket with auth config:', authConfig);
 
     // Initialize socket connection with authentication
     const socketOptions = {
@@ -25,10 +43,7 @@ export const useSocket = (authData = null) => {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: Infinity,
-      auth: {
-        userId: authData.userId,
-        userRole: authData.userRole
-      }
+      auth: authConfig
     };
 
     console.log('[Socket] Socket options:', socketOptions);

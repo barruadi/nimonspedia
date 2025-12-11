@@ -9,6 +9,7 @@ import SellerAuctionHistory from './pages/SellerAuctionHistory'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import './components/Button.css'
+import { AuthProvider } from './contexts/AuthContext'
 
 function HomePage() {
   return (
@@ -56,17 +57,19 @@ function App() {
     <>
       <app-toast></app-toast>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/auction" element={<AuctionPage />} />
-          <Route path="/auctions" element={<AuctionList />} />
-          <Route path="/auction/:id" element={<AuctionDetail />} />
-          <Route path="/auction-history" element={<SellerAuctionHistory />} />
-          <Route path="/chat/*" element={<ChatPage />} />
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/auction" element={<AuctionPage />} />
+            <Route path="/auctions" element={<AuctionList />} />
+            <Route path="/auction/:id" element={<AuctionDetail />} />
+            <Route path="/auction-history" element={<SellerAuctionHistory />} />
+            <Route path="/chat/*" element={<ChatPage />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </>
   )

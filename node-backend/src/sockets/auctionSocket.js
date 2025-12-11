@@ -13,6 +13,7 @@
 const pool = require('../config/db');
 const { sendAuctionNotification } = require('../services/pushNotificationService');
 const { sendOutbidNotification, sendAuctionWonNotification, sendAuctionEndedSellerNotification } = require('../utils/notificationUtils');
+const { createSocketAuthMiddleware } = require('../middlewares/socketAuthMiddleware');
 
 // Map to track active auction timers: { auctionId: timeoutHandle }
 const auctionTimers = new Map();
@@ -23,74 +24,9 @@ const auctionTimers = new Map();
  */
 const setupAuctionSocket = (io) => {
   console.log('[Auction Socket Setup] Starting auction socket setup...');
-  
-  // Middleware to authenticate socket connections
-  io.use(async (socket, next) => {
-    console.log(`[Auction Socket Auth] New connection attempt: ${socket.id}`);
-    console.log(`[Auction Socket Auth] Handshake headers:`, socket.handshake.headers);
-    console.log(`[Auction Socket Auth] Handshake auth:`, socket.handshake.auth);
-    
-    try {
-      const userId = socket.handshake.auth.userId;
-      const userRole = socket.handshake.auth.userRole;
 
-      console.log(`[Auction Socket Auth] Extracted from handshake - userId: "${userId}" (type: ${typeof userId}), userRole: "${userRole}" (type: ${typeof userRole})`);
-
-      // Validate required auth data
-      if (!userId || !userRole) {
-        console.warn(`[Auction Socket Auth] Authentication failed: missing data. userId: ${userId}, userRole: ${userRole}`);
-        return next(new Error('Authentication required: missing userId or userRole'));
-      }
-
-      // Verify userId is a valid integer
-      const parsedUserId = parseInt(userId);
-      console.log(`[Auction Socket Auth] Parsed userId: ${parsedUserId}, isNaN: ${isNaN(parsedUserId)}`);
-      
-      if (isNaN(parsedUserId)) {
-        console.warn(`[Auction Socket Auth] Invalid userId format: "${userId}"`);
-        return next(new Error('Invalid userId format'));
-      }
-
-      console.log(`[Auction Socket Auth] Querying database for user ${parsedUserId}...`);
-      
-      // Verify user exists in database
-      const userQuery = `
-        SELECT user_id, role, full_name
-        FROM users
-        WHERE user_id = $1
-      `;
-      const pgPool = pool.getInstance();
-      const userResult = await pgPool.query(userQuery, [parsedUserId]);
-
-      console.log(`[Auction Socket Auth] Database query result: ${userResult.rows.length} row(s) found`);
-
-      if (userResult.rows.length === 0) {
-        console.warn(`[Auction Socket Auth] User ${parsedUserId} not found in database`);
-        return next(new Error('User not found'));
-      }
-
-      const dbUser = userResult.rows[0];
-      console.log(`[Auction Socket Auth] Database user data:`, dbUser);
-
-      // Verify role matches (prevent role spoofing)
-      if (dbUser.role !== userRole) {
-        console.warn(`[Auction Socket Auth] Role mismatch - DB: "${dbUser.role}", provided: "${userRole}"`);
-        return next(new Error('Role mismatch'));
-      }
-
-      // Store authenticated user data on socket
-      socket.userId = parsedUserId;
-      socket.userRole = userRole;
-      socket.userName = dbUser.full_name;
-
-      console.log(`[Auction Socket Auth] User authenticated - socket: ${socket.id}, userId: ${parsedUserId}, role: ${userRole}, name: ${dbUser.full_name}`);
-      next();
-    } catch (error) {
-      console.error('[Auction Socket Auth] Authentication error:', error.message);
-      console.error('[Auction Socket Auth] Error stack:', error.stack);
-      next(new Error('Authentication failed: ' + error.message));
-    }
-  });
+  // Use shared session-based authentication middleware
+  io.use(createSocketAuthMiddleware('Auction Socket'));
 
   console.log('[Auction Socket Setup] Middleware registered, setting up connection handler...');
 

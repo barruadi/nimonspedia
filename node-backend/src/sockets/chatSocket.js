@@ -1,30 +1,15 @@
 const Chat = require('../models/Chat');
 // Chat WebSocket Handlers
 const { sendChatNotification } = require('../services/pushNotificationService');
+const { createSocketAuthMiddleware } = require('../middlewares/socketAuthMiddleware');
 
 /**
  * Setup Chat WebSocket Handlers
  * @param {SocketIO.Server} io - Socket.IO server instance
  */
 const setupChatSocket = (io) => {
-  // Middleware to authenticate socket connections
-  io.use(async (socket, next) => {
-    try {
-      const userId = socket.handshake.auth.userId;
-      const userRole = socket.handshake.auth.userRole;
-
-      if (!userId || !userRole) {
-        return next(new Error('Authentication required'));
-      }
-
-      socket.userId = parseInt(userId);
-      socket.userRole = userRole;
-      next();
-    } catch (error) {
-      console.error('[Chat Socket] Authentication error:', error);
-      next(new Error('Authentication failed'));
-    }
-  });
+  // Use shared session-based authentication middleware
+  io.use(createSocketAuthMiddleware('Chat Socket'));
 
   io.on('connection', (socket) => {
     console.log(`[Chat] User connected: ${socket.id} (userId: ${socket.userId}, role: ${socket.userRole})`);
