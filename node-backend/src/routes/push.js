@@ -1,6 +1,7 @@
 const express = require('express');
 const webPush = require('web-push');
 const database = require('../config/db');
+const verifyUser = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 const pool = database.getInstance();
@@ -33,11 +34,12 @@ router.get('/push/public-key', (req, res) => {
  * Subscribe to push notifications
  * POST /api/node/push/subscribe
  */
-router.post('/push/subscribe', async (req, res) => {
+router.post('/push/subscribe', verifyUser, async (req, res) => {
     try {
-        const { userId, subscription } = req.body;
+        const userId = req.userId;
+        const { subscription, preferences } = req.body;
 
-        if (!userId || !subscription || !subscription.endpoint) {
+        if (!subscription || !subscription.endpoint) {
             return res.status(400).json({
                 ok: false,
                 error: { message: 'Invalid request data' }
@@ -81,13 +83,32 @@ router.post('/push/subscribe', async (req, res) => {
             ]);
         }
 
-        // Ensure push preferences exist
-        const prefQuery = `
-            INSERT INTO push_preferences (user_id)
-            VALUES ($1)
-            ON CONFLICT (user_id) DO NOTHING
-        `;
-        await pool.query(prefQuery, [userId]);
+        // Update or insert preferences
+        if (preferences) {
+            const prefQuery = `
+                INSERT INTO push_preferences (user_id, chat_enabled, auction_enabled, order_enabled)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    chat_enabled = $2,
+                    auction_enabled = $3,
+                    order_enabled = $4,
+                    updated_at = NOW()
+            `;
+            await pool.query(prefQuery, [
+                userId,
+                preferences.chat !== undefined ? preferences.chat : true,
+                preferences.auction !== undefined ? preferences.auction : true,
+                preferences.order !== undefined ? preferences.order : true
+            ]);
+        } else {
+            // Ensure push preferences exist with defaults
+            const prefQuery = `
+                INSERT INTO push_preferences (user_id)
+                VALUES ($1)
+                ON CONFLICT (user_id) DO NOTHING
+            `;
+            await pool.query(prefQuery, [userId]);
+        }
 
         return res.status(201).json({
             ok: true,
@@ -106,11 +127,12 @@ router.post('/push/subscribe', async (req, res) => {
  * Unsubscribe from push notifications
  * POST /api/node/push/unsubscribe
  */
-router.post('/push/unsubscribe', async (req, res) => {
+router.post('/push/unsubscribe', verifyUser, async (req, res) => {
     try {
-        const { userId, endpoint } = req.body;
+        const userId = req.userId;
+        const { endpoint } = req.body;
 
-        if (!userId || !endpoint) {
+        if (!endpoint) {
             return res.status(400).json({
                 ok: false,
                 error: { message: 'Invalid request data' }
@@ -246,6 +268,99 @@ router.post('/push/send', async (req, res) => {
         return res.status(500).json({
             ok: false,
             error: { message: 'Failed to send notification' }
+        });
+    }
+});
+
+/**
+ * Get user's push notification preferences
+ * GET /api/node/push/preferences
+ */
+router.get('/push/preferences', verifyUser, async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const prefQuery = `
+            SELECT chat_enabled, auction_enabled, order_enabled, updated_at
+            FROM push_preferences
+            WHERE user_id = $1
+        `;
+        const result = await pool.query(prefQuery, [userId]);
+
+        if (result.rows.length === 0) {
+            // Return defaults if no preferences found
+            return res.json({
+                ok: true,
+                preferences: {
+                    chat: true,
+                    auction: true,
+                    order: true
+                }
+            });
+        }
+
+        const prefs = result.rows[0];
+        return res.json({
+            ok: true,
+            preferences: {
+                chat: prefs.chat_enabled,
+                auction: prefs.auction_enabled,
+                order: prefs.order_enabled,
+                updatedAt: prefs.updated_at
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching preferences:', error);
+        return res.status(500).json({
+            ok: false,
+            error: { message: 'Failed to fetch preferences' }
+        });
+    }
+});
+
+/**
+ * Update user's push notification preferences
+ * PUT /api/node/push/preferences
+ */
+router.put('/push/preferences', verifyUser, async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { chat, auction, order } = req.body;
+
+        const prefQuery = `
+            INSERT INTO push_preferences (user_id, chat_enabled, auction_enabled, order_enabled)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (user_id) DO UPDATE SET
+                chat_enabled = $2,
+                auction_enabled = $3,
+                order_enabled = $4,
+                updated_at = NOW()
+            RETURNING chat_enabled, auction_enabled, order_enabled, updated_at
+        `;
+
+        const result = await pool.query(prefQuery, [
+            userId,
+            chat !== undefined ? chat : true,
+            auction !== undefined ? auction : true,
+            order !== undefined ? order : true
+        ]);
+
+        const prefs = result.rows[0];
+        return res.json({
+            ok: true,
+            message: 'Preferences updated successfully',
+            preferences: {
+                chat: prefs.chat_enabled,
+                auction: prefs.auction_enabled,
+                order: prefs.order_enabled,
+                updatedAt: prefs.updated_at
+            }
+        });
+    } catch (error) {
+        console.error('Error updating preferences:', error);
+        return res.status(500).json({
+            ok: false,
+            error: { message: 'Failed to update preferences' }
         });
     }
 });
