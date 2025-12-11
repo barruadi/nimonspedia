@@ -1,20 +1,9 @@
-/**
- * Auction WebSocket Handlers - Real-time Bidding System
- * 
- * Features:
- * - Database transactions with row-level locking
- * - 15-second anti-sniping timer
- * - Automatic balance deduction & refund
- * - Order auto-creation on auction end
- * - Real-time bid broadcasting
- * - Push notifications for auction events
- */
 
 const pool = require('../config/db');
 const { sendAuctionNotification } = require('../services/pushNotificationService');
 const { sendOutbidNotification, sendAuctionWonNotification, sendAuctionEndedSellerNotification } = require('../utils/notificationUtils');
 
-// Map to track active auction timers: { auctionId: timeoutHandle }
+// Map to track active auction timers: { auctionId: { closeTimer, warnTimer } }
 const auctionTimers = new Map();
 
 /**
@@ -408,16 +397,25 @@ const setupAuctionSocket = (io) => {
         await client.query('COMMIT');
         console.log(`[Auction Socket] Transaction committed for auction ${auctionId}`);
 
-        // Clear old timer if exists
+        // Clear old timers if they exist
         if (auctionTimers.has(auctionId)) {
-          clearTimeout(auctionTimers.get(auctionId));
+          const oldTimers = auctionTimers.get(auctionId);
+          if (oldTimers.closeTimer) clearTimeout(oldTimers.closeTimer);
+          if (oldTimers.warnTimer) clearTimeout(oldTimers.warnTimer);
         }
 
-        // Set new 15-second timer
-        const timer = setTimeout(() => {
+        // Set new timers
+        // 1. Warning notification at 10 seconds (5 seconds before close)
+        const warnTimer = setTimeout(() => {
+          sendAuctionEndingSoonNotifications(io, auctionId);
+        }, 10000);
+
+        // 2. Close auction at 15 seconds
+        const closeTimer = setTimeout(() => {
           closeAuction(io, auctionId);
         }, 15000);
-        auctionTimers.set(auctionId, timer);
+
+        auctionTimers.set(auctionId, { closeTimer, warnTimer });
         console.log(`[Auction Socket] 15s timer set for auction ${auctionId}`);
 
         // SUCCESS - Callback to bidder with final balance
@@ -596,14 +594,84 @@ const setupAuctionSocket = (io) => {
 };
 
 /**
+ * SEND AUCTION ENDING SOON NOTIFICATIONS
+ * Called 10 seconds after last bid (5 seconds before auction closes)
+ * Sends notification to all bidders who haven't been notified yet
+ *
+ * @param {Socket.IO} io
+ * @param {number} auctionId
+ */
+async function sendAuctionEndingSoonNotifications(io, auctionId) {
+  const pgPool = pool.getInstance();
+
+  try {
+    console.log(`[Auction Socket] Sending ending soon notifications for auction ${auctionId}`);
+
+    // Get all bidders for this auction who haven't received ending soon notification
+    const biddersQuery = `
+      SELECT DISTINCT b.bidder_id, u.full_name, p.name as product_name
+      FROM bids b
+      JOIN users u ON b.bidder_id = u.user_id
+      JOIN auctions a ON b.auction_id = a.auction_id
+      JOIN products p ON a.product_id = p.product_id
+      WHERE b.auction_id = $1
+        AND a.status = 'active'
+        AND NOT EXISTS (
+          SELECT 1 FROM sent_notifications sn
+          WHERE sn.auction_id = $1
+            AND sn.user_id = b.bidder_id
+            AND sn.notification_type = 'ending_soon'
+        )
+    `;
+
+    const result = await pgPool.query(biddersQuery, [auctionId]);
+
+    if (result.rows.length === 0) {
+      console.log(`[Auction Socket] No bidders to notify for auction ${auctionId}`);
+      return;
+    }
+
+    const productName = result.rows[0].product_name;
+
+    // Send notification to each bidder
+    for (const row of result.rows) {
+      try {
+        await sendAuctionNotification(
+          row.bidder_id,
+          'Auction Ending Soon!',
+          `The auction for "${productName}" is about to end. Place your bid now!`,
+          auctionId
+        );
+
+        // Record that notification was sent
+        await pgPool.query(
+          `INSERT INTO sent_notifications (auction_id, user_id, notification_type)
+           VALUES ($1, $2, $3)
+           ON CONFLICT DO NOTHING`,
+          [auctionId, row.bidder_id, 'ending_soon']
+        );
+
+        console.log(`[Auction Socket] Ending soon notification sent to user ${row.bidder_id}`);
+      } catch (error) {
+        console.error(`[Auction Socket] Failed to send notification to user ${row.bidder_id}:`, error.message);
+      }
+    }
+
+    console.log(`[Auction Socket] Sent ending soon notifications to ${result.rows.length} bidders`);
+  } catch (error) {
+    console.error('[Auction Socket] Error sending ending soon notifications:', error.message);
+  }
+}
+
+/**
  * AUTO-CLOSE AUCTION (called by 15-second timer)
- * 
+ *
  * Steps:
  * 1. Determine winner (highest bidder)
  * 2. Update auction status to 'ended'
  * 3. Create order automatically
  * 4. Broadcast auction:ended to room
- * 
+ *
  * @param {Socket.IO} io
  * @param {number} auctionId
  */
