@@ -117,6 +117,8 @@ class RegisterController
             ];
         }
         
+
+        
         if ($role === 'seller') {
             $store_name  = trim($req['body']['store_name'] ?? '');
             $description = trim($req['body']['store_description'] ?? '');

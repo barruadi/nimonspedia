@@ -288,7 +288,7 @@ self.addEventListener('push', (event) => {
     icon: notificationData.icon,
     badge: notificationData.badge,
     vibrate: [200, 100, 200],
-    tag: 'nimonspedia-notification',
+    tag: `nimonspedia-notification-${Date.now()}`,
     requireInteraction: false,
     data: notificationData.data,
     actions: [
@@ -342,7 +342,8 @@ self.addEventListener('notificationclick', (event) => {
       
       // If no window is open, open a new one
       if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+        const absoluteUrl = new URL(targetUrl, self.location.origin).href;
+        return clients.openWindow(absoluteUrl);
       }
     })
   );
