@@ -332,3 +332,15 @@ CREATE TABLE IF NOT EXISTS review_images (
 );
 
 CREATE INDEX IF NOT EXISTS idx_review_images_review ON review_images(review_id);
+
+-- SENT NOTIFICATIONS
+
+CREATE TABLE IF NOT EXISTS sent_notifications (
+    notification_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    auction_id      INTEGER NOT NULL REFERENCES auctions(auction_id) ON DELETE CASCADE,
+    user_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    notification_type TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sent_notifications_auction_user_type ON sent_notifications(auction_id, user_id, notification_type);
