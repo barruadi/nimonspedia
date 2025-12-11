@@ -29,14 +29,14 @@ const verifyUser = async (req, res, next) => {
     }
 
     // Strategy 2: Check user_id from request body
-    if (!userId && req.body && req.body.user_id) {
-      userId = req.body.user_id;
+    if (!userId && req.body && (req.body.user_id || req.body.userId)) {
+      userId = req.body.user_id || req.body.userId;
       console.log(`[Auth/Body] Using user_id from request body: ${userId}`);
     }
 
     // Strategy 3: Check user_id from query params
-    if (!userId && req.query.user_id) {
-      userId = parseInt(req.query.user_id);
+    if (!userId && (req.query.user_id || req.query.userId)) {
+      userId = parseInt(req.query.user_id || req.query.userId);
       console.log(`[Auth/Query] Using user_id from query param: ${userId}`);
     }
 

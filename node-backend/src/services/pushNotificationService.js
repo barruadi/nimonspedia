@@ -75,12 +75,21 @@ async function sendPushNotification(userId, notification) {
             return { success: false, error: 'No subscriptions found' };
         }
 
-        const payload = JSON.stringify({
+        // Extract additional data from notification object for proper routing
+        const notificationPayload = {
             title,
             body,
-            url: url || '/',
-            timestamp: Date.now()
-        });
+            icon: '/logo-192.png',
+            badge: '/logo-192.png',
+            data: {
+                url: url || '/',
+                type: notificationType,
+                timestamp: Date.now(),
+                ...notification.data // Include any additional data passed
+            }
+        };
+
+        const payload = JSON.stringify(notificationPayload);
 
         // Send to all user's subscriptions
         const sendPromises = subscriptions.rows.map(async (sub) => {
@@ -160,7 +169,12 @@ async function sendChatNotification(receiverId, senderName, messagePreview, stor
         title: 'Pesan Baru',
         body: `${senderName}: ${messagePreview}`,
         url: `/chat?store=${storeId}&buyer=${buyerId}`,
-        notificationType: 'chat'
+        notificationType: 'chat',
+        data: {
+            type: 'chat',
+            storeId,
+            buyerId
+        }
     });
 }
 
@@ -176,7 +190,11 @@ async function sendAuctionNotification(userId, title, message, auctionId) {
         title: title,
         body: message,
         url: `/auction/${auctionId}`,
-        notificationType: 'auction'
+        notificationType: 'auction',
+        data: {
+            type: 'auction',
+            auctionId
+        }
     });
 }
 
@@ -189,12 +207,16 @@ async function sendAuctionNotification(userId, title, message, auctionId) {
  */
 async function sendOrderNotification(userId, title, message, orderId = null) {
     const url = orderId ? `/orders?id=${orderId}` : '/orders';
-    
+
     return sendPushNotification(userId, {
         title: title,
         body: message,
         url: url,
-        notificationType: 'order'
+        notificationType: 'order',
+        data: {
+            type: 'order',
+            orderId
+        }
     });
 }
 
