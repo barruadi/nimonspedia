@@ -220,7 +220,7 @@ Pastikan Docker dan Docker Compose sudah terinstal di sistem Anda sebelum melanj
 
 ## Tangkapan Layar
 
-[Tangkapan Layar]([https://www.google.com/search?q=http://localhost](https://drive.google.com/drive/folders/1kMIfIpUjm6n2WJzBmNUde1XaIc_kXZYo?usp=sharing))
+https://www.google.com/search?q=http://localhost](https://drive.google.com/drive/folders/1kMIfIpUjm6n2WJzBmNUde1XaIc_kXZYo?usp=sharing
 
 -----
 
