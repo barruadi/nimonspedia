@@ -104,8 +104,8 @@ class BalanceModal extends HTMLElement {
     this.errorText.textContent = '';
 
     try {
-      // Call Midtrans payment endpoint
-      const res = await fetch('http://localhost/api/node/payment/topup', {
+      // Call direct top-up endpoint
+      const res = await fetch('http://localhost/api/profile/top-up', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,13 +123,16 @@ class BalanceModal extends HTMLElement {
       // Close modal
       this.close();
 
-      // Redirect to Midtrans payment page
-      if (data.data.redirect_url) {
-        console.log('Redirecting to payment gateway:', data.data.redirect_url);
-        window.location.href = data.data.redirect_url;
-      } else {
-        throw new Error('Payment redirect URL not found');
-      }
+      // Refresh balance
+      await this.refreshBalance();
+
+      // Show success message
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: {
+          message: `Top up berhasil! Saldo baru: Rp ${parseInt(data.data.new_balance).toLocaleString('id-ID')}`,
+          type: 'success'
+        }
+      }))
 
     } catch (err) {
       this.errorText.textContent = err.message;
