@@ -319,9 +319,9 @@ const setupAuctionSocket = (io) => {
           });
         }
 
-        // STEP 5: REFUND PREVIOUS BIDDER (if exists and different user)
+        // STEP 5: REFUND PREVIOUS BIDDER (if exists, regardless of whether same user or different)
         let previousBidderRefundAmount = 0;
-        if (previousBid && previousBid.bidder_id !== bidderId) {
+        if (previousBid) {
           // Lock previous bidder's row
           const prevBidderQuery = `
             SELECT user_id, balance FROM users WHERE user_id = $1 FOR UPDATE
@@ -329,7 +329,7 @@ const setupAuctionSocket = (io) => {
           const prevBidderResult = await client.query(prevBidderQuery, [previousBid.bidder_id]);
           
           if (prevBidderResult.rows.length > 0) {
-            // Refund their bid amount
+            // Refund their bid amount (applies to same user bidding multiple times too)
             previousBidderRefundAmount = previousBid.bid_amount;
             const refundQuery = `
               UPDATE users SET balance = balance + $1 WHERE user_id = $2
