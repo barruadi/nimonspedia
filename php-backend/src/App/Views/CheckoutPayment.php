@@ -19,22 +19,23 @@
             background: white;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
         }
 
         /* Navbar styling */
         .navbar-container {
-            width: 250px;
+            width: 100%;
             background: #22c55e;
-            min-height: 100vh;
             position: fixed;
             left: 0;
             top: 0;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         /* Main content area */
         .main-content {
-            margin-left: 250px;
+            margin-top: 80px;
             flex: 1;
             padding: 40px;
             background: white;
@@ -251,12 +252,12 @@
             
             const res = await fetch(`/api/node/feature-flags?user_id=${userId}`, { credentials: 'include' });
             const data = await res.json();
-            
-            if (!data.checkout_enabled?.enabled) {
+
+            if (!data.flags?.checkout_enabled?.enabled) {
               const info = {
                 featureName: 'Checkout',
-                reason: data.checkout_enabled?.reason,
-                isGlobal: data.checkout_enabled?.isGlobal
+                reason: data.flags?.checkout_enabled?.reason,
+                isGlobal: data.flags?.checkout_enabled?.isGlobal
               };
               sessionStorage.setItem('disabledFeatureInfo', JSON.stringify(info));
               window.location.replace('/feature-disabled');
@@ -365,6 +366,7 @@
                     snap.pay(data.data.token, {
                         onSuccess: function(result) {
                             console.log('[Payment] Payment successful:', result);
+                            // Redirect to success page where user will manually process the payment
                             window.location.href = '/checkout/success?order_id=<?= $_GET['order_id'] ?? '' ?>';
                         },
                         onPending: function(result) {

@@ -21,6 +21,11 @@ router.post('/payment/order', verifyUser, paymentController.createOrderPayment);
 // GET /api/node/payment/status/:order_id
 router.get('/payment/status/:order_id', verifyUser, paymentController.getPaymentStatus);
 
+// Check and process payment from Midtrans (for sandbox/localhost)
+// POST /api/node/payment/check/:order_id
+// Manually checks Midtrans API and processes payment (alternative to webhook for local development)
+router.post('/payment/check/:order_id', verifyUser, paymentController.checkAndProcessPayment);
+
 /**
  * Webhook Routes (No auth middleware - verified by signature)
  */

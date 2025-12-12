@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pembayaran Berhasil - Nimonspedia</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 48px 32px;
+      text-align: center;
+      animation: slideUp 0.5s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: scaleIn 0.5s ease-out 0.2s both;
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0);
+      }
+      to {
+        transform: scale(1);
+      }
+    }
+
+    .icon svg {
+      width: 48px;
+      height: 48px;
+      stroke: white;
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #1f2937;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .order-id {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    .amount {
+      font-size: 32px;
+      color: #10b981;
+      font-weight: 700;
+      margin: 24px 0;
+    }
+
+    .message {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .details {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      text-align: left;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .detail-value {
+      color: #1f2937;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f4f6;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 32px 24px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .amount {
+        font-size: 28px;
+      }
+
+      .buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+
+    <h1>Pembayaran Berhasil!</h1>
+    <p class="order-id">Order ID: <span id="orderId">Loading...</span></p>
+
+    <div class="amount" id="amount">
+      <span class="loading"></span>
+    </div>
+
+    <p class="message">
+      Top up balance Anda telah berhasil diproses. Saldo Anda akan segera diperbarui.
+    </p>
+
+    <div class="details" id="details" style="display: none;">
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value" id="status">Success</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Payment Type</span>
+        <span class="detail-value" id="paymentType">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Transaction ID</span>
+        <span class="detail-value" id="transactionId">-</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Waktu</span>
+        <span class="detail-value" id="timestamp">-</span>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="process-btn" class="btn btn-primary" style="width: 100%; margin-bottom: 12px;">Process Payment</button>
+      <a href="/products" class="btn btn-secondary" style="flex: 1;">Kembali ke Beranda</a>
+      <a href="/profile" class="btn btn-secondary" style="flex: 1;">Lihat Profil</a>
+    </div>
+  </div>
+
+  <script>
+    // Get order_id from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
+    const processBtn = document.getElementById('process-btn');
+
+    function loadPaymentStatus() {
+      // Fetch the payment status
+      fetch(`http://localhost/api/node/payment/status/${orderId}`, {
+        credentials: 'include'
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok && data.data) {
+            const payment = data.data;
+
+            // Update amount
+            document.getElementById('amount').textContent =
+              `Rp ${parseInt(payment.gross_amount).toLocaleString('id-ID')}`;
+
+            // Show details
+            document.getElementById('details').style.display = 'block';
+            document.getElementById('status').textContent = payment.status;
+            document.getElementById('paymentType').textContent = payment.payment_type || '-';
+            document.getElementById('transactionId').textContent = payment.transaction_id || orderId;
+
+            // Format timestamp
+            if (payment.updated_at) {
+              const date = new Date(payment.updated_at);
+              document.getElementById('timestamp').textContent =
+                date.toLocaleString('id-ID', {
+                  dateStyle: 'medium',
+                  timeStyle: 'short'
+                });
+            }
+
+            // Hide process button if already processed
+            if (payment.status === 'success') {
+              processBtn.textContent = 'Payment Processed ✓';
+              processBtn.disabled = true;
+              processBtn.style.background = '#10b981';
+            }
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching payment status:', err);
+          document.getElementById('amount').textContent = 'Rp -';
+        });
+    }
+
+    if (orderId) {
+      document.getElementById('orderId').textContent = orderId;
+
+      // Load initial status
+      loadPaymentStatus();
+
+      // Handle process button click
+      processBtn.addEventListener('click', async function() {
+        processBtn.disabled = true;
+        processBtn.textContent = 'Processing...';
+
+        try {
+          console.log('Processing payment for order:', orderId);
+
+          // Check and process the payment
+          const checkResponse = await fetch(`http://localhost/api/node/payment/check/${orderId}`, {
+            method: 'POST',
+            credentials: 'include'
+          });
+
+          const checkData = await checkResponse.json();
+          console.log('Payment check result:', checkData);
+
+          if (checkData.ok) {
+            // Reload the payment status
+            loadPaymentStatus();
+
+            // Show success message
+            alert('Payment processed successfully! Your balance has been updated.');
+          } else {
+            alert('Error processing payment: ' + (checkData.error || 'Unknown error'));
+            processBtn.disabled = false;
+            processBtn.textContent = 'Process Payment';
+          }
+        } catch (error) {
+          console.error('Error processing payment:', error);
+          alert('Error processing payment: ' + error.message);
+          processBtn.disabled = false;
+          processBtn.textContent = 'Process Payment';
+        }
+      });
+    } else {
+      document.getElementById('orderId').textContent = 'N/A';
+      document.getElementById('amount').textContent = 'Rp -';
+      processBtn.disabled = true;
+    }
+  </script>
+</body>
+</html>

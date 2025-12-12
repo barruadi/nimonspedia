@@ -58,7 +58,7 @@ async function createTopUpPayment(req, res) {
 
     const user = userResult.rows[0];
 
-    // Generate unique order ID
+    // Generate unique order ID with timestamp for top-ups (since they don't have a pre-existing order_id)
     const orderId = `TOPUP-${user.user_id}-${Date.now()}`;
 
     // Create transaction parameter for Midtrans
@@ -80,7 +80,7 @@ async function createTopUpPayment(req, res) {
         }
       ],
       callbacks: {
-        finish: 'http://localhost/payment/success',
+        finish: `http://localhost/payment/success?order_id=${orderId}`,
         error: 'http://localhost/payment/error',
         pending: 'http://localhost/payment/pending'
       }
@@ -172,7 +172,7 @@ async function createOrderPayment(req, res) {
     // Check if payment already exists for this order
     const existingPayment = await pool.query(
       `SELECT * FROM payment_transactions
-       WHERE related_order_id = $1 AND status IN ('pending', 'success')
+       WHERE related_order_id = $1
        LIMIT 1`,
       [order_id]
     );
@@ -187,26 +187,32 @@ async function createOrderPayment(req, res) {
         });
       }
 
-      // If pending, return existing token
-      try {
-        const statusResponse = await snap.transaction.status(existing.transaction_id);
+      // If pending, check if still valid in Midtrans
+      if (existing.status === 'pending') {
+        try {
+          const statusResponse = await snap.transaction.status(existing.transaction_id);
 
-        if (statusResponse.transaction_status === 'pending') {
-          return res.status(200).json({
-            ok: true,
-            data: {
-              order_id: existing.order_id,
-              message: 'Payment already in progress'
-            }
-          });
+          if (statusResponse.transaction_status === 'pending') {
+            return res.status(200).json({
+              ok: true,
+              data: {
+                order_id: existing.order_id,
+                message: 'Payment already in progress'
+              }
+            });
+          }
+        } catch (err) {
+          console.log('[Payment/Order] Existing transaction expired, will create new one');
         }
-      } catch (err) {
-        console.log('[Payment/Order] Existing transaction expired, creating new one');
       }
-    }
 
-    // Generate unique transaction order ID
-    const transactionOrderId = `ORDER-${order.order_id}-${Date.now()}`;
+      // Delete old payment transaction to allow creating a new one
+      console.log('[Payment/Order] Deleting old payment transaction:', existing.order_id);
+      await pool.query(
+        `DELETE FROM payment_transactions WHERE order_id = $1`,
+        [existing.order_id]
+      );
+    }
 
     // Get order items for item_details
     const itemsResult = await pool.query(
@@ -227,7 +233,7 @@ async function createOrderPayment(req, res) {
     // Create transaction parameter for Midtrans
     const parameter = {
       transaction_details: {
-        order_id: transactionOrderId,
+        order_id: order_id.toString(),
         gross_amount: order.total_amount
       },
       customer_details: {
@@ -253,7 +259,7 @@ async function createOrderPayment(req, res) {
         transaction_id, order_id, user_id, related_order_id,
         type, gross_amount, status, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-      [transactionOrderId, transactionOrderId, userId, order_id, 'order', order.total_amount, 'pending']
+      [order_id.toString(), order_id.toString(), userId, order_id, 'order', order.total_amount, 'pending']
     );
 
     console.log('[Payment/Order] Snap token created:', transaction.token);
@@ -263,7 +269,7 @@ async function createOrderPayment(req, res) {
       data: {
         token: transaction.token,
         redirect_url: transaction.redirect_url,
-        order_id: transactionOrderId
+        order_id: order_id
       }
     });
 
@@ -422,6 +428,16 @@ async function handlePaymentWebhook(req, res) {
             console.log('[Webhook/Payment] Balance updated for user:', dbTransaction.user_id, 'amount:', dbTransaction.gross_amount);
 
           } else if (dbTransaction.type === 'order') {
+            // Deduct balance from buyer
+            await client.query(
+              `UPDATE users
+               SET balance = balance - $1, updated_at = NOW()
+               WHERE user_id = $2`,
+              [dbTransaction.gross_amount, dbTransaction.user_id]
+            );
+
+            console.log('[Webhook/Payment] Balance deducted for user:', dbTransaction.user_id, 'amount:', dbTransaction.gross_amount);
+
             // Update order status to approved (payment received)
             const orderUpdateResult = await client.query(
               `UPDATE orders
@@ -551,9 +567,251 @@ async function getPaymentStatus(req, res) {
   }
 }
 
+/**
+ * Check and process payment status from Midtrans
+ * POST /api/node/payment/check/:order_id
+ * This manually checks Midtrans API and processes the payment (for sandbox/localhost where webhook doesn't work)
+ */
+async function checkAndProcessPayment(req, res) {
+  const pool = db.getInstance();
+
+  try {
+    const { order_id } = req.params;
+    const userId = req.userId || req.query.user_id;
+
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    console.log('[Payment/Check] Checking payment status for:', order_id);
+
+    // Get transaction from database
+    const result = await pool.query(
+      `SELECT * FROM payment_transactions
+       WHERE order_id = $1 AND user_id = $2`,
+      [order_id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Transaction not found'
+      });
+    }
+
+    const dbTransaction = result.rows[0];
+
+    // If already processed successfully, return current status
+    if (dbTransaction.status === 'success' && dbTransaction.processed_at) {
+      console.log('[Payment/Check] Transaction already processed');
+      return res.status(200).json({
+        ok: true,
+        data: {
+          status: dbTransaction.status,
+          message: 'Payment already processed'
+        }
+      });
+    }
+
+    // Check status from Midtrans API
+    let transactionStatus;
+    try {
+      transactionStatus = await snap.transaction.status(order_id);
+      console.log('[Payment/Check] Midtrans status:', transactionStatus.transaction_status);
+    } catch (error) {
+      console.error('[Payment/Check] Failed to get status from Midtrans:', error.message);
+      return res.status(500).json({
+        ok: false,
+        error: 'Failed to check payment status from Midtrans'
+      });
+    }
+
+    const {
+      transaction_status,
+      fraud_status,
+      payment_type,
+      transaction_id,
+      va_numbers,
+      bank
+    } = transactionStatus;
+
+    // Start database transaction
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Lock the transaction row
+      const lockedTx = await client.query(
+        `SELECT * FROM payment_transactions
+         WHERE order_id = $1
+         FOR UPDATE`,
+        [order_id]
+      );
+
+      if (lockedTx.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          ok: false,
+          error: 'Transaction not found'
+        });
+      }
+
+      const currentTx = lockedTx.rows[0];
+
+      // Determine new status
+      let newStatus = 'pending';
+
+      if (transaction_status === 'capture') {
+        newStatus = (fraud_status === 'accept') ? 'success' : 'pending';
+      } else if (transaction_status === 'settlement') {
+        newStatus = 'success';
+      } else if (transaction_status === 'pending') {
+        // In sandbox mode, treat pending as success if user manually triggers this endpoint
+        // (since sandbox doesn't auto-settle transactions)
+        if (process.env.MIDTRANS_IS_PRODUCTION !== 'true') {
+          console.log('[Payment/Check] Sandbox mode: treating pending as success');
+          newStatus = 'success';
+        }
+      } else if (transaction_status === 'deny' || transaction_status === 'cancel') {
+        newStatus = 'failed';
+      } else if (transaction_status === 'expire') {
+        newStatus = 'expired';
+      }
+
+      console.log('[Payment/Check] Midtrans status:', transaction_status, '-> Our status:', newStatus);
+
+      // Only process if status changed or not yet processed
+      if (currentTx.status !== newStatus || !currentTx.processed_at) {
+
+        // Update payment transaction
+        await client.query(
+          `UPDATE payment_transactions
+           SET status = $1,
+               transaction_id = $2,
+               payment_type_midtrans = $3,
+               bank = $4,
+               va_number = $5,
+               midtrans_response = $6,
+               processed_at = NOW(),
+               retry_count = retry_count + 1,
+               updated_at = NOW()
+           WHERE order_id = $7`,
+          [
+            newStatus,
+            transaction_id || order_id,
+            payment_type,
+            bank || null,
+            va_numbers ? va_numbers[0]?.va_number : null,
+            JSON.stringify(transactionStatus),
+            order_id
+          ]
+        );
+
+        // Handle based on transaction type and status
+        if (newStatus === 'success') {
+          if (currentTx.type === 'topup') {
+            // Update user balance
+            await client.query(
+              `UPDATE users
+               SET balance = balance + $1, updated_at = NOW()
+               WHERE user_id = $2`,
+              [currentTx.gross_amount, currentTx.user_id]
+            );
+
+            console.log('[Payment/Check] Balance updated for user:', currentTx.user_id, 'amount:', currentTx.gross_amount);
+
+          } else if (currentTx.type === 'order') {
+            // Deduct balance from buyer
+            await client.query(
+              `UPDATE users
+               SET balance = balance - $1, updated_at = NOW()
+               WHERE user_id = $2`,
+              [currentTx.gross_amount, currentTx.user_id]
+            );
+
+            console.log('[Payment/Check] Balance deducted for user:', currentTx.user_id, 'amount:', currentTx.gross_amount);
+
+            // Update order status to approved
+            const orderUpdateResult = await client.query(
+              `UPDATE orders
+               SET status = 'approved', updated_at = NOW()
+               WHERE order_id = $1
+               RETURNING buyer_id, order_id`,
+              [currentTx.related_order_id]
+            );
+
+            console.log('[Payment/Check] Order approved:', currentTx.related_order_id);
+
+            // Send push notification to buyer
+            if (orderUpdateResult.rows.length > 0) {
+              const order = orderUpdateResult.rows[0];
+              try {
+                await sendOrderNotification(
+                  order.buyer_id,
+                  'Payment Success',
+                  `Payment for order #${order.order_id} was successful. Your order has been approved.`,
+                  order.order_id
+                );
+                console.log('[Payment/Check] Notification sent to buyer');
+              } catch (notifError) {
+                console.error('[Payment/Check] Failed to send notification:', notifError);
+              }
+            }
+          }
+        }
+
+        await client.query('COMMIT');
+
+        console.log('[Payment/Check] Payment processed successfully');
+
+        return res.status(200).json({
+          ok: true,
+          data: {
+            status: newStatus,
+            message: 'Payment status updated successfully'
+          }
+        });
+
+      } else {
+        // No status change
+        await client.query('COMMIT');
+
+        console.log('[Payment/Check] No status change needed');
+
+        return res.status(200).json({
+          ok: true,
+          data: {
+            status: currentTx.status,
+            message: 'Payment status unchanged'
+          }
+        });
+      }
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('[Payment/Check] Error:', error);
+    return res.status(500).json({
+      ok: false,
+      error: 'Failed to check and process payment',
+      details: error.message
+    });
+  }
+}
+
 module.exports = {
   createTopUpPayment,
   createOrderPayment,
   handlePaymentWebhook,
-  getPaymentStatus
+  getPaymentStatus,
+  checkAndProcessPayment
 };
