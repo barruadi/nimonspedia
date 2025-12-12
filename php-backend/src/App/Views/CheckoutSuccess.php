@@ -185,12 +185,12 @@
       
       const res = await fetch(`/api/node/feature-flags?user_id=${userId}`, { credentials: 'include' });
       const data = await res.json();
-      
-      if (!data.checkout_enabled?.enabled) {
+
+      if (!data.flags?.checkout_enabled?.enabled) {
         const info = {
           featureName: 'Checkout',
-          reason: data.checkout_enabled?.reason,
-          isGlobal: data.checkout_enabled?.isGlobal
+          reason: data.flags?.checkout_enabled?.reason,
+          isGlobal: data.flags?.checkout_enabled?.isGlobal
         };
         sessionStorage.setItem('disabledFeatureInfo', JSON.stringify(info));
         window.location.replace('/feature-disabled');

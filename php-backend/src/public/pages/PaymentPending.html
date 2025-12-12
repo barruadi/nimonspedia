@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menunggu Pembayaran - Nimonspedia</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 48px 32px;
+      text-align: center;
+      animation: slideUp 0.5s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: #f59e0b;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+      }
+    }
+
+    .icon svg {
+      width: 48px;
+      height: 48px;
+      stroke: white;
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #1f2937;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .order-id {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    .amount {
+      font-size: 32px;
+      color: #f59e0b;
+      font-weight: 700;
+      margin: 24px 0;
+    }
+
+    .message {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .info-box {
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      text-align: left;
+    }
+
+    .info-title {
+      color: #92400e;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .info-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .info-list li {
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.8;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .info-list li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #f59e0b;
+      font-weight: bold;
+    }
+
+    .status-check {
+      background: #f3f4f6;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .status-check-text {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #d97706;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 32px 24px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .amount {
+        font-size: 28px;
+      }
+
+      .buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+    </div>
+
+    <h1>Menunggu Pembayaran</h1>
+    <p class="order-id">Order ID: <span id="orderId">Loading...</span></p>
+
+    <div class="amount" id="amount">Rp -</div>
+
+    <p class="message">
+      Transaksi Anda sedang diproses. Silakan selesaikan pembayaran sesuai instruksi yang telah Anda terima.
+    </p>
+
+    <div class="info-box">
+      <div class="info-title">Instruksi:</div>
+      <ul class="info-list">
+        <li>Selesaikan pembayaran sesuai metode yang dipilih</li>
+        <li>Saldo akan otomatis bertambah setelah pembayaran dikonfirmasi</li>
+        <li>Proses verifikasi biasanya memakan waktu 1-5 menit</li>
+        <li>Anda akan menerima notifikasi setelah pembayaran berhasil</li>
+      </ul>
+    </div>
+
+    <div class="status-check">
+      <span class="status-check-text">Memeriksa status pembayaran...</span>
+      <div class="spinner"></div>
+    </div>
+
+    <div class="buttons">
+      <a href="javascript:void(0)" onclick="checkStatus()" class="btn btn-primary">Cek Status</a>
+      <a href="/products" class="btn btn-secondary">Kembali ke Beranda</a>
+    </div>
+  </div>
+
+  <script>
+    // Get order_id from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
+
+    let checkInterval;
+
+    if (orderId) {
+      document.getElementById('orderId').textContent = orderId;
+
+      // Initial check
+      checkStatus();
+
+      // Auto-check every 10 seconds
+      checkInterval = setInterval(checkStatus, 10000);
+    } else {
+      document.getElementById('orderId').textContent = 'N/A';
+    }
+
+    async function checkStatus() {
+      if (!orderId) return;
+
+      try {
+        const res = await fetch(`http://localhost/api/node/payment/status/${orderId}`, {
+          credentials: 'include'
+        });
+        const data = await res.json();
+
+        if (data.ok && data.data) {
+          const payment = data.data;
+
+          // Update amount
+          document.getElementById('amount').textContent =
+            `Rp ${parseInt(payment.gross_amount).toLocaleString('id-ID')}`;
+
+          // Check if status changed
+          if (payment.status === 'success' || payment.status === 'settlement') {
+            // Payment successful, redirect to success page
+            clearInterval(checkInterval);
+            window.location.href = `/payment/success?order_id=${orderId}`;
+          } else if (payment.status === 'failed' || payment.status === 'denied' || payment.status === 'expired') {
+            // Payment failed, redirect to error page
+            clearInterval(checkInterval);
+            window.location.href = `/payment/error?order_id=${orderId}`;
+          }
+          // Otherwise stay on pending page
+        }
+      } catch (err) {
+        console.error('Error checking payment status:', err);
+      }
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (checkInterval) clearInterval(checkInterval);
+    });
+  </script>
+</body>
+</html>

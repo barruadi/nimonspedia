@@ -89,8 +89,13 @@ class BalanceModal extends HTMLElement {
     e.preventDefault();
     const amount = parseInt(this.amountInput.value, 10) || 0;
 
-    if (amount < 1000) {
+    if (amount < 10000) {
       this.errorText.textContent = 'Minimum top up adalah Rp 10.000';
+      return;
+    }
+
+    if (amount > 10000000) {
+      this.errorText.textContent = 'Maximum top up adalah Rp 10.000.000';
       return;
     }
 
@@ -99,33 +104,60 @@ class BalanceModal extends HTMLElement {
     this.errorText.textContent = '';
 
     try {
-      const res = await api.post('/profile/top-up', { amount });
+      // Call Midtrans payment endpoint
+      const res = await fetch('http://localhost/api/node/payment/topup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ amount })
+      });
 
-      if (!res || res.ok === false) {
-        throw new Error(res?.error?.message || 'Top up gagal');
+      const data = await res.json();
+
+      if (!data.ok) {
+        throw new Error(data.error || 'Top up gagal');
       }
-      
-      if (notifyAuthChanged) {
-        const navbar = document.querySelector('app-navbar');
-        const oldSession = navbar?._session;
-        if (oldSession && oldSession.user) {
-            oldSession.user.balance = res.data.new_balance;
-            notifyAuthChanged(oldSession);
-        }
-      }
 
-      // Dispatch event for other components to listen (e.g., checkout page)
-      window.dispatchEvent(new CustomEvent('balance:updated', {
-        detail: { newBalance: res.data.new_balance }
-      }));
-
+      // Close modal
       this.close();
+
+      // Redirect to Midtrans payment page
+      if (data.data.redirect_url) {
+        console.log('Redirecting to payment gateway:', data.data.redirect_url);
+        window.location.href = data.data.redirect_url;
+      } else {
+        throw new Error('Payment redirect URL not found');
+      }
 
     } catch (err) {
       this.errorText.textContent = err.message;
-    } finally {
       this.confirmBtn.disabled = false;
       this.confirmBtn.textContent = 'Top Up';
+    }
+  }
+
+  async refreshBalance() {
+    try {
+      const res = await fetch('http://localhost/api/me', {
+        credentials: 'include'
+      });
+      const data = await res.json();
+
+      if (data.authenticated && data.user) {
+        // Update navbar with new balance
+        if (notifyAuthChanged) {
+          notifyAuthChanged({ authenticated: true, user: data.user });
+        }
+
+        // Dispatch balance updated event
+        window.dispatchEvent(new CustomEvent('balance:updated', {
+          detail: { newBalance: data.user.balance }
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to refresh balance:', err);
     }
   }
 }
