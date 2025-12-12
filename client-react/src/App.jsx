@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import React from 'react'
 import './App.css'
 import './components/ToastNotification'
 import ChatPage from './components/chat/ChatPage'
@@ -13,12 +14,28 @@ import FeatureGuard from './components/FeatureGuard'
 import './components/Button.css'
 
 function HomePage() {
+  const [userRole, setUserRole] = React.useState(null);
+
+  React.useEffect(() => {
+    // Fetch user role
+    fetch('http://localhost/api/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated && data.user) {
+          setUserRole(data.user.role);
+        }
+      })
+      .catch(err => console.error('Failed to fetch user:', err));
+  }, []);
+
+  const auctionUrl = userRole === 'seller' ? '/auction-history' : '/auctions';
+
   return (
     <div style={{ padding: '20px', textAlign: 'center' }}>
       <h1>Welcome to Nimons</h1>
       <p>Choose a feature:</p>
       <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '20px' }}>
-        <Link to="/auctions" style={{
+        <a href={auctionUrl} style={{
           padding: '15px 30px',
           backgroundColor: '#007bff',
           color: 'white',
@@ -27,7 +44,7 @@ function HomePage() {
           fontSize: '18px'
         }}>
           Go to Auction
-        </Link>
+        </a>
         <Link to="/chat" style={{
           padding: '15px 30px',
           backgroundColor: '#05AA5B',
