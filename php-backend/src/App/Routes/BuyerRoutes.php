@@ -16,11 +16,48 @@ $router->get('/', fn($req) => header('Location: /products') && exit(), []);
 
 $router->get('/products', fn($req) => (new ProductController())->showAllProducts(), []);
 
+$router->get('/cart', function($req) {
+    $cartPagePath = __DIR__ . '/../../public/pages/CartPage.html';
+    if (file_exists($cartPagePath)) {
+        return file_get_contents($cartPagePath);
+    }
+    http_response_code(404);
+    return 'Cart page not found';
+}, [$auth, $prohibitRole, $checkoutEnabled]);
+
 $router->get('/checkout', fn($req) => (new CheckoutController())->showCheckout(), [$checkoutEnabled]);
 $router->post('/checkout/submit', fn($req) => (new CheckoutController())->confirmOrder($req), [$checkoutEnabled]);
 $router->get('/checkout/payment', fn($req) => (new CheckoutController())->paymentPage(), [$checkoutEnabled]);
 $router->get('/checkout/success', fn($req) => (new CheckoutController())->successPage(), [$checkoutEnabled]);
 $router->post('/checkout/confirm', fn($req) => (new CheckoutController())->confirmOrder($req), [$checkoutEnabled]);
+
+// Payment callback pages (for Midtrans redirects)
+$router->get('/payment/success', function($req) {
+    $pagePath = __DIR__ . '/../../public/pages/PaymentSuccess.html';
+    if (file_exists($pagePath)) {
+        return file_get_contents($pagePath);
+    }
+    http_response_code(404);
+    return 'Payment success page not found';
+});
+
+$router->get('/payment/error', function($req) {
+    $pagePath = __DIR__ . '/../../public/pages/PaymentError.html';
+    if (file_exists($pagePath)) {
+        return file_get_contents($pagePath);
+    }
+    http_response_code(404);
+    return 'Payment error page not found';
+});
+
+$router->get('/payment/pending', function($req) {
+    $pagePath = __DIR__ . '/../../public/pages/PaymentPending.html';
+    if (file_exists($pagePath)) {
+        return file_get_contents($pagePath);
+    }
+    http_response_code(404);
+    return 'Payment pending page not found';
+});
 $router->get('/api/store/{id}', fn($req, $id) => StoreController::getStoreDetail($req, (int)$id));
 
 $router->get('/store/{id}', fn($req, $id) => (new StoreController())->showStoreDetail($req, (int)$id));
