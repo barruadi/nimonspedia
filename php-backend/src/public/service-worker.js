@@ -243,6 +243,8 @@ self.addEventListener('fetch', (event) => {
 // Push event - handle incoming push notifications
 self.addEventListener('push', (event) => {
   console.log('[Service Worker] Push notification received');
+  console.log('[Service Worker] Push event data:', event.data);
+  console.log('[Service Worker] Has data?', event.data ? 'Yes' : 'No');
 
   let notificationData = {
     title: 'Nimonspedia',

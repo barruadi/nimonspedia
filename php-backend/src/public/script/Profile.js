@@ -1,11 +1,5 @@
 import { api } from '/utils/api.js';
 import { notificationManager } from '/utils/notificationManager.js';
-import {
-  subscribeToPushNotifications,
-  unsubscribeFromPushNotifications,
-  isUserSubscribed,
-  getNotificationPermissionStatus
-} from '/utils/pushNotification.js';
 
 (async function initProfile() {
   const rootLoading   = document.getElementById('profile-loading');
@@ -39,7 +33,6 @@ import {
   const cancelPwBtn   = document.getElementById('cancelPwBtn');
 
   let currentUserId = null;
-  let isPushSubscribed = false;
 
   function showError(msg) {
     if (!errBox || !okBox) return;
@@ -123,50 +116,45 @@ import {
     emailSpan.textContent = user.email || '';
     nameInput.value       = nameSpan.textContent;
 
-    // Load notification preferences from /api/profile/notifications
+    // Initialize notification manager and load preferences
     try {
-      const notifRes = await api.get('/profile/notifications');
-      if (notifRes && notifRes.ok) {
-        const prefs = notifRes.preferences || {};
-        toggleChat.checked = prefs.chat_enabled !== false;
-        toggleAuction.checked = prefs.auction_enabled !== false;
-        toggleOrder.checked = prefs.order_enabled !== false;
+      await notificationManager.init();
+      const prefs = await notificationManager.getPreferences();
+      
+      console.log('[Profile] Loaded preferences:', prefs);
+      
+      if (prefs) {
+        toggleChat.checked = prefs.chat || false;
+        toggleAuction.checked = prefs.auction || false;
+        toggleOrder.checked = prefs.order || false;
+      } else {
+        // Default to true if no preferences found
+        toggleChat.checked = true;
+        toggleAuction.checked = true;
+        toggleOrder.checked = true;
       }
     } catch (notifErr) {
-      console.warn('Failed to load notification preferences:', notifErr);
-      toggleChat.checked = false;
-      toggleAuction.checked = false;
-      toggleOrder.checked = false;
-    }
-
-    try {
-      // Use the centralized service worker manager
-      const { registerServiceWorker } = await import('/utils/serviceWorkerManager.js');
-      await registerServiceWorker();
-      console.log('Service worker registered in Profile.js');
-      
-      isPushSubscribed = await isUserSubscribed();
-      console.log('Push subscription status:', isPushSubscribed);
-    } catch (subErr) {
-      console.warn('Failed to check subscription status:', subErr);
-      isPushSubscribed = false;
+      console.warn('[Profile] Failed to load notification preferences:', notifErr);
+      toggleChat.checked = true;
+      toggleAuction.checked = true;
+      toggleOrder.checked = true;
     }
 
     if (toggleChat) {
       toggleChat.addEventListener('change', (e) => {
-        updateNotificationPreference('chat_enabled', e.target.checked);
+        updateNotificationPreference('chat', e.target.checked);
       });
     }
 
     if (toggleAuction) {
       toggleAuction.addEventListener('change', (e) => {
-        updateNotificationPreference('auction_enabled', e.target.checked);
+        updateNotificationPreference('auction', e.target.checked);
       });
     }
 
     if (toggleOrder) {
       toggleOrder.addEventListener('change', (e) => {
-        updateNotificationPreference('order_enabled', e.target.checked);
+        updateNotificationPreference('order', e.target.checked);
       });
     }
 
@@ -286,72 +274,30 @@ import {
     }
   });
 
-  async function updateNotificationPreference(field, enabled) {
+  async function updateNotificationPreference(notificationType, enabled) {
     try {
-      console.log(`[Profile] Updating ${field} to ${enabled}`);
+      console.log(`[Profile] Updating ${notificationType} to ${enabled}`);
 
-      // Save preference to /api/profile/notifications
-      const res = await api.post('/profile/notifications', {
-        [field]: enabled
-      });
+      // Use notificationManager to update preference
+      const success = await notificationManager.updatePreference(notificationType, enabled);
 
-      if (res && res.ok) {
-        // Handle push subscription based on all toggle states
-        await handlePushSubscription();
-
+      if (success) {
         showSuccess('Pengaturan notifikasi berhasil diperbarui.');
         setTimeout(() => clearMessages(), 3000);
       } else {
-        showError(res?.error?.message || 'Gagal memperbarui pengaturan.');
+        showError('Gagal memperbarui pengaturan.');
         // Revert toggle
-        if (field === 'chat_enabled') toggleChat.checked = !enabled;
-        else if (field === 'auction_enabled') toggleAuction.checked = !enabled;
-        else if (field === 'order_enabled') toggleOrder.checked = !enabled;
+        if (notificationType === 'chat') toggleChat.checked = !enabled;
+        else if (notificationType === 'auction') toggleAuction.checked = !enabled;
+        else if (notificationType === 'order') toggleOrder.checked = !enabled;
       }
     } catch (err) {
       console.error(err);
       showError('Terjadi kesalahan jaringan.');
       // Revert toggle
-      if (field === 'chat_enabled') toggleChat.checked = !enabled;
-      else if (field === 'auction_enabled') toggleAuction.checked = !enabled;
-      else if (field === 'order_enabled') toggleOrder.checked = !enabled;
-    }
-  }
-
-  async function handlePushSubscription() {
-    try {
-      console.log('[Push] handlePushSubscription called, currentUserId:', currentUserId);
-      
-      if (!currentUserId) {
-        console.error('User ID not available');
-        showError('Terjadi kesalahan. Silakan refresh halaman.');
-        return;
-      }
-
-      const anyEnabled = toggleChat.checked || toggleAuction.checked || toggleOrder.checked;
-      
-      if (anyEnabled && !isPushSubscribed) {
-        console.log('Subscribing to push notifications for user:', currentUserId);
-        await subscribeToPushNotifications(currentUserId);
-        isPushSubscribed = true;
-        console.log('Successfully subscribed to push notifications');
-      } else if (!anyEnabled && isPushSubscribed) {
-        console.log('Unsubscribing from push notifications for user:', currentUserId);
-        await unsubscribeFromPushNotifications(currentUserId);
-        isPushSubscribed = false;
-        console.log('Successfully unsubscribed from push notifications');
-      }
-    } catch (error) {
-      console.error('Error handling push subscription:', error);
-      
-      const permissionStatus = getNotificationPermissionStatus();
-      if (permissionStatus === 'denied') {
-        showError('Notifikasi diblokir. Silakan aktifkan di pengaturan browser.');
-      } else if (permissionStatus === 'unsupported') {
-        showError('Browser Anda tidak mendukung push notification.');
-      } else {
-        showError('Gagal mengaktifkan push notification. Silakan coba lagi.');
-      }
+      if (notificationType === 'chat') toggleChat.checked = !enabled;
+      else if (notificationType === 'auction') toggleAuction.checked = !enabled;
+      else if (notificationType === 'order') toggleOrder.checked = !enabled;
     }
   }
 })();

@@ -1,11 +1,5 @@
 import { api } from '/utils/api.js';
 import { notificationManager } from '/utils/notificationManager.js';
-import {
-  subscribeToPushNotifications,
-  unsubscribeFromPushNotifications,
-  isUserSubscribed,
-  getNotificationPermissionStatus
-} from '/utils/pushNotification.js';
 
 (async function initProfile() {
   const rootLoading   = document.getElementById('profile-loading');
@@ -35,7 +29,6 @@ import {
   const newPwConfirmInput = document.getElementById('newPwConfirmInput');
 
   let currentUserId = null;
-  let isPushSubscribed = false;
 
   function showError(msg) {
     if (!errBox || !okBox) return;
@@ -285,43 +278,6 @@ import {
       if (notificationType === 'chat') toggleChat.checked = !enabled;
       else if (notificationType === 'auction') toggleAuction.checked = !enabled;
       else if (notificationType === 'order') toggleOrder.checked = !enabled;
-    }
-  }
-
-  async function handlePushSubscription() {
-    try {
-      console.log('[Push] handlePushSubscription called, currentUserId:', currentUserId);
-      
-      if (!currentUserId) {
-        console.error('User ID not available');
-        showError('Terjadi kesalahan. Silakan refresh halaman.');
-        return;
-      }
-
-      const anyEnabled = toggleChat.checked || toggleAuction.checked || toggleOrder.checked;
-      
-      if (anyEnabled && !isPushSubscribed) {
-        console.log('Subscribing to push notifications for user:', currentUserId);
-        await subscribeToPushNotifications(currentUserId);
-        isPushSubscribed = true;
-        console.log('Successfully subscribed to push notifications');
-      } else if (!anyEnabled && isPushSubscribed) {
-        console.log('Unsubscribing from push notifications for user:', currentUserId);
-        await unsubscribeFromPushNotifications(currentUserId);
-        isPushSubscribed = false;
-        console.log('Successfully unsubscribed from push notifications');
-      }
-    } catch (error) {
-      console.error('Error handling push subscription:', error);
-      
-      const permissionStatus = getNotificationPermissionStatus();
-      if (permissionStatus === 'denied') {
-        showError('Notifikasi diblokir. Silakan aktifkan di pengaturan browser.');
-      } else if (permissionStatus === 'unsupported') {
-        showError('Browser Anda tidak mendukung push notification.');
-      } else {
-        showError('Gagal mengaktifkan push notification. Silakan coba lagi.');
-      }
     }
   }
 })();

@@ -139,4 +139,68 @@ class NotificationService
             return false;
         }
     }
+
+    /**
+     * Send order notification via Node.js backend
+     * @param int $userId - User ID to receive notification
+     * @param string $title - Notification title
+     * @param string $message - Notification message
+     * @param int|null $orderId - Order ID (optional)
+     * @return bool - Success status
+     */
+    public static function sendOrderNotification(int $userId, string $title, string $message, ?int $orderId = null): bool
+    {
+        try {
+            $nodeBackendUrl = getenv('NODE_BACKEND_URL') ?: 'http://node-backend:3000';
+            $url = "{$nodeBackendUrl}/api/node/notifications/send-order";
+
+            $data = [
+                'userId' => $userId,
+                'title' => $title,
+                'message' => $message,
+                'orderId' => $orderId
+            ];
+
+            error_log("[NotificationService] Attempting to send order notification to user {$userId}");
+            error_log("[NotificationService] URL: {$url}");
+            error_log("[NotificationService] Data: " . json_encode($data));
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5 second timeout
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3); // 3 second connection timeout
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            error_log("[NotificationService] HTTP Response Code: {$httpCode}");
+            error_log("[NotificationService] Response Body: {$response}");
+            
+            if ($curlError) {
+                error_log("[NotificationService] CURL Error: {$curlError}");
+                return false;
+            }
+
+            if ($httpCode >= 200 && $httpCode < 300) {
+                error_log("[NotificationService] Order notification sent successfully to user {$userId}");
+                return true;
+            } else {
+                error_log("[NotificationService] Failed to send order notification. HTTP {$httpCode}: {$response}");
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            error_log("[NotificationService] Exception sending order notification: " . $e->getMessage());
+            error_log("[NotificationService] Stack trace: " . $e->getTraceAsString());
+            return false;
+        }
+    }
 }

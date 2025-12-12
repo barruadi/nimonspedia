@@ -365,4 +365,51 @@ router.put('/push/preferences', verifyUser, async (req, res) => {
     }
 });
 
+/**
+ * Send order notification (called from PHP backend)
+ * POST /api/node/notifications/send-order
+ * Body: { userId, title, message, orderId }
+ */
+router.post('/notifications/send-order', async (req, res) => {
+    try {
+        const { userId, title, message, orderId } = req.body;
+
+        console.log('[Push Routes] Received order notification request:', { userId, title, message, orderId });
+
+        if (!userId || !title || !message) {
+            console.error('[Push Routes] Missing required fields for order notification');
+            return res.status(400).json({
+                ok: false,
+                error: 'Missing required fields: userId, title, message'
+            });
+        }
+
+        // Use the sendOrderNotification helper from push notification service
+        const { sendOrderNotification } = require('../services/pushNotificationService');
+        
+        const result = await sendOrderNotification(userId, title, message, orderId);
+
+        if (result.success) {
+            console.log('[Push Routes] Order notification sent successfully to user', userId);
+            return res.json({
+                ok: true,
+                message: 'Order notification sent successfully'
+            });
+        } else {
+            console.warn('[Push Routes] Failed to send order notification:', result);
+            return res.status(500).json({
+                ok: false,
+                error: result.error || 'Failed to send notification'
+            });
+        }
+
+    } catch (error) {
+        console.error('[Push Routes] Error sending order notification:', error);
+        return res.status(500).json({
+            ok: false,
+            error: error.message || 'Internal server error'
+        });
+    }
+});
+
 module.exports = router;
