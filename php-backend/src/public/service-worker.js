@@ -1,5 +1,5 @@
 // Cache configuration
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `nimonspedia-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `nimonspedia-dynamic-${CACHE_VERSION}`;
 const MAX_STATIC_CACHE_SIZE = 50;
@@ -251,7 +251,8 @@ self.addEventListener('push', (event) => {
     body: 'Anda mendapat notifikasi baru',
     icon: '/uploads/logo-192.png',
     badge: '/uploads/badge-96.png',
-    url: '/'
+    url: '/',
+    type: 'general'
   };
 
   if (event.data) {
@@ -259,6 +260,7 @@ self.addEventListener('push', (event) => {
       let data;
       try {
         data = event.data.json();
+        console.log('[Service Worker] Parsed notification data:', data);
       } catch (jsonError) {
         const text = event.data.text();
         console.log('[Service Worker] Received text payload:', text);
@@ -273,11 +275,8 @@ self.addEventListener('push', (event) => {
           icon: data.icon || notificationData.icon,
           badge: data.badge || notificationData.badge,
           url: data.url || notificationData.url,
-          data: {
-            url: data.url || notificationData.url,
-            timestamp: data.timestamp || Date.now(),
-            notificationType: data.notificationType
-          }
+          type: data.data?.type || data.notificationType || 'general',
+          data: data.data || {}
         };
       }
     } catch (error) {
@@ -290,9 +289,14 @@ self.addEventListener('push', (event) => {
     icon: notificationData.icon,
     badge: notificationData.badge,
     vibrate: [200, 100, 200],
-    tag: `nimonspedia-notification-${Date.now()}`,
+    tag: `nimonspedia-${notificationData.type}-${Date.now()}`,
     requireInteraction: false,
-    data: notificationData.data,
+    data: {
+      url: notificationData.url,
+      type: notificationData.type,
+      timestamp: Date.now(),
+      ...notificationData.data
+    },
     actions: [
       {
         action: 'open',
@@ -307,23 +311,48 @@ self.addEventListener('push', (event) => {
     ]
   };
 
+  console.log('[Service Worker] Showing notification:', notificationData.title);
+  console.log('[Service Worker] Notification options:', options);
+
   event.waitUntil(
     self.registration.showNotification(notificationData.title, options)
+      .then(() => {
+        console.log('[Service Worker] Notification displayed successfully');
+      })
+      .catch((error) => {
+        console.error('[Service Worker] Error displaying notification:', error);
+      })
   );
 });
 
 // Notification click event - handle user interaction
 self.addEventListener('notificationclick', (event) => {
   console.log('[Service Worker] Notification clicked');
-  
+  console.log('[Service Worker] Notification data:', event.notification.data);
+
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/';
-  
   // Handle action buttons
   if (event.action === 'close') {
+    console.log('[Service Worker] Close action clicked');
     return;
   }
+
+  const notificationData = event.notification.data || {};
+  let targetUrl = notificationData.url || '/';
+
+  // Handle different notification types
+  if (notificationData.type === 'order' && notificationData.orderId) {
+    targetUrl = `/pages/orders.html?id=${notificationData.orderId}`;
+  } else if (notificationData.type === 'chat') {
+    if (notificationData.storeId && notificationData.buyerId) {
+      targetUrl = `/pages/chat.html?storeId=${notificationData.storeId}&buyerId=${notificationData.buyerId}`;
+    }
+  } else if (notificationData.type === 'auction' && notificationData.auctionId) {
+    targetUrl = `/pages/auction-detail.html?id=${notificationData.auctionId}`;
+  }
+
+  console.log('[Service Worker] Opening URL:', targetUrl);
 
   // Open or focus the target URL
   event.waitUntil(
@@ -336,17 +365,29 @@ self.addEventListener('notificationclick', (event) => {
         const client = windowClients[i];
         const clientUrl = new URL(client.url);
         const targetUrlObj = new URL(targetUrl, self.location.origin);
-        
-        if (clientUrl.pathname === targetUrlObj.pathname && 'focus' in client) {
-          return client.focus();
+
+        // For order notifications, focus and navigate to the specific order
+        if (notificationData.type === 'order' || clientUrl.pathname === targetUrlObj.pathname) {
+          if ('focus' in client) {
+            return client.focus().then(() => {
+              // Navigate to the target URL if needed
+              if ('navigate' in client && clientUrl.href !== targetUrlObj.href) {
+                return client.navigate(targetUrlObj.href);
+              }
+              return client;
+            });
+          }
         }
       }
-      
+
       // If no window is open, open a new one
       if (clients.openWindow) {
         const absoluteUrl = new URL(targetUrl, self.location.origin).href;
+        console.log('[Service Worker] Opening new window:', absoluteUrl);
         return clients.openWindow(absoluteUrl);
       }
+    }).catch((error) => {
+      console.error('[Service Worker] Error handling notification click:', error);
     })
   );
 });

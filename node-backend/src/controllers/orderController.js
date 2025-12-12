@@ -261,24 +261,26 @@ async function updateOrderStatus(req, res) {
 
       if (status === 'approved') {
         recipientId = order.buyer_id;
-        notificationTitle = 'Order Approved';
-        notificationBody = `Your order #${orderId} has been approved and will be processed soon`;
+        notificationTitle = 'Pesanan Disetujui';
+        notificationBody = `Pesanan #${orderId} telah disetujui oleh penjual`;
       } else if (status === 'rejected') {
         recipientId = order.buyer_id;
-        notificationTitle = 'Order Rejected';
-        notificationBody = `Your order #${orderId} has been rejected. Reason: ${reject_reason}`;
+        notificationTitle = 'Pesanan Ditolak';
+        notificationBody = `Pesanan #${orderId} ditolak. Alasan: ${reject_reason}`;
       } else if (status === 'on_delivery') {
         recipientId = order.buyer_id;
-        notificationTitle = 'Order On Delivery';
-        notificationBody = `Your order #${orderId} is now on delivery${delivery_time ? `. Expected: ${new Date(delivery_time).toLocaleString()}` : ''}`;
+        notificationTitle = 'Pesanan Sedang Dikirim';
+        notificationBody = `Pesanan #${orderId} sedang dalam pengiriman${delivery_time ? `. Estimasi: ${new Date(delivery_time).toLocaleString('id-ID')}` : ''}`;
       } else if (status === 'received') {
         recipientId = order.seller_id;
-        notificationTitle = 'Order Received';
-        notificationBody = `Order #${orderId} has been received by the buyer`;
+        notificationTitle = 'Pesanan Diterima';
+        notificationBody = `Pesanan #${orderId} telah diterima oleh pembeli`;
       }
 
       if (recipientId) {
-        await sendOrderNotification(recipientId, notificationTitle, notificationBody, orderId);
+        console.log(`[Order] Sending notification to user ${recipientId}: ${notificationTitle}`);
+        const notifResult = await sendOrderNotification(recipientId, notificationTitle, notificationBody, orderId);
+        console.log(`[Order] Notification result:`, notifResult);
       }
     } catch (notifError) {
       console.error('[Order] Failed to send notification:', notifError);

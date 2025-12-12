@@ -195,10 +195,9 @@ async function sendAuctionNotification(userId, title, message, auctionId) {
     return sendPushNotification(userId, {
         title: title,
         body: message,
-        url: `/auction/${auctionId}`,
+        url: `/pages/auction-detail.html?id=${auctionId}`,
         notificationType: 'auction',
         data: {
-            type: 'auction',
             auctionId
         }
     });
@@ -212,7 +211,9 @@ async function sendAuctionNotification(userId, title, message, auctionId) {
  * @param {number} orderId - Order ID (optional, for URL)
  */
 async function sendOrderNotification(userId, title, message, orderId = null) {
-    const url = orderId ? `/orders?id=${orderId}` : '/orders';
+    console.log(`[Push] Sending order notification to user ${userId}: ${title}`);
+
+    const url = orderId ? `/pages/orders.html?id=${orderId}` : '/pages/orders.html';
 
     return sendPushNotification(userId, {
         title: title,
