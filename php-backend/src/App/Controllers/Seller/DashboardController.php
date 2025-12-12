@@ -216,10 +216,10 @@ class DashboardController
             return ['ok' => false, 'error' => 'Invalid file type. Only JPG, PNG, WEBP allowed'];
         }
 
-        // Validate file size (max 2MB)
-        $maxSize = 2 * 1024 * 1024;
+        // Validate file size (max 4MB)
+        $maxSize = 4 * 1024 * 1024;
         if ($file['size'] > $maxSize) {
-            return ['ok' => false, 'error' => 'File size must be less than 2MB'];
+            return ['ok' => false, 'error' => 'File size must be less than 4MB'];
         }
 
         // Create upload directory

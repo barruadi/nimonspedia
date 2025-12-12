@@ -259,20 +259,6 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(store_id, buy
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at);
 
 
--- PUSH SUBSCRIPTIONS
-
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-    subscription_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, -- Auto Increment
-    user_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    endpoint        TEXT NOT NULL,
-    p256dh_key      TEXT NOT NULL,
-    auth_key        TEXT NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);
-
-
 -- PUSH PREFERENCES
 
 CREATE TABLE IF NOT EXISTS push_preferences (
@@ -280,8 +266,30 @@ CREATE TABLE IF NOT EXISTS push_preferences (
     chat_enabled    BOOLEAN NOT NULL DEFAULT TRUE,
     auction_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     order_enabled   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_push_preferences_user_id ON push_preferences(user_id);
+
+COMMENT ON TABLE push_preferences IS 'User preferences for push notifications';
+
+
+-- PUSH SUBSCRIPTIONS
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    subscription_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    endpoint        TEXT NOT NULL,
+    p256dh_key      TEXT NOT NULL,
+    auth_key        TEXT NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_push_subscription_user_endpoint UNIQUE (user_id, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+
+COMMENT ON TABLE push_subscriptions IS 'Stores push notification subscription endpoints per user device';
 
 
 -- USER FEATURE ACCESS CONTROL
@@ -332,15 +340,3 @@ CREATE TABLE IF NOT EXISTS review_images (
 );
 
 CREATE INDEX IF NOT EXISTS idx_review_images_review ON review_images(review_id);
-
--- SENT NOTIFICATIONS
-
-CREATE TABLE IF NOT EXISTS sent_notifications (
-    notification_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    auction_id      INTEGER NOT NULL REFERENCES auctions(auction_id) ON DELETE CASCADE,
-    user_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    notification_type TEXT NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_sent_notifications_auction_user_type ON sent_notifications(auction_id, user_id, notification_type);

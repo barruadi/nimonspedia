@@ -3,6 +3,9 @@
 namespace App\Controllers\Buyer;
 
 use App\Models\Order;
+use App\Models\Store;
+use App\Services\NotificationService;
+use Exception;
 
 class OrderController
 {
@@ -97,6 +100,24 @@ class OrderController
         if (!$success) {
             http_response_code(500);
             return ['ok' => false, 'error' => 'Gagal mengkonfirmasi penerimaan barang'];
+        }
+
+        // Send push notification to seller
+        try {
+            $store = Store::findById($order['store_id']);
+            if ($store) {
+                $sellerId = $store['owner_id'];
+                NotificationService::sendOrderNotification(
+                    $sellerId,
+                    'Order Received',
+                    "Order #{$orderId} has been received by the buyer",
+                    $orderId
+                );
+                error_log("[OrderController] Sent received notification to seller {$sellerId} for order {$orderId}");
+            }
+        } catch (Exception $notifErr) {
+            error_log("[OrderController] Failed to send received notification: " . $notifErr->getMessage());
+            // Don't fail the request if notification fails
         }
 
         http_response_code(200);

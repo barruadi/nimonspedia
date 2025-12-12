@@ -75,21 +75,24 @@ async function sendPushNotification(userId, notification) {
             return { success: false, error: 'No subscriptions found' };
         }
 
-        // Extract additional data from notification object for proper routing
+        // Build notification payload matching service worker format
         const notificationPayload = {
             title,
             body,
             icon: '/logo-192.png',
             badge: '/logo-192.png',
+            tag: notificationType || 'notification',
             data: {
                 url: url || '/',
                 type: notificationType,
                 timestamp: Date.now(),
-                ...notification.data // Include any additional data passed
+                ...(notification.data || {})
             }
         };
 
         const payload = JSON.stringify(notificationPayload);
+        
+        console.log(`[Push] Sending notification to user ${userId}:`, notificationPayload);
 
         // Send to all user's subscriptions
         const sendPromises = subscriptions.rows.map(async (sub) => {
@@ -165,15 +168,18 @@ async function sendPushNotificationToMultipleUsers(userIds, notification) {
  * @param {number} buyerId - Buyer ID (for URL)
  */
 async function sendChatNotification(receiverId, senderName, messagePreview, storeId, buyerId) {
+    console.log(`[Push] Preparing chat notification for user ${receiverId} from ${senderName}`);
+    
     return sendPushNotification(receiverId, {
-        title: 'Pesan Baru',
-        body: `${senderName}: ${messagePreview}`,
-        url: `/chat?store=${storeId}&buyer=${buyerId}`,
+        title: senderName,
+        body: messagePreview,
+        url: `/chat/${storeId}/${buyerId}`,
         notificationType: 'chat',
         data: {
             type: 'chat',
             storeId,
-            buyerId
+            buyerId,
+            senderName
         }
     });
 }
@@ -189,10 +195,9 @@ async function sendAuctionNotification(userId, title, message, auctionId) {
     return sendPushNotification(userId, {
         title: title,
         body: message,
-        url: `/auction/${auctionId}`,
+        url: `/pages/auction-detail.html?id=${auctionId}`,
         notificationType: 'auction',
         data: {
-            type: 'auction',
             auctionId
         }
     });
@@ -206,7 +211,9 @@ async function sendAuctionNotification(userId, title, message, auctionId) {
  * @param {number} orderId - Order ID (optional, for URL)
  */
 async function sendOrderNotification(userId, title, message, orderId = null) {
-    const url = orderId ? `/orders?id=${orderId}` : '/orders';
+    console.log(`[Push] Sending order notification to user ${userId}: ${title}`);
+
+    const url = orderId ? `/pages/orders.html?id=${orderId}` : '/pages/orders.html';
 
     return sendPushNotification(userId, {
         title: title,

@@ -43,6 +43,21 @@ class AppNavbar extends HTMLElement {
   async refresh() {
     this._session = await this.fetchSession();
     this.render();
+    
+    // Auto-initialize push notifications for authenticated users
+    if (this._session && this._session.authenticated) {
+      this.initPushNotifications();
+    }
+  }
+
+  async initPushNotifications() {
+    try {
+      const { notificationManager } = await import('/utils/notificationManager.js');
+      await notificationManager.initAndSubscribe();
+      console.log('[Navbar] Push notifications initialized');
+    } catch (error) {
+      console.warn('[Navbar] Failed to initialize push notifications:', error);
+    }
   }
 
   async fetchSession() {

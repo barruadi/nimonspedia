@@ -205,10 +205,10 @@ class RegisterController
             return ['ok' => false, 'error' => 'Format file tidak valid. Hanya JPG, PNG, dan WEBP yang diperbolehkan'];
         }
 
-        $maxSize = 2 * 1024 * 1024;
+        $maxSize = 4 * 1024 * 1024;
         if ($file['size'] > $maxSize) {
             error_log("File too large: " . $file['size'] . " bytes (max: $maxSize bytes)");
-            return ['ok' => false, 'error' => 'Ukuran file terlalu besar. Maksimal 2MB'];
+            return ['ok' => false, 'error' => 'Ukuran file terlalu besar. Maksimal 4MB'];
         }
 
         $uploadDir = __DIR__ . '/../../../public/uploads/logo/';
