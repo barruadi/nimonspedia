@@ -261,3 +261,5 @@ Pastikan Docker dan Docker Compose sudah terinstal di sistem Anda sebelum melanj
 -   **Halaman Admin Login**: 13523071
 -   **Halaman Admin Dashboard**: 13523071
 -   **Halaman Feature Disabled**: 13523071
+-   **Payment Gateaway**: 13523101
+-   **Review and Rating**: 13523101
