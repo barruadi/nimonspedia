@@ -8,6 +8,8 @@ import AuctionDetail from './pages/AuctionDetail'
 import SellerAuctionHistory from './pages/SellerAuctionHistory'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
+import DisabledFeature from './pages/DisabledFeature'
+import FeatureGuard from './components/FeatureGuard'
 import './components/Button.css'
 
 function HomePage() {
@@ -58,13 +60,43 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/auction" element={<AuctionPage />} />
-          <Route path="/auctions" element={<AuctionList />} />
-          <Route path="/auction/:id" element={<AuctionDetail />} />
-          <Route path="/auction-history" element={<SellerAuctionHistory />} />
-          <Route path="/chat/*" element={<ChatPage />} />
+          
+          {/* Auction Routes - Protected */}
+          <Route path="/auction" element={
+            <FeatureGuard feature="auction_enabled">
+              <AuctionPage />
+            </FeatureGuard>
+          } />
+          <Route path="/auctions" element={
+            <FeatureGuard feature="auction_enabled">
+              <AuctionList />
+            </FeatureGuard>
+          } />
+          <Route path="/auction/:id" element={
+            <FeatureGuard feature="auction_enabled">
+              <AuctionDetail />
+            </FeatureGuard>
+          } />
+          <Route path="/auction-history" element={
+            <FeatureGuard feature="auction_enabled">
+              <SellerAuctionHistory />
+            </FeatureGuard>
+          } />
+          
+          {/* Chat Routes - Protected */}
+          <Route path="/chat/*" element={
+            <FeatureGuard feature="chat_enabled">
+              <ChatPage />
+            </FeatureGuard>
+          } />
+          
+          {/* Admin Routes - No protection needed */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          
+          {/* Disabled Feature Page */}
+          <Route path="/feature-disabled" element={<DisabledFeature />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

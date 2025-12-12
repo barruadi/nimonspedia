@@ -40,6 +40,8 @@ $canCheckout = $canCheckout ?? true; // server-side rule; JS will enable if temp
     .btn { width:100%; padding:12px 22px; border-radius:12px; background:var(--ok); color:#fff; border:none; font-weight:700; cursor:pointer; }
     .btn[disabled]{ opacity:.6; cursor:not-allowed; }
     hr { border:none; border-top:1px solid #eee; margin:16px 0; }
+    body { visibility: hidden; }
+    body.feature-checked { visibility: visible; }
 
     /* ===== Modal (Alamat Sementara – 1 field) ===== */
     .modal-backdrop {
@@ -65,6 +67,37 @@ $canCheckout = $canCheckout ?? true; // server-side rule; JS will enable if temp
     .btn-primary { background:var(--ok); border:1px solid var(--ok); color:#fff; padding:10px 16px; border-radius:10px; cursor:pointer; }
     .error { color:#b91c1c; font-size:12px; margin-top:8px; }
   </style>
+  <script>
+    // Block page render until feature check complete
+    (async function() {
+      try {
+        const userId = await (async () => {
+          const res = await fetch('/api/me', { credentials: 'include' });
+          const data = await res.json();
+          return data?.user?.user_id || data?.user?.id;
+        })();
+        
+        const res = await fetch(`/api/node/feature-flags?user_id=${userId}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (!data.checkout_enabled?.enabled) {
+          const info = {
+            featureName: 'Checkout',
+            reason: data.checkout_enabled?.reason,
+            isGlobal: data.checkout_enabled?.isGlobal
+          };
+          sessionStorage.setItem('disabledFeatureInfo', JSON.stringify(info));
+          window.location.replace('/feature-disabled');
+          return;
+        }
+        
+        document.body.classList.add('feature-checked');
+      } catch (error) {
+        console.error('Error checking feature flag:', error);
+        document.body.classList.add('feature-checked');
+      }
+    })();
+  </script>
 </head>
 <body>
   <div class="wrap">

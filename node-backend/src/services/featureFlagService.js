@@ -10,9 +10,10 @@ const pool = database.getInstance();
  * Check if a feature is enabled for a specific user
  *
  * Logic:
- * 1. First check for user-specific override (user_id is set)
- * 2. If no user-specific setting, check for global setting (user_id is NULL)
- * 3. If no records found, default to enabled (true)
+ * 1. Check global setting (user_id IS NULL)
+ * 2. Check user-specific setting (user_id is set)
+ * 3. If EITHER global OR user is disabled → result is DISABLED
+ * 4. If no records found, default to enabled (true)
  *
  * @param {string} featureName - Feature name (checkout_enabled, chat_enabled, auction_enabled)
  * @param {number|null} userId - User ID to check for, null to check only global
@@ -20,26 +21,10 @@ const pool = database.getInstance();
  */
 async function isFeatureEnabled(featureName, userId = null) {
   try {
-    // If user is specified, check user-specific setting first
-    if (userId !== null) {
-      const userQuery = `
-        SELECT is_enabled, reason
-        FROM user_feature_access
-        WHERE feature_name = $1 AND user_id = $2
-        ORDER BY updated_at DESC
-        LIMIT 1
-      `;
-      const userResult = await pool.query(userQuery, [featureName, userId]);
-
-      if (userResult.rows.length > 0) {
-        const row = userResult.rows[0];
-        return {
-          enabled: row.is_enabled,
-          reason: row.reason,
-          isGlobal: false
-        };
-      }
-    }
+    let globalEnabled = true;
+    let globalReason = null;
+    let userEnabled = true;
+    let userReason = null;
 
     // Check global setting (user_id IS NULL)
     const globalQuery = `
@@ -53,18 +38,45 @@ async function isFeatureEnabled(featureName, userId = null) {
 
     if (globalResult.rows.length > 0) {
       const row = globalResult.rows[0];
-      return {
-        enabled: row.is_enabled,
-        reason: row.reason || 'Maintenance',
-        isGlobal: true
-      };
+      globalEnabled = row.is_enabled;
+      globalReason = row.reason;
     }
 
-    // Default: feature is enabled if no records found
+    // If user is specified, check user-specific setting
+    if (userId !== null) {
+      const userQuery = `
+        SELECT is_enabled, reason
+        FROM user_feature_access
+        WHERE feature_name = $1 AND user_id = $2
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `;
+      const userResult = await pool.query(userQuery, [featureName, userId]);
+
+      if (userResult.rows.length > 0) {
+        const row = userResult.rows[0];
+        userEnabled = row.is_enabled;
+        userReason = row.reason;
+      }
+    }
+
+    // Feature is enabled ONLY if BOTH global AND user are enabled
+    // If either is disabled, the feature is disabled
+    const finalEnabled = globalEnabled && userEnabled;
+    const finalReason = !globalEnabled ? globalReason : (!userEnabled ? userReason : null);
+    const isGlobal = !globalEnabled;
+
+    console.log(`[FeatureFlag] ${featureName} for user ${userId}:`, {
+      globalEnabled,
+      userEnabled,
+      finalEnabled,
+      finalReason
+    });
+
     return {
-      enabled: true,
-      reason: null,
-      isGlobal: false
+      enabled: finalEnabled,
+      reason: finalReason,
+      isGlobal: isGlobal
     };
   } catch (error) {
     console.error('[FeatureFlagService] Error checking feature flag:', error);

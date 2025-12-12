@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nimonspedia-react-v1';
+const CACHE_NAME = 'nimonspedia-react-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -46,6 +46,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Don't cache JavaScript files or API calls
+  const url = new URL(event.request.url);
+  const shouldNotCache =
+    url.pathname.endsWith('.js') ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.includes('/assets/');
+
+  if (shouldNotCache) {
+    // Always fetch fresh for JS files and API calls
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -71,6 +84,97 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => {
         return caches.match('/index.html');
+      })
+  );
+});
+
+// Push notification event handler
+self.addEventListener('push', (event) => {
+  console.log('[Service Worker] Push notification received:', event);
+
+  let notificationData = {
+    title: 'Nimonspedia',
+    body: 'You have a new notification',
+    icon: '/logo-192.png',
+    badge: '/logo-192.png',
+    tag: 'default',
+    data: {}
+  };
+
+  try {
+    if (event.data) {
+      const payload = event.data.json();
+      notificationData = {
+        title: payload.title || notificationData.title,
+        body: payload.body || notificationData.body,
+        icon: payload.icon || notificationData.icon,
+        badge: payload.badge || notificationData.badge,
+        tag: payload.tag || notificationData.tag,
+        data: payload.data || {},
+        requireInteraction: payload.requireInteraction || false,
+        actions: payload.actions || []
+      };
+    }
+  } catch (error) {
+    console.error('[Service Worker] Error parsing push notification:', error);
+  }
+
+  const promiseChain = self.registration.showNotification(
+    notificationData.title,
+    {
+      body: notificationData.body,
+      icon: notificationData.icon,
+      badge: notificationData.badge,
+      tag: notificationData.tag,
+      data: notificationData.data,
+      requireInteraction: notificationData.requireInteraction,
+      actions: notificationData.actions,
+      vibrate: [200, 100, 200]
+    }
+  );
+
+  event.waitUntil(promiseChain);
+});
+
+// Notification click event handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification clicked:', event.notification);
+
+  event.notification.close();
+
+  const notificationData = event.notification.data || {};
+  let urlToOpen = '/';
+
+  // Determine URL based on notification type
+  if (notificationData.type === 'chat' && notificationData.storeId && notificationData.buyerId) {
+    urlToOpen = `/chat/${notificationData.storeId}/${notificationData.buyerId}`;
+  } else if (notificationData.type === 'auction' && notificationData.auctionId) {
+    urlToOpen = `/auction/${notificationData.auctionId}`;
+  } else if (notificationData.type === 'order' && notificationData.orderId) {
+    urlToOpen = `/orders/${notificationData.orderId}`;
+  } else if (notificationData.url) {
+    urlToOpen = notificationData.url;
+  }
+
+  // Open or focus the client window
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            return client.focus().then(client => {
+              if ('navigate' in client) {
+                return client.navigate(urlToOpen);
+              }
+            });
+          }
+        }
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
       })
   );
 });

@@ -180,7 +180,17 @@ const AdminDashboard = () => {
           chat_enabled: true,
           auction_enabled: true
         });
-        setFlagReasons({});
+        
+        // Load existing reasons from backend
+        const existingReasons = {};
+        if (data.details && Array.isArray(data.details)) {
+          data.details.forEach(detail => {
+            if (!detail.isEnabled && detail.reason) {
+              existingReasons[detail.featureName] = detail.reason;
+            }
+          });
+        }
+        setFlagReasons(existingReasons);
       }
     } catch (error) {
       showToast('Gagal memuat data flags', 'error');
@@ -670,38 +680,56 @@ const AdminDashboard = () => {
                   <span className="label">Email:</span>
                   <span className="value">{selectedUserForFlags.email}</span>
                 </div>
+                <div className="user-info-row">
+                  <span className="label">Role:</span>
+                  <span className="value">
+                    <span className={`badge ${selectedUserForFlags.role?.toLowerCase()}`}>
+                      {selectedUserForFlags.role}
+                    </span>
+                  </span>
+                </div>
               </div>
 
               <div className="flags-grid">
-                {Object.entries(currentUserFlags).map(([flagName, enabled]) => {
-                  const displayName = flagName.replace('_enabled', '').replace('_', ' ');
-                  return (
-                    <div key={flagName} className="flag-item">
-                      <label className={`flag-label ${!enabled ? 'disabled' : ''}`}>
-                        <input
-                          type="checkbox"
-                          checked={enabled}
-                          onChange={(e) => handleUserFlagChange(flagName, e.target.checked)}
-                        />
-                        <span className="flag-name">{displayName.charAt(0).toUpperCase() + displayName.slice(1)}</span>
+                {Object.entries(currentUserFlags)
+                  .filter(([key]) => {
+                    const userRole = selectedUserForFlags.role?.toLowerCase();
+                    // Seller: hanya chat_enabled dan auction_enabled (2 toggle)
+                    // Buyer: checkout_enabled, chat_enabled, auction_enabled (3 toggle)
+                    if (key === 'checkout_enabled' && userRole === 'seller') {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map(([flagName, enabled]) => {
+                    const displayName = flagName.replace('_enabled', '').replace('_', ' ');
+                    return (
+                      <div key={flagName} className="flag-item">
+                        <label className={`flag-label ${!enabled ? 'disabled' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            onChange={(e) => handleUserFlagChange(flagName, e.target.checked)}
+                          />
+                          <span className="flag-name">{displayName.charAt(0).toUpperCase() + displayName.slice(1)}</span>
+                          {!enabled && (
+                            <span className="status-badge disabled">Nonaktif</span>
+                          )}
+                        </label>
                         {!enabled && (
-                          <span className="status-badge disabled">Nonaktif</span>
+                          <textarea
+                            placeholder="Masukkan alasan (minimal 10 karakter)"
+                            value={flagReasons[flagName] || ''}
+                            onChange={(e) => setFlagReasons(prev => ({
+                              ...prev,
+                              [flagName]: e.target.value
+                            }))}
+                            className="reason-textarea"
+                          />
                         )}
-                      </label>
-                      {!enabled && (
-                        <textarea
-                          placeholder="Masukkan alasan (minimal 10 karakter)"
-                          value={flagReasons[flagName] || ''}
-                          onChange={(e) => setFlagReasons(prev => ({
-                            ...prev,
-                            [flagName]: e.target.value
-                          }))}
-                          className="reason-textarea"
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
 

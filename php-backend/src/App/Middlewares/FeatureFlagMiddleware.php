@@ -40,10 +40,30 @@ class FeatureFlagMiddleware
                     ]);
                     exit;
                 } else {
-                    // Redirect to disabled page for web requests
-                    $reason = urlencode($featureStatus['reason'] ?? 'Feature disabled');
+                    // Redirect to React disabled page (not PHP)
+                    // Use inline script to set sessionStorage before redirect
+                    http_response_code(403);
+                    header('Content-Type: text/html; charset=utf-8');
+                    $featureDisplayName = str_replace('_enabled', '', $featureName);
+                    $featureDisplayName = ucfirst($featureDisplayName);
+                    $reason = htmlspecialchars($featureStatus['reason'] ?? 'Feature disabled', ENT_QUOTES, 'UTF-8');
                     $isGlobal = $featureStatus['isGlobal'] ? 'true' : 'false';
-                    header("Location: /feature-disabled?feature=$featureName&reason=$reason&isGlobal=$isGlobal");
+                    
+                    echo "<!DOCTYPE html>
+                    <html>
+                    <head><meta charset='utf-8'><title>Redirecting...</title></head>
+                    <body>
+                    <script>
+                    sessionStorage.setItem('disabledFeatureInfo', JSON.stringify({
+                        featureName: '$featureDisplayName',
+                        reason: '$reason',
+                        isGlobal: $isGlobal
+                    }));
+                    window.location.replace('/feature-disabled');
+                    </script>
+                    <p>Redirecting...</p>
+                    </body>
+                    </html>";
                     exit;
                 }
             }

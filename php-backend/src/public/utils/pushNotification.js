@@ -149,6 +149,7 @@ export async function subscribeToPushNotifications(userId) {
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include', // Include cookies for session
             body: JSON.stringify({
                 userId: userId,
                 subscription: subscription.toJSON()
@@ -197,6 +198,7 @@ export async function unsubscribeFromPushNotifications(userId) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include', // Include cookies for session
                 body: JSON.stringify({
                     userId: userId,
                     endpoint: subscription.endpoint

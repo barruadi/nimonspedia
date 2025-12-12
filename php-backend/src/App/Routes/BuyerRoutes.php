@@ -11,6 +11,9 @@ $prohibitRole = RoleMiddleware::prohibit(['seller']);
 $roleBuyer = RoleMiddleware::allow(['buyer']);
 $checkoutEnabled = FeatureFlagMiddleware::requireCheckout(); 
 
+// Redirect root to /products
+$router->get('/', fn($req) => header('Location: /products') && exit(), []);
+
 $router->get('/products', fn($req) => (new ProductController())->showAllProducts(), []);
 
 $router->get('/checkout', fn($req) => (new CheckoutController())->showCheckout(), [$checkoutEnabled]);

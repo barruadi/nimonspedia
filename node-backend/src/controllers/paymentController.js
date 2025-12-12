@@ -1,6 +1,7 @@
 const midtransClient = require('midtrans-client');
 const crypto = require('crypto');
 const db = require('../config/db');
+const { sendOrderNotification } = require('../services/pushNotificationService');
 
 // Initialize Midtrans Snap client
 const snap = new midtransClient.Snap({
@@ -422,17 +423,31 @@ async function handlePaymentWebhook(req, res) {
 
           } else if (dbTransaction.type === 'order') {
             // Update order status to approved (payment received)
-            await client.query(
+            const orderUpdateResult = await client.query(
               `UPDATE orders
                SET status = 'approved', updated_at = NOW()
-               WHERE order_id = $1`,
+               WHERE order_id = $1
+               RETURNING buyer_id, order_id`,
               [dbTransaction.related_order_id]
             );
 
             console.log('[Webhook/Payment] Order approved:', dbTransaction.related_order_id);
 
-            // TODO: Send push notification to user
-            // TODO: Send notification to seller
+            // Send push notification to buyer
+            if (orderUpdateResult.rows.length > 0) {
+              const order = orderUpdateResult.rows[0];
+              try {
+                await sendOrderNotification(
+                  order.buyer_id,
+                  'Payment Success',
+                  `Payment for order #${order.order_id} was successful. Your order has been approved.`,
+                  order.order_id
+                );
+                console.log('[Webhook/Payment] Notification sent to buyer');
+              } catch (notifError) {
+                console.error('[Webhook/Payment] Failed to send notification:', notifError);
+              }
+            }
           }
         }
 
