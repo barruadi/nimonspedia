@@ -208,10 +208,17 @@ class Router
                     $next = function ($req) use ($mw, $prev) { return $mw($req, $prev); };
                 }
 
-                try { return $next($request); }
+                try { 
+                    $result = $next($request);
+                    return $result;
+                }
                 catch (\Throwable $e) {
+                    error_log("[Router] Exception caught: " . $e->getMessage());
+                    error_log("[Router] Trace: " . $e->getTraceAsString());
                     if ($this->errorHandler) return ($this->errorHandler)($e, $request);
-                    http_response_code(500); return 'Internal Server Error';
+                    http_response_code(500); 
+                    header('Content-Type: application/json');
+                    return json_encode(['ok' => false, 'error' => 'Internal Server Error', 'message' => $e->getMessage()]);
                 }
             }
         }

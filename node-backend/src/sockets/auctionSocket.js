@@ -86,6 +86,11 @@ const setupAuctionSocket = (io) => {
   io.on('connection', (socket) => {
     console.log(`[Auction Socket] User CONNECTED: ${socket.id} (userId: ${socket.userId}, role: ${socket.userRole}, name: ${socket.userName})`);
 
+    // Join user-specific room for personal notifications
+    const userRoom = `user-${socket.userId}`;
+    socket.join(userRoom);
+    console.log(`[Auction Socket] User ${socket.userId} joined personal room ${userRoom}`);
+
     /**
      * EVENT: auction:join
      * Client joins auction room to receive real-time updates
@@ -319,9 +324,9 @@ const setupAuctionSocket = (io) => {
           });
         }
 
-        // STEP 5: REFUND PREVIOUS BIDDER (if exists and different user)
+        // STEP 5: REFUND PREVIOUS BIDDER (if exists, regardless of whether same user or different)
         let previousBidderRefundAmount = 0;
-        if (previousBid && previousBid.bidder_id !== bidderId) {
+        if (previousBid) {
           // Lock previous bidder's row
           const prevBidderQuery = `
             SELECT user_id, balance FROM users WHERE user_id = $1 FOR UPDATE
@@ -329,7 +334,7 @@ const setupAuctionSocket = (io) => {
           const prevBidderResult = await client.query(prevBidderQuery, [previousBid.bidder_id]);
           
           if (prevBidderResult.rows.length > 0) {
-            // Refund their bid amount
+            // Refund their bid amount (applies to same user bidding multiple times too)
             previousBidderRefundAmount = previousBid.bid_amount;
             const refundQuery = `
               UPDATE users SET balance = balance + $1 WHERE user_id = $2
@@ -467,14 +472,22 @@ const setupAuctionSocket = (io) => {
             const productResult = await pgPool.query(productQuery, [auctionId]);
             const productName = productResult.rows[0]?.product_name || 'produk';
 
+            // Get previous bidder's name
+            const previousBidderQuery = `
+              SELECT full_name FROM users WHERE user_id = $1
+            `;
+            const previousBidderResult = await pgPool.query(previousBidderQuery, [previousBid.bidder_id]);
+            const previousBidderName = previousBidderResult.rows[0]?.full_name || 'Anda';
+
             await sendOutbidNotification(
               previousBid.bidder_id,
               productName,
               auctionId,
               buyer.full_name,
-              bidAmount
+              bidAmount,
+              previousBidderName
             );
-            console.log(`[Auction Socket] Outbid notification sent to user ${previousBid.bidder_id}`);
+            console.log(`[Auction Socket] Outbid notification sent to user ${previousBid.bidder_id} (${previousBidderName})`);
           } catch (notifError) {
             console.error('[Auction Socket] Error sending outbid notification:', notifError.message);
           }
@@ -607,15 +620,35 @@ async function sendAuctionEndingSoonNotifications(io, auctionId) {
   try {
     console.log(`[Auction Socket] Sending ending soon notifications for auction ${auctionId}`);
 
+    // Get auction details and seller information
+    const auctionQuery = `
+      SELECT 
+        a.auction_id,
+        p.name as product_name,
+        s.owner_id as seller_id,
+        u.full_name as seller_name
+      FROM auctions a
+      JOIN products p ON a.product_id = p.product_id
+      JOIN stores s ON p.store_id = s.store_id
+      JOIN users u ON s.owner_id = u.user_id
+      WHERE a.auction_id = $1 AND a.status = 'active'
+    `;
+
+    const auctionResult = await pgPool.query(auctionQuery, [auctionId]);
+
+    if (auctionResult.rows.length === 0) {
+      console.log(`[Auction Socket] Auction ${auctionId} not found or not active`);
+      return;
+    }
+
+    const { product_name: productName, seller_id: sellerId, seller_name: sellerName } = auctionResult.rows[0];
+
     // Get all bidders for this auction who haven't received ending soon notification
     const biddersQuery = `
-      SELECT DISTINCT b.bidder_id, u.full_name, p.name as product_name
+      SELECT DISTINCT b.bidder_id, u.full_name
       FROM bids b
       JOIN users u ON b.bidder_id = u.user_id
-      JOIN auctions a ON b.auction_id = a.auction_id
-      JOIN products p ON a.product_id = p.product_id
       WHERE b.auction_id = $1
-        AND a.status = 'active'
         AND NOT EXISTS (
           SELECT 1 FROM sent_notifications sn
           WHERE sn.auction_id = $1
@@ -624,17 +657,10 @@ async function sendAuctionEndingSoonNotifications(io, auctionId) {
         )
     `;
 
-    const result = await pgPool.query(biddersQuery, [auctionId]);
-
-    if (result.rows.length === 0) {
-      console.log(`[Auction Socket] No bidders to notify for auction ${auctionId}`);
-      return;
-    }
-
-    const productName = result.rows[0].product_name;
+    const biddersResult = await pgPool.query(biddersQuery, [auctionId]);
 
     // Send notification to each bidder
-    for (const row of result.rows) {
+    for (const row of biddersResult.rows) {
       try {
         await sendAuctionNotification(
           row.bidder_id,
@@ -651,13 +677,45 @@ async function sendAuctionEndingSoonNotifications(io, auctionId) {
           [auctionId, row.bidder_id, 'ending_soon']
         );
 
-        console.log(`[Auction Socket] Ending soon notification sent to user ${row.bidder_id}`);
+        console.log(`[Auction Socket] Ending soon notification sent to bidder ${row.bidder_id}`);
       } catch (error) {
-        console.error(`[Auction Socket] Failed to send notification to user ${row.bidder_id}:`, error.message);
+        console.error(`[Auction Socket] Failed to send notification to bidder ${row.bidder_id}:`, error.message);
       }
     }
 
-    console.log(`[Auction Socket] Sent ending soon notifications to ${result.rows.length} bidders`);
+    // Send notification to seller (if they haven't received it yet)
+    const sellerNotifiedQuery = `
+      SELECT 1 FROM sent_notifications
+      WHERE auction_id = $1 AND user_id = $2 AND notification_type = 'ending_soon'
+    `;
+    const sellerNotified = await pgPool.query(sellerNotifiedQuery, [auctionId, sellerId]);
+
+    if (sellerNotified.rows.length === 0) {
+      try {
+        await sendAuctionNotification(
+          sellerId,
+          'Lelang Anda Segera Berakhir',
+          `Lelang untuk "${productName}" akan berakhir dalam 5 detik!`,
+          auctionId
+        );
+
+        // Record that notification was sent to seller
+        await pgPool.query(
+          `INSERT INTO sent_notifications (auction_id, user_id, notification_type)
+           VALUES ($1, $2, $3)
+           ON CONFLICT DO NOTHING`,
+          [auctionId, sellerId, 'ending_soon']
+        );
+
+        console.log(`[Auction Socket] Ending soon notification sent to seller ${sellerId}`);
+      } catch (error) {
+        console.error(`[Auction Socket] Failed to send notification to seller ${sellerId}:`, error.message);
+      }
+    } else {
+      console.log(`[Auction Socket] Seller ${sellerId} already received ending soon notification`);
+    }
+
+    console.log(`[Auction Socket] Sent ending soon notifications to ${biddersResult.rows.length} bidders and seller ${sellerId}`);
   } catch (error) {
     console.error('[Auction Socket] Error sending ending soon notifications:', error.message);
   }
@@ -837,7 +895,7 @@ async function closeAuction(io, auctionId) {
           winnerId,
           notificationProductName,
           finalPrice,
-          winnerName
+          auctionId
         );
         console.log(`[Auction Socket] Win notification sent to winner ${winnerId}`);
       }
@@ -858,7 +916,8 @@ async function closeAuction(io, auctionId) {
           sellerId,
           notificationProductName,
           winnerName || 'Tidak ada pemenang',
-          finalPrice
+          finalPrice,
+          auctionId
         );
         console.log(`[Auction Socket] Seller ended notification sent to seller ${sellerId}`);
       }

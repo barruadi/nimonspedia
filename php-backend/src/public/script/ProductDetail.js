@@ -1,4 +1,5 @@
 import { api } from '../utils/api.js';
+import { featureGuard } from '../utils/featureGuard.js';
 
 function initProductDetailPage() {
     const loadingState = document.getElementById('loadingState');
@@ -26,13 +27,23 @@ function initProductDetailPage() {
 
     let currentProduct = null;
     let isUserLoggedIn = false;
+    let isCheckoutEnabled = true;
 
     async function checkAuthStatus() {
         try {
             const result = await api.get('/me');
             isUserLoggedIn = result && result.authenticated === true;
+            
+            // Check if checkout feature is enabled
+            if (isUserLoggedIn) {
+                isCheckoutEnabled = await featureGuard.isFeatureEnabled('checkout_enabled');
+                console.log('[ProductDetail] Checkout enabled:', isCheckoutEnabled);
+            } else {
+                isCheckoutEnabled = true; // Default for non-logged-in users
+            }
         } catch (error) {
             isUserLoggedIn = false;
+            isCheckoutEnabled = true;
         }
     }
 
@@ -96,14 +107,14 @@ function setupPurchaseBox(product) {
         productStock.textContent = stock;
         qtyInput.max = stock;
 
-        // If user is not logged in, disable all purchase controls
-        if (!isUserLoggedIn) {
+        // If user is not logged in or checkout is disabled, disable all purchase controls
+        if (!isUserLoggedIn || !isCheckoutEnabled) {
             qtyInput.value = 0;
             qtyInput.disabled = true;
             qtyDecrement.disabled = true;
             qtyIncrement.disabled = true;
             updateSubtotal();
-            return; // Don't add event listeners for guests
+            return; // Don't add event listeners for guests or disabled users
         }
 
         if (stock === 0) {
@@ -165,6 +176,11 @@ function setupPurchaseBox(product) {
         // If user is not logged in, show "Login to buy" button
         if (!isUserLoggedIn) {
             addToCartBtn.textContent = 'Login to buy';
+            addToCartBtn.disabled = true;
+            addToCartBtn.classList.add('btn-disabled-guest');
+        } else if (!isCheckoutEnabled) {
+            // Checkout feature is disabled for this user
+            addToCartBtn.textContent = 'Checkout Disabled';
             addToCartBtn.disabled = true;
             addToCartBtn.classList.add('btn-disabled-guest');
         } else if (stock === 0) {

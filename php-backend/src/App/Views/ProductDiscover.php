@@ -216,6 +216,8 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
 
 /* --- Action Buttons --- */
 .actions { margin-top: auto; }
+.actions.loading .btn-addcart { opacity: 0.5; pointer-events: none; }
+.btn-addcart.btn-checking { opacity: 0.5; cursor: wait; }
 .btn-addcart,
 .btn-disabled {
   display: flex;
@@ -479,13 +481,14 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
             <?php endif; ?>
           </div>
 
-          <div class="actions">
+          <div class="actions" data-product-id="<?= $id ?>" data-stock="<?= $stock ?>" data-is-guest="<?= $isGuest ? 'true' : 'false' ?>">
             <?php if ($isOut): ?>
               <span class="btn-disabled">Habis</span>
             <?php elseif ($isGuest): ?>
               <span class="btn-disabled">Login to buy</span>
             <?php else: ?>
-              <button class="btn-addcart" data-product-id="<?= $id ?>">
+              <!-- Placeholder while checking feature flags -->
+              <button class="btn-addcart btn-checking" disabled>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="9" cy="21" r="1"></circle>
                   <circle cx="20" cy="21" r="1"></circle>
@@ -587,9 +590,106 @@ $categoriesCsv = implode(',', array_map('strval', $filters['categories']));
 <script type="module">
 
 import { api } from '/utils/api.js';
+import { featureGuard } from '/utils/featureGuard.js';
 import { redirectSellerToDashboard } from '/utils/sellerRedirect.js';
 
 redirectSellerToDashboard();
+
+// Check checkout feature flag
+let isCheckoutEnabled = true;
+let featureFlagsLoaded = false;
+
+async function checkFeatureFlags() {
+  if (window.isLoggedIn) {
+    try {
+      isCheckoutEnabled = await featureGuard.isFeatureEnabled('checkout_enabled');
+      console.log('[ProductDiscover] Checkout enabled:', isCheckoutEnabled);
+      featureFlagsLoaded = true;
+      
+      // Render buttons based on feature flag status
+      renderAllAddToCartButtons();
+    } catch (err) {
+      console.error('[ProductDiscover] Error checking feature flags:', err);
+      featureFlagsLoaded = true;
+      // Render buttons even on error (assume enabled)
+      renderAllAddToCartButtons();
+    }
+  } else {
+    featureFlagsLoaded = true;
+  }
+}
+
+function renderAllAddToCartButtons() {
+  const buttons = document.querySelectorAll('.btn-addcart.btn-checking');
+  console.log('[ProductDiscover] Found buttons to process:', buttons.length);
+  console.log('[ProductDiscover] isCheckoutEnabled:', isCheckoutEnabled);
+  
+  buttons.forEach(btn => {
+    const wrapper = btn.closest('.actions');
+    if (!wrapper) {
+      console.warn('[ProductDiscover] No wrapper found for button:', btn);
+      return;
+    }
+    
+    const productId = wrapper.dataset.productId;
+    const stock = parseInt(wrapper.dataset.stock || '0');
+    const isGuest = wrapper.dataset.isGuest === 'true';
+    
+    console.log('[ProductDiscover] Processing button for product:', productId, 'checkout enabled:', isCheckoutEnabled);
+    
+    if (!isCheckoutEnabled) {
+      // Checkout disabled - show disabled button
+      wrapper.innerHTML = '<span class="btn-disabled">Checkout Disabled</span>';
+    } else {
+      // Checkout enabled - show active button
+      wrapper.innerHTML = `<button class="btn-addcart" data-product-id="${productId}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        Add to cart
+      </button>`;
+    }
+  });
+}
+
+// Initialize feature flags immediately after DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[ProductDiscover] DOM loaded, checking feature flags...');
+    await checkFeatureFlags();
+  });
+} else {
+  // DOM already loaded
+  console.log('[ProductDiscover] DOM already loaded, checking feature flags...');
+  (async () => {
+    await checkFeatureFlags();
+  })();
+}
+
+// Also observe for any dynamically added buttons
+const observer = new MutationObserver((mutations) => {
+  if (featureFlagsLoaded && !isCheckoutEnabled) {
+    const newButtons = document.querySelectorAll('.btn-addcart:not(.btn-disabled-by-feature)');
+    if (newButtons.length > 0) {
+      console.log('[ProductDiscover] Found new buttons after mutation, disabling...');
+      newButtons.forEach(btn => {
+        if (!btn.classList.contains('btn-checking')) {
+          const wrapper = btn.closest('.actions');
+          if (wrapper && !wrapper.dataset.isGuest) {
+            wrapper.innerHTML = '<span class="btn-disabled">Checkout Disabled</span>';
+          }
+        }
+      });
+    }
+  }
+});
+
+// Start observing
+if (window.isLoggedIn) {
+  observer.observe(document.body, { childList: true, subtree: true });
+}
 
 /* --------------------- helpers ---------------------- */
 function parseCsv(str) {
@@ -829,6 +929,7 @@ function renderProducts(json) {
   grid.dataset.totalPages = json.pagination.totalPages;
 
   const loggedOut = !window.isLoggedIn;
+  const checkoutDisabled = window.isLoggedIn && !isCheckoutEnabled;
 
   if (!json.products.length) {
     grid.innerHTML = `
@@ -861,6 +962,8 @@ function renderProducts(json) {
         actionHtml = `<span class="btn-disabled">Habis</span>`;
       } else if (isGuest) {
         actionHtml = `<span class="btn-disabled">Login to buy</span>`;
+      } else if (checkoutDisabled) {
+        actionHtml = `<span class="btn-disabled">Checkout Disabled</span>`;
       } else {
         actionHtml = `<button class="btn-addcart" data-product-id="${id}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -979,6 +1082,12 @@ async function addToCart(productId, qty = 1, btn) {
     window.location.href = '/login';
     return;
   }
+  
+  if (!isCheckoutEnabled) {
+    alert('Fitur checkout sedang dinonaktifkan');
+    return;
+  }
+  
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span class="btn-spinner"></span> Loading...';

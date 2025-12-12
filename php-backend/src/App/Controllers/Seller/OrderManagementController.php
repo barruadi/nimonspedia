@@ -3,6 +3,7 @@
 namespace App\Controllers\Seller;
 
 use App\Models\{Store, Order};
+use App\Services\NotificationService;
 use Exception;
 
 class OrderManagementController
@@ -73,6 +74,21 @@ class OrderManagementController
         if (!$success) {
             http_response_code(500);
             return ['ok' => false, 'error' => 'Failed to approve order'];
+        }
+
+        // Send push notification to buyer
+        try {
+            $buyerId = $order['buyer_id'];
+            NotificationService::sendOrderNotification(
+                $buyerId,
+                'Order Approved',
+                "Your order #{$orderId} has been approved and will be processed soon",
+                $orderId
+            );
+            error_log("[OrderManagement] Sent approval notification to buyer {$buyerId} for order {$orderId}");
+        } catch (Exception $notifErr) {
+            error_log("[OrderManagement] Failed to send approval notification: " . $notifErr->getMessage());
+            // Don't fail the request if notification fails
         }
 
         http_response_code(200);
@@ -160,6 +176,21 @@ class OrderManagementController
                 throw new Exception('Failed to reject order in database');
             }
 
+            // Send push notification to buyer
+            try {
+                $buyerId = $order['buyer_id'];
+                NotificationService::sendOrderNotification(
+                    $buyerId,
+                    'Order Rejected',
+                    "Your order #{$orderId} has been rejected. Reason: {$rejectReason}",
+                    $orderId
+                );
+                error_log("[OrderManagement] Sent rejection notification to buyer {$buyerId} for order {$orderId}");
+            } catch (Exception $notifErr) {
+                error_log("[OrderManagement] Failed to send rejection notification: " . $notifErr->getMessage());
+                // Don't fail the request if notification fails
+            }
+
             http_response_code(200);
             return [
                 'ok' => true,
@@ -212,6 +243,22 @@ class OrderManagementController
         if (!$success) {
             http_response_code(500);
             return ['ok' => false, 'error' => 'Failed to set delivery time'];
+        }
+
+        // Send push notification to buyer
+        try {
+            $buyerId = $order['buyer_id'];
+            $deliveryDate = date('d M Y H:i', strtotime($deliveryTime));
+            NotificationService::sendOrderNotification(
+                $buyerId,
+                'Order On Delivery',
+                "Your order #{$orderId} is now on delivery. Expected delivery: {$deliveryDate}",
+                $orderId
+            );
+            error_log("[OrderManagement] Sent delivery notification to buyer {$buyerId} for order {$orderId}");
+        } catch (Exception $notifErr) {
+            error_log("[OrderManagement] Failed to send delivery notification: " . $notifErr->getMessage());
+            // Don't fail the request if notification fails
         }
 
         http_response_code(200);

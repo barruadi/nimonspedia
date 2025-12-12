@@ -29,6 +29,12 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
+      // Check if click is on hamburger button
+      const hamburgerBtn = document.getElementById('hamburger-btn');
+      if (hamburgerBtn && hamburgerBtn.contains(e.target)) {
+        return; // Don't close if clicking hamburger button
+      }
+
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
       }
@@ -37,9 +43,11 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+    if (showMobileMenu || showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMobileMenu, showDropdown]);
 
   const fetchSession = async () => {
     try {
@@ -350,9 +358,12 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
             )}
 
             <button
-              className="hamburger-btn"
+              className={`hamburger-btn ${showMobileMenu ? 'active' : ''}`}
               id="hamburger-btn"
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMobileMenu(!showMobileMenu);
+              }}
               aria-label="Menu"
             >
               <span className="hamburger-line"></span>
@@ -366,6 +377,7 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
         <div
           className={`mobile-menu ${showMobileMenu ? 'active' : ''}`}
           ref={mobileMenuRef}
+          onClick={(e) => e.stopPropagation()}
         >
           {!loggedIn ? (
             <>
