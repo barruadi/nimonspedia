@@ -220,25 +220,7 @@ Pastikan Docker dan Docker Compose sudah terinstal di sistem Anda sebelum melanj
 
 ## Tangkapan Layar
 
-| Halaman | Tangkapan Layar Desktop | Tangkapan Layar Mobile |
-| :--- | :---: | :---: |
-| **Auction List** | <img src="php/src/public/uploads/pages-desktop/login.png"> | <img src="php/src/public/uploads/pages-mobile/login.png"> |
-| **Auction Detail** | <img src="php/src/public/uploads/pages-desktop/register.png"> | <img src="php/src/public/uploads/pages-mobile/register.png"> |
-| **Seller Auction History** | <img src="php/src/public/uploads/pages-desktop/products.png">| <img src="php/src/public/uploads/pages-mobile/products.png"> |
-| **Chat** | <img src="php/src/public/uploads/pages-desktop/product-detail.png"> |<img src="php/src/public/uploads/pages-mobile/product-detail.png"> |
-| **Admin Login** | <img src="php/src/public/uploads/pages-desktop/store-detail.png"> | <img src="php/src/public/uploads/pages-mobile/store-detail.png"> |
-| **Admin Dashboard** | <img src="php/src/public/uploads/pages-desktop/carts.png">| <img src="php/src/public/uploads/pages-mobile/carts.png"> |
-| **Feature Disabled** | <img src="php/src/public/uploads/pages-desktop/checkout.png"> | <img src="php/src/public/uploads/pages-mobile/checkout.png"> |
-
------
-
-## LightHouse
-
-1. LightHouse 1
-<img src="php/src/public/uploads/pages-desktop/checkout.png"> 
-
-2. LightHouse 2
-<img src="php/src/public/uploads/pages-desktop/checkout.png"> 
+[Tangkapan Layar]([https://www.google.com/search?q=http://localhost](https://drive.google.com/drive/folders/1kMIfIpUjm6n2WJzBmNUde1XaIc_kXZYo?usp=sharing))
 
 -----
 
