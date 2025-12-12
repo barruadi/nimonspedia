@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detail Produk</title>
+    <link rel="stylesheet" href="/styles/ProductDetail.css">
+</head>
+<body>
+    <div class="product-detail-page">
+        <div id="loadingState" class="loading-full-page">
+            <p>Memuat produk...</p>
+        </div>
+
+        <div id="contentWrapper" class="content-wrapper" style="display: none">
+            
+            <section class="product-main">
+                
+                <figure class="product-image-container">
+                    <img id="productImage" src="/images/placeholder.png" alt="Foto Produk" />
+                </figure>
+                
+                <div class="product-info-container
+                ">
+                    
+                    <header class="product-header">
+                        <h1 id="productName">Nama Produk</h1>
+                        <span id="productCategory" class="product-category">Kategori</span>
+                        <div id="productRatingHeader" class="product-rating-header" style="display: none;">
+                            <div class="header-stars" id="headerStars"></div>
+                            <span id="headerRatingText" class="header-rating-text"></span>
+                        </div>
+                        <span id="productPrice" class="product-price">Rp 0</span>
+                        <div class="divider"></div>
+                    </header>
+
+                    <section class="product-secondary">
+                        <div class="description-box">
+                            <h3>Deskripsi Produk</h3>
+                            <p id="productDescription"></p>
+                        </div>
+                        
+                        <div class="store-box">
+                            <h3>Toko</h3>
+                            <div class="store-info-header">
+                                <img id="storeLogo" src="/images/store-placeholder.png" alt="Logo Toko" class="store-logo" />
+                                <div class="store-info-description">
+                                    <span id="storeName" class="store-name"></span>
+                                    <p id="storeDescription"></p>
+                                </div>
+                            </div>
+                            <div class="store-actions">
+                                <button type="button" id="chatStoreBtn" class="btn-chat-store">Mulai Chat</button>
+                                <button type="button" id="goToAuctionBtn" class="btn-go-auction">Pergi ke Lelang</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="purchase-box-container">
+                    <div class="purchase-box">
+                        <h2>Pembelian</h2>
+                        <div class="purchase-controls">
+                            <div class="quantity-selector">
+                                <button type="button" id="qtyDecrement" class="qty-btn" aria-label="Kurangi jumlah">-</button>
+                                <input type="number" id="qtyInput" class="qty-input" value="0" min="0" />
+                                <button type="button" id="qtyIncrement" class="qty-btn" aria-label="Tambah jumlah">+</button>
+                            </div>
+                            <div class="stock-info">
+                                <span>Stok:</span>
+                                <span id="productStock">0</span>
+                            </div>
+                        </div>
+
+                        <div class="subtotal-info">
+                            <span>Subtotal</span>
+                            <span id="subtotalPrice" class="subtotal-price">Rp 0</span>
+                        </div>
+                        <button type="button" id="addToCartBtn" class="btn-add-to-cart">
+                            Tambahkan ke Keranjang
+                        </button>
+                        <div id="cartMessage" class="cart-message" style="display: none;">
+                        </div>
+                    </div>
+                </aside>
+                
+            </section>
+
+            <!-- Reviews Section -->
+            <section class="reviews-section" id="reviewsSection" style="display: none;">
+                <div class="reviews-header">
+                    <h2>Reviews & Ratings</h2>
+                </div>
+
+                <div class="reviews-summary">
+                    <div class="rating-overview">
+                        <div class="average-rating">
+                            <span id="averageRating" class="rating-number">0.0</span>
+                            <div class="stars-display" id="averageStars"></div>
+                            <span id="totalReviews" class="total-reviews">0 reviews</span>
+                        </div>
+                        <div class="rating-breakdown" id="ratingBreakdown"></div>
+                    </div>
+                </div>
+
+                <div class="reviews-list" id="reviewsList">
+                    <!-- Reviews will be loaded here -->
+                </div>
+
+                <div id="reviewsLoading" class="reviews-loading" style="display: none;">
+                    <p>Loading reviews...</p>
+                </div>
+
+                <div id="noReviews" class="no-reviews" style="display: none;">
+                    <p>No reviews yet. Be the first to review this product!</p>
+                </div>
+            </section>
+
+            </div>
+    </div>
+    </body>
+</html>

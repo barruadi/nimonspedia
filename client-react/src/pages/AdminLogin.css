@@ -1,0 +1,259 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.login-page {
+  --green: #05AA5B;
+  --green-bg: #d5edd8;
+  --border: #05AA5B;
+  --radius-card: 12px;
+  --radius-field: 8px;
+  --text-main: #000;
+  --text-dim: #6b7280;
+  --bg-page: #FFFFFFFFFfff;
+
+  font-family: system-ui, BlinkMacSystemFont, "Inter", Roboto, sans-serif;
+  background: var(--bg-page);
+  min-height: 100vh;
+  width: 100%;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  color: var(--text-main);
+}
+
+.login-page .login-left {
+  flex: 1 1 50%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: left;
+}
+
+.login-page .illustration {
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 1rem;
+}
+
+.login-page .hero-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.login-page .left-copy {
+  max-width: 400px;
+  text-align: center;
+}
+
+.login-page .left-headline {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #000;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  display: inline-block;
+}
+
+.login-page .brand {
+  color: var(--green);
+}
+
+.login-page .left-sub {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.login-page .login-card {
+  flex: 1 1 50%;
+  max-width: 380px;
+  background: #FFFFFF;
+  border-radius: var(--radius-card);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.05);
+  padding: 1.75rem 1.5rem 1.25rem;
+}
+
+.login-page .login-header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.login-page .login-title {
+  margin: 0 0 .5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #000;
+}
+
+.login-page .login-sub {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #000;
+  font-weight: 400;
+}
+
+.login-page .login-link {
+  color: var(--green);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.login-page .field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  min-height: 0.85rem;
+  line-height: 1.2;
+}
+
+.login-page .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.login-page .field {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-page .field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #000;
+  margin-bottom: .4rem;
+}
+
+.login-page .input-wrap {
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-field);
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  padding: .625rem .75rem;
+}
+
+.login-page .input-wrap.with-icon {
+  padding-right: 2.5rem;
+}
+
+.login-page .input-wrap input {
+  border: 0;
+  outline: none;
+  width: 100%;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #000;
+}
+
+.login-page .input-wrap input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.login-page .reveal-btn {
+  position: absolute;
+  right: .5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+
+.login-page .primary-btn {
+  width: 100%;
+  background: var(--green-bg);
+  color: var(--green);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.2;
+  padding: .75rem 1rem;
+  border-radius: var(--radius-field);
+  border: 0;
+  cursor: pointer;
+  border: 2px solid var(--green-bg);
+}
+
+.login-page .primary-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.login-page .help-text {
+  text-align: center;
+  font-size: .9rem;
+  line-height: 1.4;
+  color: #000;
+  font-weight: 400;
+  margin-top: 1.5rem;
+}
+
+@media(max-width: 900px) {
+  .login-page {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    min-height: 100vh;
+  }
+
+  .login-page .login-left {
+    order: 1;
+    max-width: 400px;
+  }
+
+  .login-page .illustration {
+    max-width: 200px;
+    margin-bottom: 0.75rem;
+  }
+
+  .login-page .login-card {
+    order: 2;
+    width: 100%;
+    max-width: 380px;
+  }
+}
+
+.page-footer {
+  text-align: center;
+  padding: 1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Keranjang</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/styles/Cart.css">
+  <style>
+    body { visibility: hidden; }
+    body.feature-checked { visibility: visible; }
+  </style>
+  <script>
+    // Block page render until feature check complete
+    (async function() {
+      try {
+        const userId = await (async () => {
+          const res = await fetch('/api/me', { credentials: 'include' });
+          const data = await res.json();
+          return data?.user?.user_id || data?.user?.id;
+        })();
+        
+        const res = await fetch(`/api/node/feature-flags?user_id=${userId}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (!data.checkout_enabled?.enabled) {
+          const info = {
+            featureName: 'Checkout',
+            reason: data.checkout_enabled?.reason,
+            isGlobal: data.checkout_enabled?.isGlobal
+          };
+          sessionStorage.setItem('disabledFeatureInfo', JSON.stringify(info));
+          window.location.replace('/feature-disabled');
+          return; // Stop execution
+        }
+        
+        // Feature enabled, show page
+        document.body.classList.add('feature-checked');
+      } catch (error) {
+        console.error('Error checking feature flag:', error);
+        document.body.classList.add('feature-checked'); // Show on error
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Keranjang</h1>
+    <div class="grid">
+      <!-- LEFT -->
+      <section class="card" id="cart-left">
+        <div class="topbar">
+          <label class="all">
+            <input type="checkbox" id="check-all">
+            <span>Pilih semua</span>
+          </label>
+          <button id="remove-selected" class="btn btn-outline">Hapus yang dipilih</button>
+        </div>
+
+        <div id="cart-groups"></div>
+
+        <!-- Empty state -->
+        <div id="empty" class="empty" style="display:none">
+          <div>
+            <h3>Wah, keranjang belanjamu kosong</h3>
+            <p>Yuk, isi dengan barang-barang impianmu!</p>
+            <a class="btn btn-green" href="/products">Mulai Belanja</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT -->
+      <aside class="card sum" id="cart-right">
+        <h3>Ringkasan Belanja</h3>
+        <div class="box">
+          <div class="summary-lines" id="summary-lines"><!-- per-store lines --></div>
+          <div class="sum-row"><span>Total Item</span><strong id="sum-items">0</strong></div>
+          <div class="sum-row total"><span>Total Harga</span><strong id="sum-price">Rp 0</strong></div>
+        </div>
+        <button id="btn-checkout" class="btn btn-green" style="width:100%; margin-top:12px" disabled>Beli</button>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module" src="/script/Cart.js"></script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+/* Main Container with full height and scroll structure */
+.auction-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* Back Button for List */
+.back-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #05AA5B;
+  border: 1px solid #05AA5B;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+}
+
+.back-list-btn:hover {
+  background: #048a47;
+  border-color: #048a47;
+}
+
+.back-list-btn:active {
+  background: #036d37;
+}
+
+/* Header Section - Fixed at top, doesn't scroll */
+.list-header {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.list-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.list-header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+/* Tab Navigation & Search - Fixed, doesn't scroll */
+.auction-list-controls {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-btn {
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: #333;
+}
+
+.tab-btn.active {
+  color: #05AA5B;
+  border-bottom-color: #05AA5B;
+}
+
+/* Search Container & Pagination Row */
+.search-pagination-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.search-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 16px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.search-input:focus {
+  border-color: #05AA5B;
+}
+
+/* Pagination Controls - Inline (Right aligned) */
+.pagination-controls-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.pagination-btn-small {
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pagination-btn-small:hover:not(:disabled) {
+  background: #05AA5B;
+  border-color: #05AA5B;
+  color: white;
+}
+
+.pagination-btn-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info-inline {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 45px;
+  text-align: center;
+}
+
+.items-per-page-inline {
+  padding: 10px 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.items-per-page-inline:hover {
+  border-color: #05AA5B;
+  background: #f9f9f9;
+}
+
+.items-per-page-inline:focus {
+  outline: none;
+  border-color: #05AA5B;
+  box-shadow: 0 0 0 2px rgba(5, 170, 91, 0.1);
+}
+
+/* Content Area - Scrollable */
+.auction-list-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  scroll-behavior: smooth;
+}
+
+/* Grid Layout */
+.auctions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 40px;
+}
+
+/* Loading State */
+.loading-container {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.loading-container p {
+  font-size: 16px;
+}
+
+/* Error State */
+.error-container {
+  background: #ffebee;
+  border-left: 4px solid #FF6B6B;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+}
+
+.error-container p {
+  margin: 0;
+  color: #c62828;
+  font-size: 14px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+}
+
+.empty-state p {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* Pagination - Fixed at bottom, doesn't scroll */
+.pagination {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 16px 20px;
+  background-color: #fafafa;
+  border-top: 1px solid #e0e0e0;
+  min-height: 50px;
+}
+
+/* Custom scrollbar styling for content area */
+.auction-list-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.auction-list-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.auction-list-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.auction-list-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .auction-list-container {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .list-header {
+    padding: 16px;
+  }
+
+  .list-header h1 {
+    font-size: 24px;
+  }
+
+  .list-header p {
+    font-size: 14px;
+  }
+
+  .auction-list-controls {
+    padding: 12px 16px;
+  }
+
+  .tab-navigation {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .tab-btn {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .search-pagination-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-container {
+    width: 100%;
+  }
+
+  .search-input {
+    max-width: 100%;
+  }
+
+  .pagination-controls-inline {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .pagination-btn-small {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .page-info-inline {
+    font-size: 12px;
+    min-width: 40px;
+  }
+
+  .items-per-page-inline {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .auction-list-content {
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+    padding: 16px;
+  }
+
+  .auctions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auctions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .list-header h1 {
+    font-size: 20px;
+  }
+
+  .tab-navigation {
+    flex-wrap: wrap;
+  }
+}

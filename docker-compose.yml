@@ -1,28 +1,67 @@
+version: '3.8'
+
 services:
-  php:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tubes-wbd
+  nginx:
+    image: nginx:alpine
+    container_name: nimons_nginx
     ports:
-      - '8080:80'
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./php-backend:/var/www/html:ro
+      - ./node-backend/uploads:/var/www/uploads:ro
+    depends_on:
+      - php-backend
+      - node-backend
+      - client-react
+
+  php-backend:
+    build: ./php-backend 
+    container_name: nimons_php_fpm
+    volumes:
+      - ./php-backend:/var/www/html
+    ports:
+      - "8080:8080" 
     env_file:
       - ./.env
-    volumes:
-      - ./php/src:/var/www/app
     depends_on:
-      - db
-      
-  db:
+      - postgres 
+
+  node-backend:
+    build: ./node-backend
+    container_name: nimons_node
+    volumes:
+      - ./node-backend:/app
+      - /app/node_modules
+      - ./node-backend/uploads:/app/uploads
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./.env
+    command: npm run dev
+    depends_on:
+      - postgres
+
+  client-react:
+    build: ./client-react 
+    container_name: nimons_react
+    volumes:
+      - ./client-react:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173" 
+    command: npm run dev
+    
+  postgres:
     image: postgres:16
-    container_name: tubes-wbd-db
+    container_name: nimons_db
     ports:
       - "5433:5432"
     env_file:
       - ./.env
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./php/db/init:/docker-entrypoint-initdb.d:ro
+      - ./db/init:/docker-entrypoint-initdb.d:ro
 
 volumes:
   pgdata:
