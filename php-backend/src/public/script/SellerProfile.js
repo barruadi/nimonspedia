@@ -1,6 +1,7 @@
 import { api } from '/utils/api.js';
-import { 
-  subscribeToPushNotifications, 
+import { notificationManager } from '/utils/notificationManager.js';
+import {
+  subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   isUserSubscribed,
   getNotificationPermissionStatus
@@ -115,49 +116,45 @@ import {
     emailSpan.textContent = user.email || '';
     nameInput.value       = nameSpan.textContent;
 
+    // Initialize notification manager and load preferences
     try {
-      const notifRes = await api.get('/profile/notifications');
-      if (notifRes && notifRes.ok) {
-        const prefs = notifRes.preferences || {};
-        toggleChat.checked = prefs.chat_enabled !== false;
-        toggleAuction.checked = prefs.auction_enabled !== false;
-        toggleOrder.checked = prefs.order_enabled !== false;
+      await notificationManager.init();
+      const prefs = await notificationManager.getPreferences();
+      
+      console.log('[Seller Profile] Loaded preferences:', prefs);
+      
+      if (prefs) {
+        toggleChat.checked = prefs.chat || false;
+        toggleAuction.checked = prefs.auction || false;
+        toggleOrder.checked = prefs.order || false;
+      } else {
+        // Default to true if no preferences found
+        toggleChat.checked = true;
+        toggleAuction.checked = true;
+        toggleOrder.checked = true;
       }
     } catch (notifErr) {
-      console.warn('Failed to load notification preferences:', notifErr);
+      console.warn('[Seller Profile] Failed to load notification preferences:', notifErr);
       toggleChat.checked = true;
       toggleAuction.checked = true;
       toggleOrder.checked = true;
     }
 
-    try {
-      // Use the centralized service worker manager
-      const { registerServiceWorker } = await import('/utils/serviceWorkerManager.js');
-      await registerServiceWorker();
-      console.log('Service worker registered in Seller Profile');
-      
-      isPushSubscribed = await isUserSubscribed();
-      console.log('Push subscription status:', isPushSubscribed);
-    } catch (subErr) {
-      console.warn('Failed to check subscription status:', subErr);
-      isPushSubscribed = false;
-    }
-
     if (toggleChat) {
       toggleChat.addEventListener('change', (e) => {
-        updateNotificationPreference('chat_enabled', e.target.checked);
+        updateNotificationPreference('chat', e.target.checked);
       });
     }
 
     if (toggleAuction) {
       toggleAuction.addEventListener('change', (e) => {
-        updateNotificationPreference('auction_enabled', e.target.checked);
+        updateNotificationPreference('auction', e.target.checked);
       });
     }
 
     if (toggleOrder) {
       toggleOrder.addEventListener('change', (e) => {
-        updateNotificationPreference('order_enabled', e.target.checked);
+        updateNotificationPreference('order', e.target.checked);
       });
     }
 
@@ -261,23 +258,33 @@ import {
     }
   });
 
-  async function updateNotificationPreference(field, enabled) {
+  async function updateNotificationPreference(notificationType, enabled) {
     try {
-      const res = await api.post('/profile/notifications', {
-        [field]: enabled
-      });
+      console.log(`[Seller Profile] Updating ${notificationType} to ${enabled}`);
 
-      if (res && res.ok) {
-        await handlePushSubscription();
-        
+      // Use notificationManager to update preference
+      console.log("HASILLL: ")
+
+      const success = await notificationManager.updatePreference(notificationType, enabled);
+      console.log("HASILLL: ", success)
+
+      if (success) {
         showSuccess('Pengaturan notifikasi berhasil diperbarui.');
         setTimeout(() => clearMessages(), 3000);
       } else {
-        showError(res?.error?.message || 'Gagal memperbarui pengaturan.');
+        showError('Gagal memperbarui pengaturan.');
+        // Revert toggle
+        if (notificationType === 'chat') toggleChat.checked = !enabled;
+        else if (notificationType === 'auction') toggleAuction.checked = !enabled;
+        else if (notificationType === 'order') toggleOrder.checked = !enabled;
       }
     } catch (err) {
       console.error(err);
       showError('Terjadi kesalahan jaringan.');
+      // Revert toggle
+      if (notificationType === 'chat') toggleChat.checked = !enabled;
+      else if (notificationType === 'auction') toggleAuction.checked = !enabled;
+      else if (notificationType === 'order') toggleOrder.checked = !enabled;
     }
   }
 

@@ -1,6 +1,7 @@
 import { api } from '/utils/api.js';
-import { 
-  subscribeToPushNotifications, 
+import { notificationManager } from '/utils/notificationManager.js';
+import {
+  subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   isUserSubscribed,
   getNotificationPermissionStatus
@@ -122,6 +123,7 @@ import {
     emailSpan.textContent = user.email || '';
     nameInput.value       = nameSpan.textContent;
 
+    // Load notification preferences from /api/profile/notifications
     try {
       const notifRes = await api.get('/profile/notifications');
       if (notifRes && notifRes.ok) {
@@ -132,9 +134,9 @@ import {
       }
     } catch (notifErr) {
       console.warn('Failed to load notification preferences:', notifErr);
-      toggleChat.checked = true;
-      toggleAuction.checked = true;
-      toggleOrder.checked = true;
+      toggleChat.checked = false;
+      toggleAuction.checked = false;
+      toggleOrder.checked = false;
     }
 
     try {
@@ -286,7 +288,9 @@ import {
 
   async function updateNotificationPreference(field, enabled) {
     try {
-      // Save preference to database
+      console.log(`[Profile] Updating ${field} to ${enabled}`);
+
+      // Save preference to /api/profile/notifications
       const res = await api.post('/profile/notifications', {
         [field]: enabled
       });
@@ -294,15 +298,23 @@ import {
       if (res && res.ok) {
         // Handle push subscription based on all toggle states
         await handlePushSubscription();
-        
+
         showSuccess('Pengaturan notifikasi berhasil diperbarui.');
         setTimeout(() => clearMessages(), 3000);
       } else {
         showError(res?.error?.message || 'Gagal memperbarui pengaturan.');
+        // Revert toggle
+        if (field === 'chat_enabled') toggleChat.checked = !enabled;
+        else if (field === 'auction_enabled') toggleAuction.checked = !enabled;
+        else if (field === 'order_enabled') toggleOrder.checked = !enabled;
       }
     } catch (err) {
       console.error(err);
       showError('Terjadi kesalahan jaringan.');
+      // Revert toggle
+      if (field === 'chat_enabled') toggleChat.checked = !enabled;
+      else if (field === 'auction_enabled') toggleAuction.checked = !enabled;
+      else if (field === 'order_enabled') toggleOrder.checked = !enabled;
     }
   }
 

@@ -230,11 +230,17 @@ export async function isUserSubscribed() {
     }
 
     try {
-        const registration = await navigator.serviceWorker.getRegistration();
+        let registration = await navigator.serviceWorker.getRegistration();
         
         if (!registration) {
-            console.warn('Service worker not registered yet');
-            return false;
+            // Try to register service worker if not already registered
+            try {
+                registration = await navigator.serviceWorker.register('/service-worker.js');
+                console.log('[Push] Service worker registered during subscription check');
+            } catch (regError) {
+                console.warn('[Push] Service worker not registered yet:', regError.message);
+                return false;
+            }
         }
         
         const timeoutPromise = new Promise((_, reject) => {
