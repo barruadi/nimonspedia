@@ -245,6 +245,16 @@
     margin-top: auto;
 }
 
+.actions.loading .btn-addcart {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.btn-addcart.btn-checking {
+    opacity: 0.5;
+    cursor: wait;
+}
+
 .btn-addcart,
 .btn-disabled {
     display: flex;

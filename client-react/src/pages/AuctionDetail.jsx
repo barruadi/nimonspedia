@@ -24,6 +24,7 @@ const AuctionDetail = () => {
   // Timer & Countdown
   const [countdownSeconds, setCountdownSeconds] = useState(null);
   const [lastCountdownReset, setLastCountdownReset] = useState(null);
+  const [fiveSecondNotified, setFiveSecondNotified] = useState(false);
   
   // Bid Form
   const [bidAmount, setBidAmount] = useState('');
@@ -356,6 +357,62 @@ const AuctionDetail = () => {
 
     return () => clearInterval(timer);
   }, [auction, timeSyncOffset]);
+
+  // Show browser notification when 5 seconds remaining (only for bidders and seller)
+  useEffect(() => {
+    // Only trigger if countdown is exactly 5 seconds and not yet notified
+    if (countdownSeconds === 5 && !fiveSecondNotified && auction) {
+      console.log('[AuctionDetail] 5 seconds remaining - showing notification');
+      
+      // Request permission if not granted
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          showFiveSecondNotification();
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              showFiveSecondNotification();
+            }
+          });
+        }
+      }
+      
+      setFiveSecondNotified(true);
+    }
+    
+    // Reset notification flag when timer resets (new bid placed)
+    if (countdownSeconds > 5) {
+      setFiveSecondNotified(false);
+    }
+  }, [countdownSeconds, fiveSecondNotified, auction]);
+
+  // Function to show 5-second notification
+  const showFiveSecondNotification = () => {
+    if (!auction) return;
+    
+    const notificationTitle = 'Lelang Segera Berakhir!';
+    const notificationBody = `Lelang "${auction.product_name}" akan berakhir dalam 5 detik!`;
+    const notificationIcon = auction.image_path || '/uploads/logo-192.png';
+    
+    const notification = new Notification(notificationTitle, {
+      body: notificationBody,
+      icon: notificationIcon,
+      badge: '/uploads/badge-96.png',
+      tag: `auction-${auction.auction_id}-ending`,
+      requireInteraction: false,
+      vibrate: [200, 100, 200, 100, 200]
+    });
+    
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+    
+    // Auto-close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+    
+    console.log('[AuctionDetail] 5-second notification displayed');
+  };
 
   // Auto-sync with server every 30 seconds to correct drift
   useEffect(() => {

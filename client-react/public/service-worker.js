@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nimonspedia-react-v2';
+const CACHE_NAME = 'nimonspedia-react-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -98,12 +98,15 @@ self.addEventListener('push', (event) => {
     icon: '/logo-192.png',
     badge: '/logo-192.png',
     tag: 'default',
-    data: {}
+    data: {},
+    type: 'general'
   };
 
   try {
     if (event.data) {
       const payload = event.data.json();
+      console.log('[Service Worker] Parsed notification data:', payload);
+
       notificationData = {
         title: payload.title || notificationData.title,
         body: payload.body || notificationData.body,
@@ -111,6 +114,7 @@ self.addEventListener('push', (event) => {
         badge: payload.badge || notificationData.badge,
         tag: payload.tag || notificationData.tag,
         data: payload.data || {},
+        type: payload.data?.type || payload.notificationType || 'general',
         requireInteraction: payload.requireInteraction || false,
         actions: payload.actions || []
       };
@@ -119,6 +123,8 @@ self.addEventListener('push', (event) => {
     console.error('[Service Worker] Error parsing push notification:', error);
   }
 
+  console.log('[Service Worker] Showing notification:', notificationData.title);
+
   const promiseChain = self.registration.showNotification(
     notificationData.title,
     {
@@ -126,12 +132,19 @@ self.addEventListener('push', (event) => {
       icon: notificationData.icon,
       badge: notificationData.badge,
       tag: notificationData.tag,
-      data: notificationData.data,
+      data: {
+        ...notificationData.data,
+        type: notificationData.type
+      },
       requireInteraction: notificationData.requireInteraction,
       actions: notificationData.actions,
       vibrate: [200, 100, 200]
     }
-  );
+  ).then(() => {
+    console.log('[Service Worker] Notification displayed successfully');
+  }).catch((error) => {
+    console.error('[Service Worker] Error displaying notification:', error);
+  });
 
   event.waitUntil(promiseChain);
 });
@@ -139,6 +152,7 @@ self.addEventListener('push', (event) => {
 // Notification click event handler
 self.addEventListener('notificationclick', (event) => {
   console.log('[Service Worker] Notification clicked:', event.notification);
+  console.log('[Service Worker] Notification data:', event.notification.data);
 
   event.notification.close();
 
@@ -151,10 +165,12 @@ self.addEventListener('notificationclick', (event) => {
   } else if (notificationData.type === 'auction' && notificationData.auctionId) {
     urlToOpen = `/auction/${notificationData.auctionId}`;
   } else if (notificationData.type === 'order' && notificationData.orderId) {
-    urlToOpen = `/orders/${notificationData.orderId}`;
+    urlToOpen = `/orders?id=${notificationData.orderId}`;
   } else if (notificationData.url) {
     urlToOpen = notificationData.url;
   }
+
+  console.log('[Service Worker] Opening URL:', urlToOpen);
 
   // Open or focus the client window
   event.waitUntil(
@@ -173,8 +189,12 @@ self.addEventListener('notificationclick', (event) => {
         }
         // If no window is open, open a new one
         if (clients.openWindow) {
+          console.log('[Service Worker] Opening new window:', urlToOpen);
           return clients.openWindow(urlToOpen);
         }
+      })
+      .catch((error) => {
+        console.error('[Service Worker] Error handling notification click:', error);
       })
   );
 });

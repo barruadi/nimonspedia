@@ -46,10 +46,10 @@ const sendPushNotification = async (userId, options = {}) => {
   const pgPool = pool.getInstance();
 
   try {
-    const { title, body, url = '/', type = 'auction' } = options;
+    const { title, body, url = '/', type = 'auction', data = {} } = options;
 
     if (!userId || !title || !body) {
-      console.error('[Notification] ❌ Missing required fields:', { userId, title, body });
+      console.error('[Notification]  Missing required fields:', { userId, title, body });
       return { ok: false, error: 'Missing required fields' };
     }
 
@@ -96,14 +96,22 @@ const sendPushNotification = async (userId, options = {}) => {
     const payload = JSON.stringify({
       title,
       body,
+      icon: '/uploads/logo-192.png',
+      badge: '/uploads/badge-96.png',
       url,
-      timestamp: Date.now(),
-      type
+      data: {
+        url,
+        type,
+        timestamp: Date.now(),
+        ...data  // Merge additional data (e.g., auctionId, orderId)
+      }
     });
 
     // Step 4: Send to all subscriptions
     let sentCount = 0;
     const results = [];
+
+    console.log(`[Notification] Attempting to send to user ${userId} with ${subResult.rows.length} subscription(s)`);
 
     for (const subscription of subResult.rows) {
       try {
@@ -118,7 +126,7 @@ const sendPushNotification = async (userId, options = {}) => {
         await webPush.sendNotification(pushSubscription, payload);
         sentCount++;
         results.push({ success: true, subscriptionId: subscription.subscription_id });
-        console.log(`[Notification] Sent to user ${userId} (subscription: ${subscription.subscription_id})`);
+        console.log(`[Notification] Successfully sent to user ${userId} (subscription: ${subscription.subscription_id})`);
 
       } catch (error) {
         // Handle invalid subscriptions (410 Gone, 404 Not Found)
@@ -161,13 +169,19 @@ const sendPushNotification = async (userId, options = {}) => {
  * @param {number} auctionId - Auction ID (for link)
  * @param {string} newBidderName - Name of new highest bidder
  * @param {number} newBidAmount - New bid amount
+ * @param {string} previousBidderName - Name of previous bidder (who got outbid)
  */
-const sendOutbidNotification = async (previousBidderId, auctionName, auctionId, newBidderName, newBidAmount) => {
+const sendOutbidNotification = async (previousBidderId, auctionName, auctionId, newBidderName, newBidAmount, previousBidderName = 'Anda') => {
+  console.log(`[Notification] Sending outbid notification to user ${previousBidderId} for auction ${auctionId}`);
+  
   return sendPushNotification(previousBidderId, {
-    title: 'Bid Anda dilampaui!',
+    title: `${previousBidderName}, Anda telah tertandingi!`,
     body: `${newBidderName} menawar lebih tinggi Rp ${newBidAmount.toLocaleString('id-ID')} di "${auctionName}"`,
-    url: `/auction/${auctionId}`,
-    type: 'auction'
+    url: `/pages/auction-detail.html?id=${auctionId}`,
+    type: 'auction',
+    data: {
+      auctionId
+    }
   });
 };
 
@@ -180,12 +194,17 @@ const sendOutbidNotification = async (previousBidderId, auctionName, auctionId, 
  * @param {number} winningBid - Final winning bid amount
  * @param {string} sellerName - Name of seller (optional)
  */
-const sendAuctionWonNotification = async (winnerId, auctionName, winningBid, sellerName = '') => {
+const sendAuctionWonNotification = async (winnerId, auctionName, winningBid, auctionId = null) => {
+  console.log(`[Notification] Sending win notification to user ${winnerId} for auction ${auctionId}`);
+  
   return sendPushNotification(winnerId, {
     title: 'Selamat! Anda Menang Lelang',
     body: `Anda memenangkan "${auctionName}" dengan harga Rp ${winningBid.toLocaleString('id-ID')}`,
-    url: '/orders',
-    type: 'auction'
+    url: '/pages/orders.html',
+    type: 'auction',
+    data: {
+      auctionId
+    }
   });
 };
 
@@ -198,7 +217,9 @@ const sendAuctionWonNotification = async (winnerId, auctionName, winningBid, sel
  * @param {string} winnerName - Name of winner (if any)
  * @param {number} finalPrice - Final selling price
  */
-const sendAuctionEndedSellerNotification = async (sellerId, auctionName, winnerName, finalPrice) => {
+const sendAuctionEndedSellerNotification = async (sellerId, auctionName, winnerName, finalPrice, auctionId = null) => {
+  console.log(`[Notification] Sending auction ended notification to seller ${sellerId} for auction ${auctionId}`);
+  
   const message = winnerName
     ? `Lelang "${auctionName}" telah berakhir. Pemenang: ${winnerName} (Rp ${finalPrice.toLocaleString('id-ID')})`
     : `Lelang "${auctionName}" telah berakhir tanpa pemenang`;
@@ -206,8 +227,11 @@ const sendAuctionEndedSellerNotification = async (sellerId, auctionName, winnerN
   return sendPushNotification(sellerId, {
     title: 'Lelang Berakhir',
     body: message,
-    url: '/seller/orders',
-    type: 'auction'
+    url: '/pages/seller-orders.html',
+    type: 'auction',
+    data: {
+      auctionId
+    }
   });
 };
 

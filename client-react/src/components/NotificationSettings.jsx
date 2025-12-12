@@ -167,6 +167,22 @@ export default function NotificationSettings() {
               <label className="toggle-switch">
                 <input
                   type="checkbox"
+                  checked={localPreferences.auction}
+                  onChange={() => handlePreferenceChange('auction')}
+                  disabled={loading}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div className="setting-item">
+              <div className="setting-info">
+                <h4>Order Notifications</h4>
+                <p>Get notified about order status changes</p>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
                   checked={localPreferences.order}
                   onChange={() => handlePreferenceChange('order')}
                   disabled={loading}
