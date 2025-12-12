@@ -239,6 +239,37 @@
             }
         }
     </style>
+    <script>
+        // Block page render until feature check complete
+        (async function() {
+          try {
+            const userId = await (async () => {
+              const res = await fetch('/api/me', { credentials: 'include' });
+              const data = await res.json();
+              return data?.user?.user_id || data?.user?.id;
+            })();
+            
+            const res = await fetch(`/api/node/feature-flags?user_id=${userId}`, { credentials: 'include' });
+            const data = await res.json();
+            
+            if (!data.checkout_enabled?.enabled) {
+              const info = {
+                featureName: 'Checkout',
+                reason: data.checkout_enabled?.reason,
+                isGlobal: data.checkout_enabled?.isGlobal
+              };
+              sessionStorage.setItem('disabledFeatureInfo', JSON.stringify(info));
+              window.location.replace('/feature-disabled');
+              return;
+            }
+            
+            document.body.classList.add('feature-checked');
+          } catch (error) {
+            console.error('Error checking feature flag:', error);
+            document.body.classList.add('feature-checked');
+          }
+        })();
+    </script>
 </head>
 <body>
     <!-- Side Navbar -->
