@@ -19,6 +19,13 @@ class AppNavbar extends HTMLElement {
     }
 
     await this.refresh();
+
+    // Refresh flags when window gains focus (user switches back to tab)
+    this._onFocus = () => {
+      console.log('[Navbar] Window focused, refreshing session...');
+      this.refresh();
+    };
+    window.addEventListener('focus', this._onFocus);
   }
 
   disconnectedCallback() {
@@ -26,6 +33,10 @@ class AppNavbar extends HTMLElement {
     // Clean up document click listener
     if (this._closeDropdown) {
       document.removeEventListener('click', this._closeDropdown);
+    }
+    // Clean up focus listener
+    if (this._onFocus) {
+      window.removeEventListener('focus', this._onFocus);
     }
   }
 
@@ -54,15 +65,25 @@ class AppNavbar extends HTMLElement {
         return { authenticated: false, user: null, flags: null };
       }
 
-      // Fetch feature flags
+      // Fetch feature flags with user_id
       let flags = null;
       try {
-        const flagsRes = await api.get('/feature-flags');
-        if (flagsRes && flagsRes.ok && flagsRes.flags) {
-          flags = flagsRes.flags;
+        const userId = res.user?.user_id || res.user?.id;
+        if (userId) {
+          console.log(`[Navbar] Fetching feature flags for user ${userId}...`);
+          const flagsRes = await api.get(`/node/feature-flags?user_id=${userId}`);
+          console.log('[Navbar] Feature flags response:', flagsRes);
+          if (flagsRes && flagsRes.ok && flagsRes.flags) {
+            flags = flagsRes.flags;
+            console.log('[Navbar] Feature flags updated:', flags);
+          } else {
+            console.warn('[Navbar] Invalid flags response format:', flagsRes);
+          }
+        } else {
+          console.warn('[Navbar] No user_id found, skipping flags fetch');
         }
       } catch (flagsErr) {
-        console.warn('[Navbar] Failed to fetch feature flags:', flagsErr);
+        console.error('[Navbar] Failed to fetch feature flags:', flagsErr);
       }
 
       return { authenticated: true, user: res.user || null, flags };

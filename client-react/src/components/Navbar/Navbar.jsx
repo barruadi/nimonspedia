@@ -16,6 +16,14 @@ const Navbar = ({ role = 'buyer', onLogout = null }) => {
   // Fetch session on mount
   useEffect(() => {
     fetchSession();
+    
+    // Refresh session when window regains focus (efficient, no polling)
+    const handleFocus = () => {
+      fetchSession();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // Close dropdowns when clicking outside
