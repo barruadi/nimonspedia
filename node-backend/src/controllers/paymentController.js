@@ -230,10 +230,14 @@ async function createOrderPayment(req, res) {
       name: item.name
     }));
 
+    // Generate unique transaction ID for Midtrans (to avoid "order_id already used" error)
+    // Format: ORDER-{order_id}-{timestamp}
+    const uniqueTransactionId = `ORDER-${order_id}-${Date.now()}`;
+
     // Create transaction parameter for Midtrans
     const parameter = {
       transaction_details: {
-        order_id: order_id.toString(),
+        order_id: uniqueTransactionId,
         gross_amount: order.total_amount
       },
       customer_details: {
@@ -242,13 +246,13 @@ async function createOrderPayment(req, res) {
       },
       item_details: itemDetails,
       callbacks: {
-        finish: `http://localhost/orders/${order_id}`,
+        finish: `http://localhost/checkout/success?order_id=${order_id}`,
         error: 'http://localhost/payment/error',
         pending: 'http://localhost/payment/pending'
       }
     };
 
-    console.log('[Payment/Order] Creating Snap token for order:', order_id);
+    console.log('[Payment/Order] Creating Snap token for order:', order_id, 'with transaction ID:', uniqueTransactionId);
 
     // Create Snap transaction
     const transaction = await snap.createTransaction(parameter);
@@ -259,7 +263,7 @@ async function createOrderPayment(req, res) {
         transaction_id, order_id, user_id, related_order_id,
         type, gross_amount, status, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-      [order_id.toString(), order_id.toString(), userId, order_id, 'order', order.total_amount, 'pending']
+      [uniqueTransactionId, uniqueTransactionId, userId, order_id, 'order', order.total_amount, 'pending']
     );
 
     console.log('[Payment/Order] Snap token created:', transaction.token);
@@ -515,6 +519,7 @@ async function handlePaymentWebhook(req, res) {
 /**
  * Get payment transaction status
  * GET /api/node/payment/status/:order_id
+ * Note: order_id here refers to the related_order_id (actual order), not the Midtrans transaction ID
  */
 async function getPaymentStatus(req, res) {
   const pool = db.getInstance();
@@ -530,9 +535,12 @@ async function getPaymentStatus(req, res) {
       });
     }
 
+    // Query by related_order_id to get the most recent payment attempt
     const result = await pool.query(
       `SELECT * FROM payment_transactions
-       WHERE order_id = $1 AND user_id = $2`,
+       WHERE related_order_id = $1 AND user_id = $2
+       ORDER BY created_at DESC
+       LIMIT 1`,
       [order_id, userId]
     );
 
@@ -571,6 +579,7 @@ async function getPaymentStatus(req, res) {
  * Check and process payment status from Midtrans
  * POST /api/node/payment/check/:order_id
  * This manually checks Midtrans API and processes the payment (for sandbox/localhost where webhook doesn't work)
+ * Note: order_id here refers to the related_order_id (actual order), not the Midtrans transaction ID
  */
 async function checkAndProcessPayment(req, res) {
   const pool = db.getInstance();
@@ -586,12 +595,15 @@ async function checkAndProcessPayment(req, res) {
       });
     }
 
-    console.log('[Payment/Check] Checking payment status for:', order_id);
+    console.log('[Payment/Check] Checking payment status for order:', order_id);
 
-    // Get transaction from database
+    // Get transaction from database by related_order_id (the actual order ID)
+    // Order by created_at DESC to get the most recent payment attempt
     const result = await pool.query(
       `SELECT * FROM payment_transactions
-       WHERE order_id = $1 AND user_id = $2`,
+       WHERE related_order_id = $1 AND user_id = $2
+       ORDER BY created_at DESC
+       LIMIT 1`,
       [order_id, userId]
     );
 
@@ -603,6 +615,9 @@ async function checkAndProcessPayment(req, res) {
     }
 
     const dbTransaction = result.rows[0];
+    const midtransOrderId = dbTransaction.order_id; // This is the unique transaction ID for Midtrans
+
+    console.log('[Payment/Check] Found transaction:', midtransOrderId);
 
     // If already processed successfully, return current status
     if (dbTransaction.status === 'success' && dbTransaction.processed_at) {
@@ -616,10 +631,10 @@ async function checkAndProcessPayment(req, res) {
       });
     }
 
-    // Check status from Midtrans API
+    // Check status from Midtrans API using the unique transaction ID
     let transactionStatus;
     try {
-      transactionStatus = await snap.transaction.status(order_id);
+      transactionStatus = await snap.transaction.status(midtransOrderId);
       console.log('[Payment/Check] Midtrans status:', transactionStatus.transaction_status);
     } catch (error) {
       console.error('[Payment/Check] Failed to get status from Midtrans:', error.message);
@@ -644,12 +659,12 @@ async function checkAndProcessPayment(req, res) {
     try {
       await client.query('BEGIN');
 
-      // Lock the transaction row
+      // Lock the transaction row using the Midtrans transaction ID
       const lockedTx = await client.query(
         `SELECT * FROM payment_transactions
          WHERE order_id = $1
          FOR UPDATE`,
-        [order_id]
+        [midtransOrderId]
       );
 
       if (lockedTx.rows.length === 0) {
@@ -702,12 +717,12 @@ async function checkAndProcessPayment(req, res) {
            WHERE order_id = $7`,
           [
             newStatus,
-            transaction_id || order_id,
+            transaction_id || midtransOrderId,
             payment_type,
             bank || null,
             va_numbers ? va_numbers[0]?.va_number : null,
             JSON.stringify(transactionStatus),
-            order_id
+            midtransOrderId
           ]
         );
 

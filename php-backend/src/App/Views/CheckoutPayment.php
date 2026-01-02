@@ -364,10 +364,34 @@
 
                     // Open Midtrans Snap
                     snap.pay(data.data.token, {
-                        onSuccess: function(result) {
+                        onSuccess: async function(result) {
                             console.log('[Payment] Payment successful:', result);
-                            // Redirect to success page where user will manually process the payment
-                            window.location.href = '/checkout/success?order_id=<?= $_GET['order_id'] ?? '' ?>';
+
+                            // In sandbox mode, manually check and process the payment
+                            // since webhooks don't work on localhost
+                            try {
+                                loading.classList.add('active');
+                                console.log('[Payment] Processing payment for order:', orderId);
+
+                                const checkResponse = await fetch(`http://localhost/api/node/payment/check/${orderId}`, {
+                                    method: 'POST',
+                                    credentials: 'include'
+                                });
+
+                                const checkData = await checkResponse.json();
+                                console.log('[Payment] Payment processed:', checkData);
+
+                                if (checkData.ok) {
+                                    window.location.href = '/checkout/success?order_id=<?= $_GET['order_id'] ?? '' ?>';
+                                } else {
+                                    alert('Payment completed but processing failed. Please contact support.');
+                                    window.location.href = '/orders';
+                                }
+                            } catch (error) {
+                                console.error('[Payment] Error processing payment:', error);
+                                alert('Payment completed but processing failed. Please contact support.');
+                                window.location.href = '/orders';
+                            }
                         },
                         onPending: function(result) {
                             console.log('[Payment] Payment pending:', result);
